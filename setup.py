@@ -6,5 +6,5 @@ setup(name='def',
       author='est',
       author_email='i@est.im',
       url='def.est.im',
-      install_requires=['bottle', 'flask'],
+      install_requires=['bottle', 'Flask'],
      )
