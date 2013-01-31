@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+# encoding: utf8
+
 import time, re, sys, os, os.path, glob
 from pprint import pprint, pformat
+from urllib import quote
 import bottle
 from bottle import (route, run, default_app, 
-    response, Bottle, static_file, 
+    request, response, redirect,
+    Bottle, static_file, 
     jinja2_template as template, html_escape)
 
 bottle.TEMPLATE_PATH = [os.path.join(os.path.realpath(os.path.dirname(__file__)), 'templates') ]
@@ -10,10 +15,14 @@ bottle.TEMPLATE_PATH = [os.path.join(os.path.realpath(os.path.dirname(__file__))
 @route('/name/<name>')
 def nameindex(name='Stranger'):
     return '<strong>Hello, %s!</strong>' % name
- 
+
 @route('/')
-def index():
-    return template('index.html')
+@route('/<query>')
+def index(query=''):
+    q = request.query.get('q', '')
+    if q:
+        return redirect('/%s' % quote(q), code=301)
+    return template('index.html', query=query.decode('utf8', 'replace'))
 
 
 wsgi_app=default_app()
