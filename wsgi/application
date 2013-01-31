@@ -10,7 +10,7 @@ try:
 except IOError:
     pass
 
-from main import application
+from main import wsgi_app as application
 
 #
 # Below for testing only
