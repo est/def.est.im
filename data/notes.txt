@@ -13,3 +13,7 @@ http://fortawesome.github.com/Font-Awesome/#
 http://instacode.linology.info/
 
 http://twitter.github.com/bootstrap/examples/sticky-footer.html
+
+http://www.spixup.org/2012/12/wikipedia-instant-search-in-jquery-with.html
+
+http://woorkup.com/2010/09/13/how-to-create-your-own-instant-search/

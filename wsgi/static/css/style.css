@@ -51,6 +51,7 @@ max-width: 680px;
 .input-append .search-query {
     border-top-left-radius: 14px;
     border-bottom-left-radius: 14px;
+    padding-right: 2px;
 }
 .input-append button:last-child{
     border-top-right-radius: 14px;
