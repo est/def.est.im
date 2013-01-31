@@ -11,3 +11,5 @@ http://www.w3resource.com/twitter-bootstrap/tutorial.php
 http://fortawesome.github.com/Font-Awesome/#
 
 http://instacode.linology.info/
+
+http://twitter.github.com/bootstrap/examples/sticky-footer.html
