@@ -7,3 +7,7 @@ https://github.com/openshift/bottle-openshift-quickstart/blob/master/wsgi/mybott
 http://twitter.github.com/bootstrap/getting-started.html
 
 http://www.w3resource.com/twitter-bootstrap/tutorial.php
+
+http://fortawesome.github.com/Font-Awesome/#
+
+http://instacode.linology.info/

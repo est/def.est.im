@@ -19,6 +19,16 @@ def index():
 wsgi_app=default_app()
 if '__main__' == __name__:
     import readline, rlcompleter; readline.parse_and_bind("tab: complete")
+
+    SITE_STATIC_FILES = '|'.join(map(re.escape, [
+        'favicon.ico',
+        'robots.txt'
+    ]))
+    @route('/static/<filename:path>')
+    @route('/<filename:re:.*(%s)' % SITE_STATIC_FILES)
+    def server_static(filename):
+        return static_file(filename, root='static')
+
     __import__('BaseHTTPServer').BaseHTTPRequestHandler.address_string = lambda x:x.client_address[0]
     from django.utils import autoreload
     def dev_server():
