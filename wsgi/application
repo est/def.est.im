@@ -1,7 +1,8 @@
 #!/usr/bin/python
+
 import os
 
-virtenv = os.environ['APPDIR'] + '/venv/'
+virtenv = os.environ['APPDIR'] + '/virtenv/'
 os.environ['PYTHON_EGG_CACHE'] = os.path.join(virtenv, 'lib/python2.6/site-packages')
 virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
 try:
@@ -9,7 +10,7 @@ try:
 except IOError:
     pass
 
-from main import wsgi_app as application
+from main import application
 
 #
 # Below for testing only
