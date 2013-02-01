@@ -8,7 +8,6 @@
     <!--[if IE 7]>
     <link href="/static/css/font-awesome-ie7.min.css" rel="stylesheet">
     <![endif]-->
-
   </head>
   <body>
     <div id="wrap">
@@ -16,10 +15,13 @@
         <div id="page_title" class="page-header"><h1>def:</h1></div>
         <form class="form-search" action="/">
           <div class="input-append">
-            <input name="q" type="text" class="search-query span4" placeholder="Search" x-webkit-speech value="{{query}}" />
+            <input name="q" type="text" class="search-query span4" placeholder="Search" x-webkit-speech value="{{ query }}" />
             <button class="btn" type="submit"><span class="icon-search"></span></button>
           </div>
         </form>
+        <div class="">
+          <div id="content"><pre><code>{{ content }}</code></pre></div>
+        </div>
       </div>
 
       <div id="push"></div>
@@ -35,5 +37,18 @@
 
     <script src="/static/js/jquery-1.9.0.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
+    <script language="javascript"><!--
+      var query = "{{ query }}";
+      var url = "";
+      function showDef(data, code, msg){
+        if(code==200){
+          $('#content pre code').text(JSON.stringify(data, null, 4));
+          var primaries
+        }
+      }
+    --></script>
+    {% if query %}
+    <script src="//www.google.com/dictionary/json?callback=showDef&sl=en&tl=en&q={{query}}"></script>
+    {% endif %}
   </body>
 </html>
