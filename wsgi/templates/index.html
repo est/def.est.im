@@ -45,31 +45,46 @@
     <script language="javascript"><!--
       var query = "{{ query }}";
       var url = "";
+
+
+      function obj2div(obj){
+        var div = document.createElement('DIV');
+        for(var item in obj){
+
+          if (obj[item] instanceof Array) {
+            if(obj[item].length>1){
+              var ul= div.appendChild(document.createElement('UL'));
+              for(var i=0; i<obj[item].length ;i++){
+                var li=document.createElement('LI');
+                li.appendChild( arguments.callee(obj[item][i]) )
+                ul.appendChild(li);
+              }
+              div.appendChild(ul)
+            } else {
+              div.appendChild( arguments.callee(obj[item][0]) );
+            }
+          } 
+          else if (obj[item] instanceof Object){
+            div.appendChild(arguments.callee(obj[item]) );
+          }
+          else if (item=='text') {
+            div.innerHTML=obj[item];
+          } 
+          else {
+            div.setAttribute(item, obj[item])
+          }
+        }
+        return div
+      }
+
       function showGDict(data, code, msg){
         if(code==200){
           // lastQuery = data;  global var
           // $('#content pre code').text(JSON.stringify(data, null, 4));
+          var entryOrder=['spellings', 'primaries', 'monoPrimaries', 'relatedPhrases', 'webTranslations', 'examples', 'webDefinitions', 'images']
 
-          function obj2div(obj){
-            var div = document.createElement('DIV');
-            for(var item in obj){
-              if (obj[item] instanceof Object){
-                div.appendChild(arguments.callee(obj[item]) );
-              } else if (obj[item] instanceof Array) {
-                for(var i=0;i<obj[item].length;i++){
-                  div.appendChild( arguments.callee(obj[item]) );
-                }
-              } else if (item=='text') {
-                $(div).text(obj[item])
-              } else {
-                div.setAttribute(item, obj[item])
-              }
-            }
-
-            return div
-          }
           result=obj2div(data);
-          $('#gdictContent').after(result)
+          $('#gdictContent').append(result)
         }
       }
     --></script>
