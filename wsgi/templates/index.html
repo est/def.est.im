@@ -12,7 +12,7 @@
   <body>
     <div id="wrap">
       <div class="row container">
-        <div id="page_title" class="page-header"><h1>def:</h1></div>
+        <div id="pageTitle" class="page-header"><h1>def:</h1></div>
         <form class="form-search" action="/">
           <div class="input-append">
             <input name="q" type="text" class="search-query span4" placeholder="Search" x-webkit-speech value="{{ query }}" />
@@ -20,7 +20,12 @@
           </div>
         </form>
         <div class="">
-          <div id="content"><pre><code>{{ content }}</code></pre></div>
+          <div id="content">
+            <pre><code>{{ content }}</code></pre>
+            <div id="gdictContent">
+
+            </div>
+          </div>
         </div>
       </div>
 
@@ -40,15 +45,36 @@
     <script language="javascript"><!--
       var query = "{{ query }}";
       var url = "";
-      function showDef(data, code, msg){
+      function showGDict(data, code, msg){
         if(code==200){
-          $('#content pre code').text(JSON.stringify(data, null, 4));
-          var primaries
+          // lastQuery = data;  global var
+          // $('#content pre code').text(JSON.stringify(data, null, 4));
+
+          function obj2div(obj){
+            var div = document.createElement('DIV');
+            for(var item in obj){
+              if (obj[item] instanceof Object){
+                div.appendChild(arguments.callee(obj[item]) );
+              } else if (obj[item] instanceof Array) {
+                for(var i=0;i<obj[item].length;i++){
+                  div.appendChild( arguments.callee(obj[item]) );
+                }
+              } else if (item=='text') {
+                $(div).text(obj[item])
+              } else {
+                div.setAttribute(item, obj[item])
+              }
+            }
+
+            return div
+          }
+          result=obj2div(data);
+          $('#gdictContent').after(result)
         }
       }
     --></script>
     {% if query %}
-    <script src="//www.google.com/dictionary/json?callback=showDef&sl=en&tl=en&restrict=pr,de,sy&q={{query}}"></script>
+    <script src="//www.google.com/dictionary/json?callback=showGDict&sl=en&tl=en&restrict=pr,de,sy&q={{query}}"></script>
     {% endif %}
   </body>
 </html>
