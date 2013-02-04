@@ -108,3 +108,509 @@ google[D].d.f = function(a) {
         h = h[A]();
         return h
     };
+
+
+
+
+
+
+
+
+
+
+    {
+    "query": "abnormal",
+    "sourceLanguage": "en",
+    "targetLanguage": "en",
+    "primaries": [
+        {
+            "type": "headword",
+            "terms": [
+                {
+                    "type": "text",
+                    "text": "ab·nor·mal",
+                    "language": "en",
+                    "labels": [
+                        {
+                            "text": "Adjective",
+                            "title": "Part-of-speech"
+                        }
+                    ]
+                },
+                {
+                    "type": "phonetic",
+                    "text": "/abˈnôrməl/",
+                    "language": "und"
+                },
+                {
+                    "type": "sound",
+                    "text": "http://www.gstatic.com/dictionary/static/sounds/de/0/abnormal.mp3",
+                    "language": "und"
+                }
+            ],
+            "entries": [
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Deviating from what is normal or usual, typically in a way that is undesirable or worrying",
+                            "language": "en"
+                        }
+                    ],
+                    "entries": [
+                        {
+                            "type": "example",
+                            "terms": [
+                                {
+                                    "type": "text",
+                                    "text": "the illness is recognizable from the patient's <em>abnormal</em> behavior",
+                                    "language": "en"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "webDefinitions": [
+        {
+            "type": "headword",
+            "terms": [
+                {
+                    "type": "text",
+                    "text": "abnormal",
+                    "language": "en"
+                }
+            ],
+            "entries": [
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "not normal; not typical or usual or regular or conforming to a norm; &quot;abnormal powers of concentration&quot;; &quot;abnormal amounts of rain&quot;; &quot;abnormal circumstances&quot;; &quot;an abnormal interest in food&quot;",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://wordnetweb.princeton.edu/perl/webwn?s=abnormal\">http://wordnetweb.princeton.edu/perl/webwn?s=abnormal</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "departing from the normal in e.g. intelligence and development; &quot;they were heartbroken when they learned their child was abnormal&quot;; &quot;an abnormal personality&quot;",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://wordnetweb.princeton.edu/perl/webwn?s=abnormal\">http://wordnetweb.princeton.edu/perl/webwn?s=abnormal</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) an abnormal physical condition resulting from defective genes or developmental deficiencies",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://wordnetweb.princeton.edu/perl/webwn?s=abnormality\">http://wordnetweb.princeton.edu/perl/webwn?s=abnormality</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) retardation sufficient to fall outside the normal range of intelligence",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://wordnetweb.princeton.edu/perl/webwn?s=abnormality\">http://wordnetweb.princeton.edu/perl/webwn?s=abnormality</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) behavior that breaches the rule or etiquette or custom or morality",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://wordnetweb.princeton.edu/perl/webwn?s=abnormality\">http://wordnetweb.princeton.edu/perl/webwn?s=abnormality</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Abnormality, in the vivid sense of something deviating from the normal or differing from the typical (such as an aberration), is a subjectively defined behavioral characteristic, assigned to those with rare or dysfunctional conditions. ...",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://en.wikipedia.org/wiki/Abnormal\">http://en.wikipedia.org/wiki/Abnormal</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Abnormalities is an EP, and the ninth release from Sioux Falls, South Dakota rock band The Spill Canvas. It was released on January 12, 2010.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://en.wikipedia.org/wiki/Abnormalities\">http://en.wikipedia.org/wiki/Abnormalities</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "A person or object that is not normal; Not conforming to rule or system; deviating from the usual or normal type; Of or pertaining to behaviour that deviates from norms of social propriety or accepted standards of mental health",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://en.wiktionary.org/wiki/abnormal\">http://en.wiktionary.org/wiki/abnormal</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormally) In an abnormal manner; in a way that deviates from a standard or norm; To an extent that significantly deviates from average",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://en.wiktionary.org/wiki/abnormally\">http://en.wiktionary.org/wiki/abnormally</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(ABNORMALITY) An internal sense of not having developed to your full potential, or that psychological hurts have distorted some aspect of your being",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.evermynd.com/dictionary.html\">http://www.evermynd.com/dictionary.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(Abnormality) When something is not normal.  This is a vague term.  Sometimes your doctor may not appreciate how worried you may be and if you are concerned you should not be afraid to ask for further explanation.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.bcafundraising.org/bca/index.php?option=com_content&view=article&id=114&Itemid=237\">http://www.bcafundraising.org/bca/index.php?option=com_content&amp;view=article&amp;id=114&amp;Itemid=237</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) A departure from whatÕs normal -- in a more or less exact medical sense. An abnormality can be quantitative (or measurable with a number), qualitative (not measurable but still apparent or obvious), or a matter of timing (temporal). ...",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.jansen.com.au/Dictionary_AC.html\">http://www.jansen.com.au/Dictionary_AC.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) A variation from a normal structure or function of the body.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.hifucare.com/glossary-of-terms.html\">http://www.hifucare.com/glossary-of-terms.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "(abnormality) a health problem or feature not normally present in a healthy individual.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.chp.edu/CHP/P02125\">http://www.chp.edu/CHP/P02125</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Different from what is usual, natural, or average. Not normal.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://autonopedia.org/healing/Dentistry/Dental_Glossary.html\">http://autonopedia.org/healing/Dentistry/Dental_Glossary.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Any change from the ‘correct’ or ‘usual’. It may not necessarily mean harmful or undesirable; it can equally mean atypical, unusual or uncommon. When used in reference to genes, an abnormal gene may result in a specific genetic condition.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.wikigenetics.org/index.php/Glossary_of_Genetic_Terms_and_Concepts\">http://www.wikigenetics.org/index.php/Glossary_of_Genetic_Terms_and_Concepts</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Different from the most common pattern found in a particular tissue.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.vesalius.com/graphics/cf_quicknotes/qn.asp?VID=181\">http://www.vesalius.com/graphics/cf_quicknotes/qn.asp?VID=181</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Not average, typical or usual; not normal. [Click Here to Return to List]",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.waiting.com/glossarya.html\">http://www.waiting.com/glossarya.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "chordae (trabeculae): Extra muscle tissue in the wall of the heart, usually the left ventricle (lower chamber). Typically found by routine echocardiogram of the heart. This is an &quot;incidental finding&quot; - it does not cause symptoms or disease.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.adoptmed.org/topics/glossary-of-russian-medical-terms.html\">http://www.adoptmed.org/topics/glossary-of-russian-medical-terms.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Not normal. An abnormal lesion or growth may be cancerous, premalignant (likely to become cancer) or benign.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.mdanderson.org/patient-and-cancer-information/cancer-information/glossary-of-cancer-terms/a.html\">http://www.mdanderson.org/patient-and-cancer-information/cancer-information/glossary-of-cancer-terms/a.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "1996 (reissued in 1998 with 3 tracks replaced)",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.newworldencyclopedia.org/entry/Townes_Van_Zandt\">http://www.newworldencyclopedia.org/entry/Townes_Van_Zandt</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "deviating from the normal or average; markedly irregular",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.3rd1000.com/abc/glossary.htm\">http://www.3rd1000.com/abc/glossary.htm</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Term used to describe behavior that is rare or dysfunctional, causes personal distress, or deviates from social norms",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.ncstatecollege.edu/webpub/blewis/NewFiles/Glossary1.html\">http://www.ncstatecollege.edu/webpub/blewis/NewFiles/Glossary1.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "Contrary to rule; deviating from the usual structure.",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.nzetc.org/tm/scholarly/tei-CheManu-t1-back1-d1-d4.html\">http://www.nzetc.org/tm/scholarly/tei-CheManu-t1-back1-d1-d4.html</a>",
+                            "language": "en"
+                        }
+                    ]
+                },
+                {
+                    "type": "meaning",
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "That which is not aligned with the usual or what is not considered normal is abnormal; any formation, site, state, or activity that moves away from the norm or the generally accepted. ...",
+                            "language": "en"
+                        },
+                        {
+                            "type": "url",
+                            "text": "<a href=\"http://www.mesotheliomadr.com/glossary/\">http://www.mesotheliomadr.com/glossary/</a>",
+                            "language": "en"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "synonyms": [
+        {
+            "type": "headword",
+            "terms": [
+                {
+                    "type": "text",
+                    "text": "abnormal",
+                    "language": "en"
+                }
+            ],
+            "entries": [
+                {
+                    "type": "related",
+                    "labels": [
+                        {
+                            "text": "adjective",
+                            "title": "Part-of-speech"
+                        }
+                    ],
+                    "terms": [
+                        {
+                            "type": "text",
+                            "text": "anomalous",
+                            "language": "en"
+                        },
+                        {
+                            "type": "text",
+                            "text": "unnatural",
+                            "language": "en"
+                        },
+                        {
+                            "type": "text",
+                            "text": "irregular",
+                            "language": "en"
+                        },
+                        {
+                            "type": "text",
+                            "text": "aberrant",
+                            "language": "en"
+                        },
+                        {
+                            "type": "text",
+                            "text": "unusual",
+                            "language": "en"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

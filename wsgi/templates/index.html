@@ -19,14 +19,9 @@
             <button class="btn" type="submit"><span class="icon-search"></span></button>
           </div>
         </form>
-        <div class="">
-          <div id="content">
-            <pre><code>{{ content }}</code></pre>
-            <div id="gdictContent">
+        {% if req.json %}<div id="content"><pre><code></code></pre></div>{% endif %}
+        <div id="gdictContent"></div>
 
-            </div>
-          </div>
-        </div>
       </div>
 
       <div id="push"></div>
@@ -38,7 +33,6 @@
       </div>
     </div>
 
-    
 
     <script src="/static/js/jquery-1.9.0.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
@@ -47,48 +41,31 @@
       var url = "";
 
 
-      function obj2div(obj){
-        var div = document.createElement('DIV');
-        for(var item in obj){
-
-          if (obj[item] instanceof Array) {
-            if(obj[item].length>1){
-              var ul= div.appendChild(document.createElement('UL'));
-              for(var i=0; i<obj[item].length ;i++){
-                var li=document.createElement('LI');
-                li.appendChild( arguments.callee(obj[item][i]) )
-                ul.appendChild(li);
-              }
-              div.appendChild(ul)
-            } else {
-              div.appendChild( arguments.callee(obj[item][0]) );
-            }
-          } 
-          else if (obj[item] instanceof Object){
-            div.appendChild(arguments.callee(obj[item]) );
-          }
-          else if (item=='text') {
-            div.innerHTML=obj[item];
-          } 
-          else {
-            div.setAttribute(item, obj[item])
-          }
-        }
-        return div
-      }
 
       function showGDict(data, code, msg){
         if(code==200){
           // lastQuery = data;  global var
-          // $('#content pre code').text(JSON.stringify(data, null, 4));
-          var entryOrder=['spellings', 'primaries', 'monoPrimaries', 'synonyms', 'relatedPhrases', 'webTranslations', 'examples', 'webDefinitions', 'images']
+          {% if req.json %}$('#content pre code').text(JSON.stringify(data, null, 4));{% endif %}
+          var cDiv = $('#gdictContent')
+          if (data.spellings){
 
-          for(var i=0;i<entryOrder.length;i++) {
-            if( data[entryOrder[i]] ){
-              $('#gdictContent').append(  obj2div(data[entryOrder[i]] ));
-            }
+          } else if(data.primaries){
+
+          } else if(data.monoPrimaries){
+
+          } else if(data.synonyms){
+
+          } else if(data.relatedPhrases){
+
+          } else if(data.webTranslations){
+
+          } else if(data.examples){
+
+          } else if(data.webDefinitions){
+
+          } else if(data.images){
+
           }
-
         }
       }
     --></script>

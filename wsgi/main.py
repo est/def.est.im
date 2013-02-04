@@ -22,7 +22,7 @@ def index(query=''):
     q = request.query.get('q', '')
     if q:
         return redirect('/%s' % quote(q), code=301)
-    return template('index.html', query=query.decode('utf8', 'replace'))
+    return template('index.html', query=query.decode('utf8', 'replace'), req=request.query)
 
 
 wsgi_app=default_app()

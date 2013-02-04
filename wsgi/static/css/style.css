@@ -57,3 +57,14 @@ max-width: 680px;
     border-top-right-radius: 14px;
     border-bottom-right-radius: 14px;
 }
+
+div.primaries  li {
+  /*width: auto;*/
+  display: inline;
+}
+
+div.primaries .phonetic{
+  border-left: dotted 1px #bbb;
+  padding-left: 5px;
+}
+
