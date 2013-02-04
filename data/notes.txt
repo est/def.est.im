@@ -22,3 +22,17 @@ http://bottlepy.org/docs/dev/api.html
 
 http://bottlepy.org/docs/dev/_modules/bottle.html
 
+
+
+
+http://pypi.python.org/pypi/PyICU/0.8.1
+
+https://github.com/openshift/bottle-openshift-quickstart/blob/master/wsgi/mybottleapp.py
+
+http://twitter.github.com/bootstrap/getting-started.html
+
+http://www.w3resource.com/twitter-bootstrap/tutorial.php
+
+http://wiki.freebase.com/wiki/Text_Service
+http://stackoverflow.com/a/6143819/41948
+
