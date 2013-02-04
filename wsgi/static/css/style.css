@@ -58,9 +58,8 @@ max-width: 680px;
     border-bottom-right-radius: 14px;
 }
 
-div.primaries  li {
-  /*width: auto;*/
-  display: inline;
+div.primaries  span {
+  margin-left: 6px;
 }
 
 div.primaries .phonetic{

@@ -49,8 +49,27 @@
           var cDiv = $('#gdictContent')
           if (data.spellings){
 
-          } else if(data.primaries){
+          } else if(data.primaries && data.primaries.length==1){
+            var sec=cDiv.append('<div></div>').attr('class', 'primaries')
+            $.each(data.primaries[0].terms, function(i){
+              if(this.type.toLowerCase()=='sound'){
+                cDiv.append($('<i></i>)').attr({
+                  'url': this.text,
+                  'class': 'icon-volume-up',
+                }))
+              }
+              else if(this.type=='text'){
 
+                var t = cDiv.append( $("<span></span>").text(this.text));
+                $.each(this.labels, function(){
+                    t.append( $("<span></span>").attr(
+                      'title', this.title).text(this.text).get())
+                })
+              }
+              else{
+                cDiv.append( $("<span></span>").text(this.text).attr('class', this.type))
+              }
+            })
           } else if(data.monoPrimaries){
 
           } else if(data.synonyms){
