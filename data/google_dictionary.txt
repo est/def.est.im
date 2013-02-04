@@ -1,0 +1,110 @@
+
+https://www.google.com/dictionary/js/dictionary_api_compiled.js
+
+google[D].d.f = function(a) {
+        var h;
+        h = new V;
+        if(a.spellings) {
+            var c = h || new V;
+            c[K]("Did you mean");
+            for(var b = a.spellings, f = b[B], e = 0; e < f; e++) c[K](' <span class="dct-lnk">', b[e], "</span>")
+        }
+        if(a.primaries) {
+            c = h || new V;
+            b = a.primaries;
+            f = b[B];
+            for(e = 0; e < f; e++) {
+                var d = b[e];
+                if(0 == e) {
+                    var g = new V;
+                    var j = a,
+                        m = g || new V;
+                    if(j.synonyms) {
+                        m[K]('<br/><span style="font-weight:bold">', "Synonyms", ":</span><br/>");
+                        for(var j = j.synonyms, q = j[B], t = 0; t < q; t++) for(var X = j[t], N = m || new V, X = X[J], za = X[B], ia = 0; ia < za; ia++) {
+                            var O = X[ia],
+                                ja = N || new V;
+                            ja[K](O[E][0][w], ":&nbsp;");
+                            for(var O = O[F], Aa = O[B], Y = 0; Y < Aa; Y++) ja[K](0 != Y ? ", " : "", '<span class="dct-lnk">', O[Y][w], "</span>");
+                            ja[K]("<br/>")
+                        }
+                    }
+                    W(Z, d, c, "synonyms", g, "sourceLanguage", a[H], "targetLanguage", a[I])
+                } else c[K]("<br/>"), W(Z, d, c, "sourceLanguage", a[H], "targetLanguage", a[I])
+            }
+        }
+        if(a.monoPrimaries) {
+            c = h || new V;
+            b = a[H];
+            f = a[I];
+            e = a.monoPrimaries;
+            d = e[B];
+            for(g = 0; g < d; g++) m = e[g], c[K](0 == g ? '<h3 class="dct-tl">English dictionary</h3>' : "<br/>"), W(Z, m, c, "sourceLanguage", b, "targetLanguage", f)
+        }
+        if(a.relatedPhrases) {
+            c = h || new V;
+            b = a.relatedPhrases;
+            f = b[B];
+            for(e = 0; e < f; e++) {
+                d = b[e];
+                c[K](0 == e ? '<h3 class="dct-tl">Related phrases</h3>' : "<br/><br/>");
+                g = d;
+                d = c || new V;
+                m = g[F];
+                j = m[B];
+                for(q = 0; q < j; q++) d[K]('<span class="dct-lnk">', m[q][w], "</span>");
+                g = g[J];
+                m = g[B];
+                for(j = 0; j < m; j++) {
+                    q = g[j][F];
+                    t = q[B];
+                    for(N = 0; N < t; N++) d[K]('<br/><span class="dct-exm">', q[N][w], "</span>")
+                }
+            }
+        }
+        if(a.webTranslations) {
+            c = h || new V;
+            b = a.webTranslations;
+            f = b[B];
+            for(e = 0; e < f; e++) {
+                d = b[e];
+                c[K](0 == e ? '<h3 class="dct-tl">Web translations</h3>' : "");
+                g = d;
+                d = c || new V;
+                d[K]('<span class="dct-em">', g[F][0][w], "</span><ol>");
+                g = g[J];
+                m = g[B];
+                for(j = 0; j < m; j++) q = g[j], d[K]("<li>", q[F][0][w], '</li><span class="dct-snp">', q[J][0][F][0][w], "</span><br>", q[J][0][F][1][w]);
+                d[K]("</ol>")
+            }
+        }
+        if(a.examples) {
+            c = h || new V;
+            b = a.examples[B];
+            for(f = 0; f < b; f++) c[K](0 == f ? '<h3 class="dct-tl">Examples</h3>' : "<br/><br/>"), (c || new V)[K]("// TODO(yjl): Add implementation")
+        }
+        if(a.webDefinitions) {
+            c = h || new V;
+            b = a.webDefinitions;
+            f = b[B];
+            for(e = 0; e < f; e++) {
+                d = b[e];
+                c[K](0 == e ? '<h3 class="dct-tl">Web definitions</h3>' : "");
+                g = c || new V;
+                g[K]("<ul>");
+                m = d[J];
+                j = m[B];
+                for(q = 0; q < j; q++) t = m[q], g[K]("<li>", t[F][0][w], "</li>", q == j - 1 || t[F][1][w] != d[J][q + 1][F][1][w] ? t[F][1][w] + "<br/><br/>" : "");
+                g[K]("</ul>")
+            }
+        }
+        if(a.images) {
+            c = h || new V;
+            c[K]('<h3 class="dct-tl">', "Examples", "</h3>");
+            a = a.images;
+            b = a[B];
+            for(f = 0; f < b; f++) e = a[f], c[K](0 != f ? " " : ""), (c || new V)[K]('<span class="dct-img"><a href="http://www.google.com/', e.tbUrl, '" target=_blank><img src="http://www.google.com/', e.tbUrl, '" /></a></span>')
+        }
+        h = h[A]();
+        return h
+    };
