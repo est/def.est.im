@@ -2,6 +2,10 @@
 <html>
   <head>
     <title>def: Find the definition for any lookup! - def.est.im</title>
+    <meta name='description' content='collection of definitions, dictionary and thesaurus and stuff, lookup symbols, literals and constants in programming languages!'>
+     <link type="application/opensearchdescription+xml" rel="search"
+       href="/opensearch.xml"/>
+
     <link href="/static/css/bootstrap.min.css" rel="stylesheet" media="screen">
     <link href="/static/css/font-awesome.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet" media="screen">
@@ -19,9 +23,14 @@
             <button class="btn" type="submit"><span class="icon-search"></span></button>
           </div>
         </form>
-        {% if req.json %}<div id="content"><pre><code></code></pre></div>{% endif %}
-        <div id="gdictContent"></div>
+        <div class="">
+          <div id="content">
+            {% if req.json %}<pre><code>{{ content }}</code></pre>{% endif %}
+            <div id="gdictContent">
 
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="push"></div>
@@ -33,6 +42,7 @@
       </div>
     </div>
 
+    
 
     <script src="/static/js/jquery-1.9.0.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
@@ -40,51 +50,166 @@
       var query = "{{ query }}";
       var url = "";
 
+      function list2obj(list, keyFunc){
+        var rtn = {}
+        $.each(list, function(i){
+          // insert keyFunc here
+          if( rtn[this.type] instanceof Array){
+            rtn[this.type].push(this)
+          } 
+          else if (rtn[this.type] == undefined ){
+            rtn[this.type]=this
+          }
+          else {
+            rtn[this.type] = [rtn[this.type], this]
+          }
+        })
+        return rtn
+      }
 
+      function playSound(url){
+        // detect Internet Explorer without HTML5 audio
+        if(IE='\v'=='v'){
+          var snd = document.getElementById('soundOutput');
+          if(snd){
+            document.body.removeChild(snd);
+          }
+          snd = document.createElement('bgsound');
+          snd.setAttribute('id', 'soundOutput');
+          // console.info(url);
+          snd.setAttribute('src', url)
+          document.body.appendChild(snd)
+        } else {
+          var snd = document.createElement('audio');
+          snd.src = url;
+          snd.play()
+        }
+      }
+
+      function obj2div(obj, params){
+        var div = document.createElement('DIV');
+        var self = arguments.callee;
+
+        for(var item in obj){
+
+          var k=item, v=obj[k];
+
+          if (v instanceof Array) {
+            // #1. "terms": [ ... ]
+            if( v.length>1){
+              var ul= div.appendChild(document.createElement('UL'));
+              $.each(v, function(i){
+                var li = document.createElement('LI');
+
+                // simpler meaning section
+                if(this.type=='meaning' && this.terms){
+                  var obj = list2obj(this.terms)
+                  if(obj.url){
+                    li.innerHTML = obj.text.text + obj.url.text
+                  }
+                  else {
+                    li.innerHTML = obj.text.text
+                  }
+                }
+                else {
+                  li.appendChild( self(v[i]) )  
+                }
+                ul.appendChild( li );
+              })
+              div.appendChild(ul)
+
+            } 
+            else {
+              if(v[0].type=='text'){
+                div.innerHTML = v[0].text;
+              }
+              else {
+                div.appendChild( self( v[0]) );
+              }
+            }
+
+          } 
+          else if (k=='text') {
+            // #3 text
+            div.appendChild(document.createTextNode(v))
+          } 
+          else if (v instanceof Object){
+            // #2 sub object
+            div.appendChild(self( v) );
+          }
+          else {
+            // #4 attributes
+            div.setAttribute(k.replace('type', 'class'), v)
+          }
+        }
+
+        return div
+      }
 
       function showGDict(data, code, msg){
         if(code==200){
           // lastQuery = data;  global var
-          {% if req.json %}$('#content pre code').text(JSON.stringify(data, null, 4));{% endif %}
-          var cDiv = $('#gdictContent')
-          if (data.spellings){
+          {% if req.json %} $('#content pre code').text(JSON.stringify(data, null, 4));{% endif %}
+          var entryOrder=['spellings', 'primaries', 'monoPrimaries', 'synonyms', 'relatedPhrases', 'webTranslations', 'examples', 'webDefinitions', 'images']
 
-          } else if(data.primaries && data.primaries.length==1){
-            var sec=cDiv.append('<div></div>').attr('class', 'primaries')
-            $.each(data.primaries[0].terms, function(i){
-              if(this.type.toLowerCase()=='sound'){
-                cDiv.append($('<i></i>)').attr({
-                  'url': this.text,
-                  'class': 'icon-volume-up',
-                }))
-              }
-              else if(this.type=='text'){
-
-                var t = cDiv.append( $("<span></span>").text(this.text));
-                $.each(this.labels, function(){
-                    t.append( $("<span></span>").attr(
-                      'title', this.title).text(this.text).get())
+          $.each(entryOrder, function(i){
+            if( data[this] ){
+              if(this=='primaries'){
+                var terms = list2obj(data[this][0].terms);
+                $.each(terms, function(i){
+                  this['class']=this.type;
+                  delete this.type
                 })
+                if(terms.sound){
+                  terms.sound.src=terms.sound.text
+                  delete terms.sound.text
+                } else {
+                  terms['sound']= {style: "display: none"}
+                }
+
+                defs = $("<ol>")
+                var meaning = list2obj(data[this][0].entries).meaning;
+                if(!(meaning instanceof Array)){meaning = [meaning]}
+                
+                $.each(meaning, function(i){
+                  
+                  if(this.entries){
+                    var example = this.entries[0].terms[0];
+                    example['class']='example'
+                    example.html = example.text
+                    delete example.text
+                    delete example.type
+                  }
+                  this.terms[0].html = this.terms[0].text;
+                  delete this.terms[0].text
+                  defs.append( $("<li>", this.terms[0]).append($("<p>",  example)) )
+                });
+
+                $('#gdictContent').append(
+                  $('<div />', {"class": "primaries"}).append(
+                    $('<span />', terms.text) ).append(
+                    $('<span />', terms.phonetic) ).append(
+                    $('<span />', terms.sound).append(
+                      '<i class="icon-volume-up" onclick="playSound(this.parentNode.getAttribute(\'src\'))"></i>'
+                    ))
+                  ).append(
+                  $('<h3 />', {text: 'Meaning'}) ).append(
+                  $('<div>', {"class": 'meaning'}).append(
+                    defs)
+                  )
+                  
               }
-              else{
-                cDiv.append( $("<span></span>").text(this.text).attr('class', this.type))
+              else {
+                var div = obj2div( data[this] );
+                var t=div.childNodes[0]
+                t.childNodes[0].nodeValue='';
+                t.setAttribute('class', this + ' clearfix')
+                $('#gdictContent').append(
+                  $('<h3>', {text: this, "class": this})).append( div );
               }
-            })
-          } else if(data.monoPrimaries){
+            }
+          })
 
-          } else if(data.synonyms){
-
-          } else if(data.relatedPhrases){
-
-          } else if(data.webTranslations){
-
-          } else if(data.examples){
-
-          } else if(data.webDefinitions){
-
-          } else if(data.images){
-
-          }
         }
       }
     --></script>

@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{DOCUMENT_ROOT}/static/root/%{REQUEST_FILENAME} -f
+RewriteRule ^(.*)$ static/root/$1 [L]
+</IfModule>
