@@ -48,8 +48,10 @@
           {% if req.json %}$('#content pre code').text(JSON.stringify(data, null, 4));{% endif %}
           var cDiv = $('#gdictContent')
           if (data.spellings){
+            // spellings
 
           } else if(data.primaries && data.primaries.length==1){
+            // primaries
             var sec=cDiv.append('<div></div>').attr('class', 'primaries')
             $.each(data.primaries[0].terms, function(i){
               if(this.type.toLowerCase()=='sound'){
