@@ -1,0 +1,10 @@
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+   <ShortName>def:</ShortName>
+   <Description>Search via def.est.im</Description>
+   <Url type="text/html" method="get" template="http://def.est.im/{searchTerms}"/>
+   <Image height="16" width="16" type="image/vnd.microsoft.icon">
+http://def.est.im/favicon.ico
+   </Image>
+   <moz:SearchForm>http://def.est.im/</moz:SearchForm>
+   <Url type="application/opensearchdescription+xml" rel="self" template="http://def.est.im/opensearch.xml"/>
+</OpenSearchDescription>
