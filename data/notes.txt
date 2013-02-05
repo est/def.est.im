@@ -22,3 +22,12 @@ http://bottlepy.org/docs/dev/api.html
 
 http://bottlepy.org/docs/dev/_modules/bottle.html
 
+
+http://students.washington.edu/kuksenok/blog/gtrans-api/
+
+
+https://clients6.google.com/rpc?key=AIzaSyDqVYORLCUXxSv7zneerIgC2UYMnxvPeqQ
+
+[{"jsonrpc":"2.0","id":"gapiRpc","method":"scribe.research.get","params":{"query":"api","locale":"en","docLang":"en_US","dataset":"dictionary","imageRights":"NF","session":"384339652117066423","documentId":"1PeOtXpNCv1QQ9WiFEHj0Rs7cRX2JBHBAtCk2Y51ZUQ8","trigger":4,"previewWidth":275,"appId":"doc","gaiaSessionIndex":"1","dictionaryLanguage":"en"},"apiVersion":"v1"}]
+
+curl --header "Content-type: application/json" -d '[{"jsonrpc":"2.0","id":"gapiRpc","method":"scribe.research.get","params":{"query":"api","locale":"en","docLang":"en_US","dataset":"dictionary","imageRights":"NF","trigger":4,"previewWidth":275,"appId":"doc","gaiaSessionIndex":"1","dictionaryLanguage":"en"},"apiVersion":"v1"}]'  "https://clients6.google.com/rpc?key=AIzaSyDqVYORLCUXxSv7zneerIgC2UYMnxvPeqQ"

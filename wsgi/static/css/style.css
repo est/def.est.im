@@ -58,12 +58,32 @@ max-width: 680px;
     border-bottom-right-radius: 14px;
 }
 
-div.primaries  span {
-  margin-left: 6px;
+div.claerfix {
+  margin-top: 10px;
 }
 
-div.primaries .phonetic{
-  border-left: dotted 1px #bbb;
-  padding-left: 5px;
+div.primaries span {
+  margin-right: 15px;
+  font-size: 120%;
+}
+
+div.meaning .example{
+  font-style: italic;
+}
+
+div.webDefinitions li a {
+  display: block;
+}
+
+
+div.synonyms div.related ul li div{
+  display: inline;
+}
+
+div.synonyms div.related ul li {
+  float: left;
+  width: auto;
+  display: inline;
+  margin-left: 16px;
 }
 
