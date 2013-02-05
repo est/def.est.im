@@ -64,15 +64,20 @@
       }
 
       function playSound(url){
-        var snd = document.getElementById('soundOutput');
-        if(snd){
-          document.body.removeChild(snd);
+        // detect Internet Explorer without HTML5 audio
+        if(IE='\v'=='v'){
+          var snd = document.getElementById('soundOutput');
+          if(snd){
+            document.body.removeChild(snd);
+          }
+          snd = document.createElement('bgsound');
+          snd.setAttribute('id', 'soundOutput');
+          // console.info(url);
+          snd.setAttribute('src', url)
+          document.body.appendChild(snd)
+        } else {
+
         }
-        snd = document.createElement('bgsound');
-        snd.setAttribute('id', 'soundOutput');
-        // console.info(url);
-        snd.setAttribute('src', url)
-        document.body.appendChild(snd)
       }
 
       function obj2div(obj, params){
@@ -150,8 +155,10 @@
                   delete this.type
                 })
                 if(terms.sound){
-                  terms.sound.soundSrc=terms.sound.text
+                  terms.sound.src=terms.sound.text
                   delete terms.sound.text
+                } else {
+                  terms['sound']= {style: "display: none"}
                 }
 
                 defs = $("<ol>")
@@ -167,6 +174,8 @@
                     delete example.text
                     delete example.type
                   }
+                  this.terms[0].html = this.terms[0].text;
+                  delete this.terms[0].text
                   defs.append( $("<li>", this.terms[0]).append($("<p>",  example)) )
                 });
 
@@ -175,7 +184,7 @@
                     $('<span />', terms.text) ).append(
                     $('<span />', terms.phonetic) ).append(
                     $('<span />', terms.sound).append(
-                      '<i class="icon-volume-up" onclick="playSound(this.parentNode.getAttribute(\'soundSrc\'))"></i>'
+                      '<i class="icon-volume-up" onclick="playSound(this.parentNode.getAttribute(\'src\'))"></i>'
                     ))
                   ).append(
                   $('<h3 />', {text: 'Meaning'}) ).append(
