@@ -57,3 +57,22 @@ max-width: 680px;
     border-top-right-radius: 14px;
     border-bottom-right-radius: 14px;
 }
+
+clearfix {
+  clear:both;
+}
+
+div.webDefinitions li a {
+  display: block;
+}
+  
+div.related ul li div{
+  display: inline;
+}
+
+div.related ul li {
+  float: left;
+  width: auto;
+  display: inline;
+  margin-left: 16px;
+}

@@ -21,7 +21,7 @@
         </form>
         <div class="">
           <div id="content">
-            <pre><code>{{ content }}</code></pre>
+            {% if req.json %}<pre><code>{{ content }}</code></pre>{% endif %}
             <div id="gdictContent">
 
             </div>
@@ -71,11 +71,7 @@
 
           var k=item, v=obj[k];
 
-          if (k=='text') {
-            // #3 text
-            div.innerHTML= v;
-          } 
-          else if (v instanceof Array) {
+          if (v instanceof Array) {
             // #1. "terms": [ ... ]
             if( v.length>1){
               var ul= div.appendChild(document.createElement('UL'));
@@ -83,10 +79,10 @@
                 var li = document.createElement('LI');
 
                 // simpler meaning section
-                if(this.type=='meaning1'){
+                if(this.type=='meaning'){
                   if(this.terms && this.terms.length==2){
                     var obj = list2obj(this.terms)
-                    li.innerHTML = obj.text.text+obj.url.text;
+                    li.innerHTML = obj.text.text + obj.url.text
                   }
                   else if(0){ //this.entries){
                     var entries = list2obj(this.entries)
@@ -99,15 +95,24 @@
                 else {
                   li.appendChild( self(v[i]) )  
                 }
-                
                 ul.appendChild( li );
               })
               div.appendChild(ul)
 
-            } else {
-              div.appendChild( self( v[0]) );
+            } 
+            else {
+              if(v[0].type=='text'){
+                div.innerHTML = v[0].text;
+              }
+              else {
+                div.appendChild( self( v[0]) );
+              }
             }
 
+          } 
+          else if (k=='text') {
+            // #3 text
+            div.appendChild(document.createTextNode(v))
           } 
           else if (v instanceof Object){
             // #2 sub object
@@ -128,11 +133,20 @@
           {% if req.json %} $('#content pre code').text(JSON.stringify(data, null, 4));{% endif %}
           var entryOrder=['spellings', 'primaries', 'monoPrimaries', 'synonyms', 'relatedPhrases', 'webTranslations', 'examples', 'webDefinitions', 'images']
 
-          for(var i=0;i<entryOrder.length;i++) {
-            if( data[entryOrder[i]] ){
-              $('#gdictContent').append(  obj2div(data[entryOrder[i]] ));
+          $.each(entryOrder, function(i){
+            if( data[this] ){
+              if(this=='primaries'){
+                
+              }
+              else {
+                var div = obj2div( data[this] );
+                var t=div.childNodes[0]
+                t.childNodes[0].nodeValue=this;
+                t.setAttribute('class', this + ' clearfix')
+                $('#gdictContent').append( div );
+              }
             }
-          }
+          })
 
         }
       }
