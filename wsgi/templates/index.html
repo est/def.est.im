@@ -141,8 +141,10 @@
                   this['class']=this.type;
                   delete this.type
                 })
-                terms.sound.src=terms.sound.text
-                delete terms.sound.text
+                if(terms.sound){
+                  terms.sound.src=terms.sound.text
+                  delete terms.sound.text
+                }
 
                 defs = $("<ol>")
                 var meaning = list2obj(data[this][0].entries).meaning;
