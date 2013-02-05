@@ -46,3 +46,6 @@ https://clients6.google.com/rpc?key=AIzaSyDqVYORLCUXxSv7zneerIgC2UYMnxvPeqQ
 
 curl --header "Content-type: application/json" -d '[{"jsonrpc":"2.0","id":"gapiRpc","method":"scribe.research.get","params":{"query":"api","locale":"en","docLang":"en_US","dataset":"dictionary","imageRights":"NF","trigger":4,"previewWidth":275,"appId":"doc","gaiaSessionIndex":"1","dictionaryLanguage":"en"},"apiVersion":"v1"}]'  "https://clients6.google.com/rpc?key=AIzaSyDqVYORLCUXxSv7zneerIgC2UYMnxvPeqQ"
 
+
+
+https://developer.chrome.com/trunk/apps/cloudMessaging.html

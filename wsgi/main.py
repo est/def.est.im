@@ -27,7 +27,10 @@ def index(query=''):
 
 wsgi_app=default_app()
 if '__main__' == __name__:
-    import readline, rlcompleter; readline.parse_and_bind("tab: complete")
+    try:
+        import readline, rlcompleter; readline.parse_and_bind("tab: complete")
+    except:
+        pass
 
     SITE_STATIC_FILES = '|'.join(map(re.escape, [
         'favicon.ico',
