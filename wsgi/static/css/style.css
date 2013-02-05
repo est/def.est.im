@@ -66,11 +66,11 @@ div.webDefinitions li a {
   display: block;
 }
   
-div.related ul li div{
+div.synonyms div.related ul li div{
   display: inline;
 }
 
-div.related ul li {
+div.synonyms div.related ul li {
   float: left;
   width: auto;
   display: inline;
