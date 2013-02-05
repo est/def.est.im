@@ -58,14 +58,24 @@ max-width: 680px;
     border-bottom-right-radius: 14px;
 }
 
-clearfix {
-  clear:both;
+div.claerfix {
+  margin-top: 10px;
+}
+
+div.primaries span {
+  margin-right: 15px;
+  font-size: 120%;
+}
+
+div.meaning .example{
+  font-style: italic;
 }
 
 div.webDefinitions li a {
   display: block;
 }
-  
+
+
 div.synonyms div.related ul li div{
   display: inline;
 }
@@ -76,3 +86,4 @@ div.synonyms div.related ul li {
   display: inline;
   margin-left: 16px;
 }
+

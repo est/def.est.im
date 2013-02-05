@@ -63,6 +63,10 @@
         return rtn
       }
 
+      function playSound(url){
+
+      }
+
       function obj2div(obj, params){
         var div = document.createElement('DIV');
         var self = arguments.callee;
@@ -79,17 +83,13 @@
                 var li = document.createElement('LI');
 
                 // simpler meaning section
-                if(this.type=='meaning'){
-                  if(this.terms && this.terms.length==2){
-                    var obj = list2obj(this.terms)
+                if(this.type=='meaning' && this.terms){
+                  var obj = list2obj(this.terms)
+                  if(obj.url){
                     li.innerHTML = obj.text.text + obj.url.text
                   }
-                  else if(0){ //this.entries){
-                    var entries = list2obj(this.entries)
-                    var p=document.createElement('P')
-                    p.setAttribute('class', 'example')
-                    p.innerHTML
-                    li.appendChild()
+                  else {
+                    li.innerHTML = obj.text.text
                   }
                 }
                 else {
@@ -135,15 +135,52 @@
 
           $.each(entryOrder, function(i){
             if( data[this] ){
-              if(this=='prim1aries'){
+              if(this=='primaries'){
+                var terms = list2obj(data[this][0].terms);
+                $.each(terms, function(i){
+                  this['class']=this.type;
+                  delete this.type
+                })
+                terms.sound.src=terms.sound.text
+                delete terms.sound.text
+
+                defs = $("<ol>")
+                var meaning = list2obj(data[this][0].entries).meaning;
+                if(!(meaning instanceof Array)){meaning = [meaning]}
                 
+                $.each(meaning, function(i){
+                  
+                  if(this.entries){
+                    var example = this.entries[0].terms[0];
+                    example['class']='example'
+                    example.html = example.text
+                    delete example.text
+                    delete example.type
+                  }
+                  defs.append( $("<li>", this.terms[0]).append($("<p>",  example)) )
+                });
+
+                $('#gdictContent').append(
+                  $('<div />', {"class": "primaries"}).append(
+                    $('<span />', terms.text) ).append(
+                    $('<span />', terms.phonetic) ).append(
+                    $('<span />', terms.sound).append(
+                      '<i class="icon-volume-up" onclick="playSound()"></i>'
+                    ))
+                  ).append(
+                  $('<h3 />', {text: 'Meaning'}) ).append(
+                  $('<div>', {"class": 'meaning'}).append(
+                    defs)
+                  )
+                  
               }
               else {
                 var div = obj2div( data[this] );
                 var t=div.childNodes[0]
-                t.childNodes[0].nodeValue=this;
+                t.childNodes[0].nodeValue='';
                 t.setAttribute('class', this + ' clearfix')
-                $('#gdictContent').append( div );
+                $('#gdictContent').append(
+                  $('<h3>', {text: this, "class": this})).append( div );
               }
             }
           })
