@@ -76,7 +76,9 @@
           snd.setAttribute('src', url)
           document.body.appendChild(snd)
         } else {
-
+          var snd = document.createElement('audio');
+          snd.src = url;
+          snd.play()
         }
       }
 
