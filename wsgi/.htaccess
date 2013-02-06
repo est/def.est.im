@@ -2,5 +2,5 @@
 RewriteEngine On
 RewriteBase /
 RewriteCond %{DOCUMENT_ROOT}/wsgi/static/root%{REQUEST_URI} -e
-RewriteRule ^(.*)$ wsgi/static/root/$1 [L]
+RewriteRule ^(.*)$ static/root/$1 [L]
 </IfModule>
