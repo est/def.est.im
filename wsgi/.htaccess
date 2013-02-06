@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
-RewriteCond %{DOCUMENT_ROOT}/wsgi/static/root%{REQUEST_URI} -e
+RewriteCond %{DOCUMENT_ROOT}/static/root%{REQUEST_URI} -e
 RewriteRule ^(.*)$ static/root/$1 [L]
 </IfModule>
