@@ -20,6 +20,7 @@ Feature and ToDo List
  [ ] Show Unicode info   
  [ ] pushState for faster queries   
  [x] open search api http://www.chromium.org/tab-to-search
+ [ ] ZH-EN and EN-ZH dictionary
 
 Credits
 -------
