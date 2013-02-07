@@ -75,6 +75,9 @@ div.webDefinitions li a {
   display: block;
 }
 
+div.synonyms div.related {
+  clear: both;
+}
 
 div.synonyms div.related ul li div{
   display: inline;
