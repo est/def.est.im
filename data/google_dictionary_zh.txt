@@ -202,3 +202,56 @@ showGDict({
 		}]
 	}]
 }, 200, null)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+showGDict({
+	"query": "神奇",
+	"sourceLanguage": "zh-Hans",
+	"targetLanguage": "en",
+	"primaries": [{
+		"type": "headword",
+		"terms": [{
+			"type": "text",
+			"text": "神奇",
+			"language": "zh-Hans"
+		}, {
+			"type": "phonetic",
+			"text": "shénqí",
+			"language": "zh-Hans"
+		}],
+		"entries": [{
+			"type": "meaning",
+			"terms": [{
+				"type": "text",
+				"text": "神妙奇特；神秘奇妙",
+				"language": "zh-Hans"
+			}],
+			"entries": [{
+				"type": "example",
+				"terms": [{
+					"type": "text",
+					"text": "化腐朽为神奇 | 神奇的物理世界。",
+					"language": "zh-Hans"
+				}]
+			}]
+		}]
+	}]
+}, 200, null)
