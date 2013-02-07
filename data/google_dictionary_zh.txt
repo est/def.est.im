@@ -1,0 +1,204 @@
+showGDict({
+	"query": "啊",
+	"sourceLanguage": "zh-Hans",
+	"targetLanguage": "en",
+	"primaries": [{
+		"type": "headword",
+		"terms": [{
+			"type": "text",
+			"text": "啊",
+			"language": "zh-Hans"
+		}],
+		"entries": [{
+			"type": "container",
+			"terms": [{
+				"type": "phonetic",
+				"text": "ā",
+				"language": "zh-Hans"
+			}, {
+				"type": "phonetic",
+				"text": "(aa1 丫)",
+				"language": "zh-Hans",
+				"labels": [{
+					"text": "粤",
+					"title": "粤语"
+				}]
+			}],
+			"entries": [{
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "叹词。表示惊奇或赞叹",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "啊，打雷了 | 啊，太壮观了。",
+						"language": "zh-Hans"
+					}]
+				}]
+			}]
+		}, {
+			"type": "container",
+			"terms": [{
+				"type": "phonetic",
+				"text": "á",
+				"language": "zh-Hans"
+			}, {
+				"type": "phonetic",
+				"text": "(aa2 哑)",
+				"language": "zh-Hans",
+				"labels": [{
+					"text": "粤",
+					"title": "粤语"
+				}]
+			}],
+			"entries": [{
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "叹词。表示疑问或追问",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "啊，你说什么 | 啊，到底谁去开会？",
+						"language": "zh-Hans"
+					}]
+				}]
+			}]
+		}, {
+			"type": "container",
+			"terms": [{
+				"type": "phonetic",
+				"text": "ǎ",
+				"language": "zh-Hans"
+			}, {
+				"type": "phonetic",
+				"text": "(aa2 哑)",
+				"language": "zh-Hans",
+				"labels": [{
+					"text": "粤",
+					"title": "粤语"
+				}]
+			}],
+			"entries": [{
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "叹词。表示疑惑、疑问",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "啊，这是怎么回事 | 啊，他还没到北京？",
+						"language": "zh-Hans"
+					}]
+				}]
+			}]
+		}, {
+			"type": "container",
+			"terms": [{
+				"type": "phonetic",
+				"text": "à",
+				"language": "zh-Hans"
+			}, {
+				"type": "phonetic",
+				"text": "(aa6 亚6)",
+				"language": "zh-Hans",
+				"labels": [{
+					"text": "粤",
+					"title": "粤语"
+				}]
+			}],
+			"entries": [{
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "叹词。1.表示应答或醒悟",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "啊，就这么办吧 | 啊，原来是这样！",
+						"language": "zh-Hans"
+					}]
+				}]
+			}, {
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "表示赞叹",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "啊，做工太精美了！",
+						"language": "zh-Hans"
+					}]
+				}]
+			}]
+		}, {
+			"type": "container",
+			"terms": [{
+				"type": "phonetic",
+				"text": "a",
+				"language": "zh-Hans"
+			}, {
+				"type": "phonetic",
+				"text": "(aa6 亚6)",
+				"language": "zh-Hans",
+				"labels": [{
+					"text": "粤",
+					"title": "粤语"
+				}]
+			}],
+			"entries": [{
+				"type": "meaning",
+				"terms": [{
+					"type": "text",
+					"text": "用在句末，表示惊叹、催促等语气",
+					"language": "zh-Hans"
+				}],
+				"entries": [{
+					"type": "example",
+					"terms": [{
+						"type": "text",
+						"text": "快来看啊 | 唱得真好啊。",
+						"language": "zh-Hans"
+					}]
+				}]
+			}]
+		}]
+	}],
+	"webDefinitions": [{
+		"type": "headword",
+		"terms": [{
+			"type": "text",
+			"text": "啊",
+			"language": "zh-Hans"
+		}],
+		"entries": [{
+			"type": "meaning",
+			"terms": [{
+				"type": "text",
+				"text": "1. 叹词 an exclamation expressing doubt",
+				"language": "zh-Hans"
+			}, {
+				"type": "url",
+				"text": "<a href="http://www.nciku.cn/search/zh/detail/%E5%95%8A/1866297">http://www.nciku.cn/search/zh/detail/啊/1866297</a>",
+				"language": "zh-Hans"
+			}]
+		}]
+	}]
+}, 200, null)
