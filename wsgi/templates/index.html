@@ -168,7 +168,9 @@
                 }
 
                 defs = $("<ol>")
-                var meaning = list2obj(data[this][0].entries).meaning;
+                // one entry under primary
+                var top_entries = list2obj(data[this][0].entries)
+                var meaning = top_entries.meaning || top_entries.container;
                 if(!(meaning instanceof Array)){meaning = [meaning]}
                 
                 $.each(meaning, function(i){
@@ -180,6 +182,7 @@
                     delete example.text
                     delete example.type
                   }
+                  // deal with multiple phonetics
                   this.terms[0].html = this.terms[0].text;
                   delete this.terms[0].text
                   defs.append( $("<li>", this.terms[0]).append($("<p>",  example)) )
@@ -214,7 +217,7 @@
       }
     --></script>
     {% if query %}
-    <script src="//www.google.com/dictionary/json?callback=showGDict&sl=en&tl=en&restrict=pr,sy,de&q={{query}}"></script>
+    <script src="//www.google.com/dictionary/json?callback=showGDict&sl=zh&tl=en&restrict=pr,sy,de&q={{query}}"></script>
     {% endif %}
   </body>
 </html>

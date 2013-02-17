@@ -614,3 +614,451 @@ google[D].d.f = function(a) {
         }
     ]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+showGDict({
+    "query": "nice",
+    "sourceLanguage": "en",
+    "targetLanguage": "zh-Hans",
+    "primaries": [{
+        "type": "headword",
+        "terms": [{
+            "type": "text",
+            "text": "nice",
+            "language": "en",
+            "labels": [{
+                "text": "Adjective",
+                "title": "Part-of-speech"
+            }]
+        }, {
+            "type": "phonetic",
+            "text": "/nīs/",
+            "language": "und"
+        }, {
+            "type": "sound",
+            "text": "http://www.gstatic.com/dictionary/static/sounds/de/0/nice.mp3",
+            "language": "und"
+        }],
+        "entries": [{
+            "type": "related",
+            "terms": [{
+                "type": "text",
+                "text": "nicer",
+                "language": "und",
+                "labels": [{
+                    "text": "comparative"
+                }]
+            }, {
+                "type": "text",
+                "text": "nicest",
+                "language": "und",
+                "labels": [{
+                    "text": "superlative"
+                }]
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Pleasant; agreeable; satisfactory",
+                "language": "en"
+            }],
+            "entries": [{
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "we had a <em>nice</em> time",
+                    "language": "en"
+                }]
+            }, {
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "that wasn't very <b><em>nice</em> of</b> him",
+                    "language": "en"
+                }]
+            }, {
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "Jeremy had been very <b><em>nice</em> to</b> her",
+                    "language": "en"
+                }]
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "(of a person) Pleasant in manner; good-natured; kind",
+                "language": "en"
+            }],
+            "entries": [{
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "he's a really <em>nice</em> guy",
+                    "language": "en"
+                }]
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Fine or subtle",
+                "language": "en"
+            }],
+            "entries": [{
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "a <em>nice</em> distinction",
+                    "language": "en"
+                }]
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Requiring careful thought or attention",
+                "language": "en"
+            }],
+            "entries": [{
+                "type": "example",
+                "terms": [{
+                    "type": "text",
+                    "text": "a <em>nice</em> point",
+                    "language": "en"
+                }]
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Fastidious; scrupulous",
+                "language": "en"
+            }]
+        }]
+    }],
+    "webDefinitions": [{
+        "type": "headword",
+        "terms": [{
+            "type": "text",
+            "text": "nice",
+            "language": "en"
+        }],
+        "entries": [{
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "a city in southeastern France on the Mediterranean; the leading resort on the French Riviera",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "pleasant or pleasing or agreeable in nature or appearance; &quot;what a nice fellow you are and we all thought you so nasty&quot;- George Meredith; &quot;nice manners&quot;; &quot;a nice dress&quot;; &quot;a nice face&quot;; &quot;a nice day&quot;; &quot;had a nice time at the party&quot;; &quot;the corn and tomatoes are nice today&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "decent: socially or conventionally correct; refined or virtuous; &quot;from a decent family&quot;; &quot;a nice girl&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "done with delicacy and skill; &quot;a nice bit of craft&quot;; &quot;a job requiring nice measurements with a micrometer&quot;; &quot;a nice shot&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "dainty: excessively fastidious and easily disgusted; &quot;too nice about his food to take to camp cooking&quot;; &quot;so squeamish he would only touch the toilet handle with his elbow&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "courteous: exhibiting courtesy and politeness; &quot;a nice gesture&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wordnetweb.princeton.edu/perl/webwn?s=nice">http://wordnetweb.princeton.edu/perl/webwn?s=nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "A Unix-like (sometimes shortened to UN*X or *nix to circumvent trademark issues) operating system is one that behaves in a manner similar to a Unix system, while not necessarily conforming to or being certified to any version of the Single UNIX Specification.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/%2Anice">http://en.wikipedia.org/wiki/*nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "The National Institute for Health and Clinical Excellence or NICE is a special health authority of the National Health Service (NHS) in England and Wales. ...",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/NICE">http://en.wikipedia.org/wiki/NICE</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "&quot;Miss Teacher Bangs a Boy&quot; is episode 1010 (#149) of Comedy Central&#39;s South Park. It originally aired on October 18, 2006.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/...Nice">http://en.wikipedia.org/wiki/...Nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Nice (Niçard Occitan: Niça [classical norm] or Nissa [nonstandard], Nizza or Nizza Marittima, Νίκαια, Latin: Nicaea) is a city in southern France on the Mediterranean coast. The city is nicknamed Nice la Belle (Nissa la Bella in Niçard), which means Nice the Beautiful.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/Nice">http://en.wikipedia.org/wiki/Nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Nice. is the third North American album by J-pop group Puffy AmiYumi, released in 2003. (See 2003 in music). ...",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/Nice.">http://en.wikipedia.org/wiki/Nice.</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Nice is the seventh full-length studio album by Rollins Band, released in 2001, their first on Sanctuary Records. The band line-up was Henry Rollins fronting the blues rock band Mother Superior, whilst retaining the Rollins Band name.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/Nice_%28album%29">http://en.wikipedia.org/wiki/Nice_(album)</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Nice was an indie rock band from Sydney, Australia. The band was fronted by Randall Lee formerly of The Cannanes and currently of Ashtray Boy and Suzannah Stewart-Lindsay, previously a member of the Adelaide based band, Rewind on the Paranoid Side. ...",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/Nice_%28Australian_band%29">http://en.wikipedia.org/wiki/Nice_(Australian_band)</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "A nice biscuit is a coconut flavoured biscuit. It is thin, rectangular in shape, with rounded bumps on the edges, and lightly covered with a scattering of large sugar crystals, often with the word &quot;NICE&quot; imprinted on top in sans-serif capital letters. ...",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wikipedia.org/wiki/Nice_%28biscuit%29">http://en.wikipedia.org/wiki/Nice_(biscuit)</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": " Silly, ignorant; foolish. [14th-17th c.];  Particular in one&#39;s conduct; scrupulous, painstaking; choosy. [from 14th c.];  Particular as regards rules or qualities; strict. [16th-19th c.]; Showing or requiring great precision or sensitive discernment; subtle. [from 16th c. ...",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wiktionary.org/wiki/nice">http://en.wiktionary.org/wiki/nice</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "(nicely)  Fastidiously; carefully; Pleasantly; satisfactorily",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://en.wiktionary.org/wiki/nicely">http://en.wiktionary.org/wiki/nicely</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Run a program with modified scheduling priority.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www.networkdictionary.com/Software/Unix-Linux-Job-Process-Commands.php">http://www.networkdictionary.com/Software/Unix-Linux-Job-Process-Commands.php</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "One of the many daughters of Thespius and Megamede. She consorted with Heracles 1 and bore him a son Nicodromus [Apd.2.4.10, 2.7.8].",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www.maicar.com/GML/002GG/ggMinis.html">http://www.maicar.com/GML/002GG/ggMinis.html</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "A French girl can be a Nice, but never a nephew.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www.badpets.net/Humor/PunDictionary/N.html">http://www.badpets.net/Humor/PunDictionary/N.html</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "The most important condition is that the strategy must be &quot;nice&quot;, that is, it will not defect before its opponent does. Almost all of the top-scoring strategies were nice. Therefore a purely selfish strategy for purely selfish reasons will never hit its opponent first.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www.newworldencyclopedia.org/entry/Prisoner's_dilemma">http://www.newworldencyclopedia.org/entry/Prisoner&#39;s_dilemma</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Perhaps the most subjective keyword of all, for &quot;exceptionally nice sequences.&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://wn.com/On-Line_Encyclopedia_of_Integer_Sequences">http://wn.com/On-Line_Encyclopedia_of_Integer_Sequences</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "Do not use as a substitute for more exact words like attractive, modest, pleasant, kind, and so forth. Nice means &quot;showing or marked by great precision and sensitive discernment (a nice distinction) or executed with delicacy, accuracy, or skill (a nice bit of craftsmanship).&quot;",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://web.presby.edu/writingcenter/guides/glossary.html">http://web.presby.edu/writingcenter/guides/glossary.html</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "(exclamation) an exclamation of awe or approval; a response to favorable news. Synonyms: sweet, sick, dope, cool, awesome. Freq: extremely common. A: I got into Harvard Law. B: Nice!",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="https://segue.middlebury.edu/view/html/site/slang-glos/node/1761508">https://segue.middlebury.edu/view/html/site/slang-glos/node/1761508</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "maminakbun, gorritj-ja, no-gorritj-ja",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www1.aiatsis.gov.au/exhibitions/e_access/digital/a339234/dict/dictframes.html">http://www1.aiatsis.gov.au/exhibitions/e_access/digital/a339234/dict/dictframes.html</a>",
+                "language": "en"
+            }]
+        }, {
+            "type": "meaning",
+            "terms": [{
+                "type": "text",
+                "text": "stupid; often a code used to insult an ignorant vicitm.",
+                "language": "en"
+            }, {
+                "type": "url",
+                "text": "<a href="http://www.oocities.org/southbeach/4676/43jargon.html">http://www.oocities.org/southbeach/4676/43jargon.html</a>",
+                "language": "en"
+            }]
+        }]
+    }]
+}, 200, null)
