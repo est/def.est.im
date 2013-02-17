@@ -1,0 +1,3 @@
+[submodule "wsgi/ssdb"]
+	path = wsgi/ssdb
+	url = git@estgit:est/ssdb-py.git
