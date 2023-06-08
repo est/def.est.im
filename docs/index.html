@@ -1,1 +1,67 @@
-sdf
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Dictionary</title>
+    <style>
+      body {
+        background: linear-gradient(to right, #ff7e5f, #feb47b);
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #fff;
+      }
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      input[type="text"] {
+        padding: 10px 20px;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px 0 0 5px;
+        width: 70%;
+        margin-right: 10px;
+      }
+      input[type="submit"] {
+        padding: 10px 20px;
+        font-size: 18px;
+        background-color: #ff7e5f;
+        color: #fff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+      }
+      .definition {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-top: 20px;
+        width: 80%;
+      }
+      .definition p {
+        font-size: 16px;
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dictionary</h1>
+    <form action="#">
+      <input type="text" placeholder="Enter word">
+      <input type="submit" value="Search">
+    </form>
+    <div class="definition">
+      <p>Definition goes here...</p>
+    </div>
+  </body>
+</html>
