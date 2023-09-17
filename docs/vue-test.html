@@ -1,0 +1,43 @@
+!<!DOCTYPE html>
+<html>
+<head>
+  <title>def.est.im</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+
+
+</head>
+<body>
+<div id="app">
+  {{ message }}
+
+  <div id="app-2">
+    <span v-bind:title="message2">
+      Hover your mouse over me for a few seconds
+      to see my dynamically bound title!
+    </span>
+  </div>
+
+  <div id="app-5">
+    <p>{{ message }}</p>
+    <button v-on:click="reverseMessage">Reverse Message</button>
+  </div>
+
+</div>
+<script type="text/javascript">
+  var app = new Vue({
+  el: '#app',
+  data: {
+    message: 'Hello Vue!',
+    message2: 'You loaded this page on ' + new Date().toLocaleString()
+  },
+  methods: {
+    reverseMessage: function () {
+      this.message = this.message.split('').reverse().join('')
+    }
+  }
+
+})
+</script>
+</body>
+</html>

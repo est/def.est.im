@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Dictionary</title>
+    <style>
+      body {
+        display: flow;
+        background: linear-gradient(to right, #ff7e5f, #feb47b);
+        font-family: Helvetica, Tahoma, Arial, "PingFang SC", "Hiragino Sans GB", "Heiti SC", STXihei, "Microsoft YaHei", SimHei, "WenQuanYi Micro Hei";
+        padding: 2rem;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 1rem;
+        color: #fff;
+      }
+      form {
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 3rem;
+      }
+      input[type="text"] {
+        padding: 1rem 2rem;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px 0 0 5px;
+        width: 70%;
+        margin-right: 1rem;
+      }
+      input[type="submit"] {
+        padding: 1rem 2rem;
+        font-size: 18px;
+        background-color: #ff7e5f;
+        color: #fff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+      }
+      .definition {
+        background-color: #fff;
+        padding: 2rem;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-top: 2rem;
+        width: 80%;
+      }
+      .definition p {
+        font-size: 16px;
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dictionary</h1>
+    <form action="#">
+      <input type="text" placeholder="Enter word">
+      <input type="submit" value="Search">
+    </form>
+    <div class="definition">
+      <p>Definition goes here...</p>
+    </div>
+  </body>
+</html>
