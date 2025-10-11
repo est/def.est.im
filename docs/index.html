@@ -3,254 +3,275 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Fancy Web Dictionary – example</title>
+<title>ModernLex — Inspire · Demo</title>
+
+<!-- 字体（可删） -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-:root{
-  --bg1: linear-gradient(135deg,#0f172a 0%,#0b1020 40%, #071426 100%);
-  --glass: rgba(255,255,255,0.06);
-  --accent: linear-gradient(90deg,#7c3aed,#06b6d4);
-  --muted: rgba(255,255,255,0.65);
-  --border: rgba(255,255,255,0.05);
-  color-scheme: dark;
-}
+  :root{
+    --bg-1: linear-gradient(180deg,#071426 0%, #0a1220 50%, #031225 100%);
+    --card: rgba(255,255,255,0.03);
+    --muted: rgba(230,238,248,0.72);
+    --accent-grad: linear-gradient(90deg,#7c3aed,#06b6d4);
+    --glass-border: rgba(255,255,255,0.06);
+    --glass-weak: rgba(255,255,255,0.02);
+    color-scheme: dark;
+    font-size: 16px;
+  }
 
-html,body{
-  height:100%;
-  margin:0;
-  background:var(--bg1);
-  color:#e6eef8;
-  font-family:"Inter",sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
+  html,body{height:100%;margin:0;background:var(--bg-1);font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;color:#e8f0ff;-webkit-font-smoothing:antialiased;}
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;box-sizing:border-box;}
+  .app{
+    width:1200px;max-width:calc(100% - 48px);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:18px;padding:22px;border:1px solid var(--glass-border);
+    box-shadow:0 20px 60px rgba(2,6,23,0.7);display:grid;grid-template-columns:360px 220px 1fr;gap:18px;position:relative;overflow:hidden;
+    backdrop-filter: blur(8px) saturate(120%);
+  }
 
-.wrap{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:48px;
-}
+  /* decorative glows */
+  .app::before, .app::after{content:"";position:absolute;width:420px;height:420px;border-radius:50%;filter:blur(80px);opacity:0.12;pointer-events:none;}
+  .app::before{left:-120px;top:-120px;background:linear-gradient(45deg,#7c3aed,#06b6d4);}
+  .app::after{right:-120px;bottom:-120px;background:linear-gradient(45deg,#f97316,#fb7185);}
 
-.panel{
-  width:1200px;
-  max-width:calc(100% - 80px);
-  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));
-  border-radius:20px;
-  padding:28px;
-  border:1px solid var(--border);
-  box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  backdrop-filter:blur(8px) saturate(130%);
-  display:grid;
-  grid-template-columns:320px 200px 1fr;
-  gap:20px;
-  position:relative;
-  overflow:hidden;
-}
-.panel::before, .panel::after{
-  content:"";
-  position:absolute;
-  width:420px;height:420px;
-  border-radius:50%;
-  filter:blur(60px);
-  opacity:0.12;
-  pointer-events:none;
-}
-.panel::before{background:linear-gradient(45deg,#7c3aed,#06b6d4);left:-120px;top:-120px;}
-.panel::after{background:linear-gradient(45deg,#f97316,#f43f5e);right:-140px;bottom:-120px;}
+  .header{grid-column:1 / -1;display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .brand{font-family:"Playfair Display", serif;font-size:22px;font-weight:700;background:var(--accent-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .tagline{color:var(--muted);font-size:13px}
 
-.header{
-  grid-column:1 / -1;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:10px;
-}
-.header .title{
-  font-family:"Playfair Display",serif;
-  font-size:24px;
-  font-weight:700;
-  background:var(--accent);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-}
-.header .sub{font-size:13px;color:var(--muted);}
+  /* column cards */
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border-radius:12px;padding:16px;border:1px solid var(--glass-border);box-sizing:border-box}
+  .left .lemma{font-family:"Playfair Display",serif;font-size:36px;font-weight:700;margin:0}
+  .ipa{display:inline-block;padding:8px 10px;border-radius:10px;margin-top:8px;background:var(--glass-weak);font-weight:700;color:#dbeafe}
+  .etym,.literal{color:var(--muted);margin-top:10px;font-size:13px;line-height:1.45}
 
-.col{
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:18px;
-  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.00));
-}
+  .badges{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .badge{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);font-weight:700;font-size:12px;border:1px solid rgba(255,255,255,0.03)}
 
-.word-large{
-  font-family:"Playfair Display",serif;
-  font-size:36px;
-  font-weight:700;
-}
-.pron{
-  font-weight:700;
-  font-size:15px;
-  color:#dbeafe;
-  background:rgba(255,255,255,0.03);
-  padding:6px 10px;
-  border-radius:10px;
-  display:inline-block;
-  margin-top:8px;
-}
-.etym,.literal{
-  font-size:13px;
-  color:var(--muted);
-  line-height:1.4;
-  margin-top:10px;
-}
-.badge-row{
-  margin-top:10px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.badge{
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:600;
-  background:rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.08);
-}
+  /* middle: variants / quick actions */
+  .mid-title{font-weight:800;font-size:13px;color:#fff}
+  .variants{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
+  .variant{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.02);font-weight:700;cursor:default;border:1px solid rgba(255,255,255,0.03)}
+  .variant.primary{background:linear-gradient(90deg,#06b6d4,#7c3aed);color:#fff;box-shadow:0 10px 30px rgba(7,89,133,0.12)}
 
-/* middle */
-.inflection{
-  min-width:80px;
-  padding:8px 10px;
-  border-radius:10px;
-  text-align:center;
-  font-weight:700;
-  background:rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.05);
-  margin:4px;
-  display:inline-block;
-}
-.inflection.highlight{
-  background:linear-gradient(90deg,#0ea5e9,#7c3aed);
-  color:#fff;
-  box-shadow:0 6px 14px rgba(7,89,133,0.25);
-}
-.mid-title{
-  font-weight:800;
-  font-size:13px;
-  margin-bottom:8px;
-}
+  .quick-actions{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .btn{padding:10px 12px;border-radius:10px;border:none;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:white;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(124,58,237,0.12)}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);box-shadow:none}
 
-/* right table */
-.senses-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:6px;
-  font-size:14px;
-}
-.senses-table thead th{
-  text-align:left;
-  font-size:12px;
-  color:var(--muted);
-  padding:10px 12px;
-  border-bottom:1px dashed rgba(255,255,255,0.05);
-}
-.senses-table tbody td{
-  padding:12px;
-  vertical-align:top;
-  border-bottom:1px dotted rgba(255,255,255,0.05);
-}
-.pos-pill{
-  display:inline-block;
-  padding:6px 8px;
-  border-radius:8px;
-  font-weight:800;
-  font-size:12px;
-  background:rgba(255,255,255,0.03);
-}
-.example{
-  margin-top:8px;
-  font-style:italic;
-  color:rgba(230,238,248,0.85);
-}
-.meta{font-size:12px;color:var(--muted);margin-top:8px;}
-@media(max-width:1100px){.panel{grid-template-columns:1fr;}}
+  /* right: senses / graph */
+  .sense-header{display:flex;justify-content:space-between;align-items:center}
+  .sense-count{color:var(--muted);font-size:13px}
+  .senses{margin-top:12px}
+  table.senses{width:100%;border-collapse:collapse;font-size:14px}
+  table.senses thead th{text-align:left;color:var(--muted);font-size:12px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,0.03)}
+  table.senses td{padding:12px 8px;border-bottom:1px dotted rgba(255,255,255,0.02);vertical-align:top}
+  .pos-emoji{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);font-weight:800}
+  .meaning-title{font-weight:800;margin-bottom:6px}
+  .example{font-style:italic;color:rgba(230,238,248,0.9);margin-top:8px}
+
+  /* semantic graph placeholder */
+  .graph{
+    margin-top:18px;border-radius:10px;padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    border:1px dashed rgba(255,255,255,0.03);
+    min-height:140px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:14px;
+  }
+
+  /* legend */
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .legend-item{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+
+  /* footer/meta */
+  .meta{font-size:12px;color:var(--muted);margin-top:10px}
+
+  /* responsive */
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr; padding:16px}
+  }
+
+  /* subtle hover (for future js) */
+  .variant:hover{transform:translateY(-4px);transition:transform 220ms ease}
+  .btn:active{transform:translateY(1px)}
 </style>
 </head>
-
 <body>
-<div class="wrap">
-  <div class="panel">
-    <div class="header">
-      <div>
-        <div class="title">LumenLex</div>
-        <div class="sub">aesthetic web dictionary · static showcase</div>
-      </div>
-    </div>
+  <div class="wrap">
+    <main class="app" role="application" aria-label="Modern lexical explorer">
 
-    <!-- 第一栏 -->
-    <section class="col">
-      <div class="word-large">example</div>
-      <div class="pron">/ɪɡˈzɑːmpəl/</div>
+      <!-- header -->
+      <div class="header" aria-hidden="false">
+        <div>
+          <div class="brand">ModernLex</div>
+          <div class="tagline">semantic · contextual · screen-first</div>
+        </div>
 
-      <div class="etym">词源：Late Middle English from Old French <i>example</i>, from Latin <i>exemplum</i> “sample, pattern”.</div>
-      <div class="literal">字面意思：取出的一部分；作为样本。</div>
-
-      <div class="badge-row">
-        <div class="badge">Latin</div>
-        <div class="badge">Common</div>
-        <div class="badge">Academic</div>
+        <!-- search UI placeholder (no JS implemented) -->
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <input id="searchInput" type="search" placeholder="Search word or phrase" style="padding:10px 12px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:inherit;outline:none;width:260px" aria-label="search input" />
+          <button class="btn ghost" aria-hidden="true" title="示例：无 JS">Search</button>
+        </div>
       </div>
 
-      <div class="meta">频率：高 · 语域：一般用语 · 来源：Oxford Style Data</div>
-    </section>
+      <!-- LEFT: lemma / pronunciation / etym / literal -->
+      <section class="card left" aria-labelledby="left-title">
+        <div id="left-title" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div class="lemma" id="lemma">inspire</div>
+            <div class="ipa" id="ipa">/ɪnˈspaɪər/</div>
+          </div>
+          <!-- audio hook -->
+          <div style="text-align:right">
+            <!-- JS 可接管 data-audio-src -->
+            <button class="btn ghost" id="playAudio" data-audio-src="audio/inspire-us.mp3" aria-label="播放发音 (预留)">🔊 发音</button>
+          </div>
+        </div>
 
-    <!-- 第二栏 -->
-    <section class="col">
-      <div class="mid-title">词形变化（Inflections）</div>
-      <div>
-        <span class="inflection highlight">example</span>
-        <span class="inflection">examples</span>
-        <span class="inflection">exampled</span>
-        <span class="inflection">exampling</span>
-      </div>
-      <div class="meta">点击可查询不同词形（演示仅静态）</div>
-    </section>
+        <div class="etym" id="etymology">
+          词源：来自拉丁语 <i>inspirare</i>（in- ‘进入’ + spirare ‘呼吸’），原义“注入精神、吹入灵气”，后引申为“启发、鼓舞”。
+        </div>
 
-    <!-- 第三栏 -->
-    <section class="col">
-      <table class="senses-table">
-        <thead>
-          <tr>
-            <th style="width:18%">词性</th>
-            <th style="width:60%">释义</th>
-            <th style="width:22%">例句</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><span class="pos-pill">n.</span></td>
-            <td><strong>实例、范例：</strong> 某物的典型样式或示范。</td>
-            <td><div class="example">This painting is a fine example of her early work.</div></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td><strong>榜样：</strong> 值得模仿的人或事物。</td>
-            <td><div class="example">He set an example for the younger players.</div></td>
-          </tr>
-          <tr>
-            <td><span class="pos-pill">v.</span></td>
-            <td><strong>示范；作为例证：</strong> 用例子说明某事。</td>
-            <td><div class="example">He exampled his point with data from recent studies.</div></td>
-          </tr>
-        </tbody>
-      </table>
+        <div class="literal" id="literal">字面意思：将某种(思想/情感)“吹入”或“注入”。</div>
 
-      <div class="meta">共 3 个释义 · 数据示例仅用于展示排版风格</div>
-    </section>
+        <div class="badges" aria-hidden="true">
+          <div class="badge">来源: 拉丁语</div>
+          <div class="badge">频率: 常用</div>
+          <div class="badge">语域: 中性/正式</div>
+        </div>
+
+        <div class="meta">提示：页面为静态示例。所有 <code>id</code> 与 <code>data-*</code> 已预留，方便 JS 挂钩与动态填充。</div>
+      </section>
+
+      <!-- MIDDLE: inflections / quick actions / compact profile -->
+      <aside class="card" aria-labelledby="mid-title">
+        <div id="mid-title" class="mid-title">词形 & 快速操作</div>
+
+        <div class="variants" id="variants">
+          <!-- 这些元素可由 JS 绑定点击事件 -->
+          <span class="variant primary" data-form="lemma">inspire</span>
+          <span class="variant" data-form="third_sg">inspires</span>
+          <span class="variant" data-form="past">inspired</span>
+          <span class="variant" data-form="participle">inspiring</span>
+          <span class="variant" data-form="noun">inspiration</span>
+          <span class="variant" data-form="adj">inspirational</span>
+        </div>
+
+        <div class="quick-actions">
+          <button class="btn" id="lookupContextBtn" data-action="lookup-context">在上下文中查找</button>
+          <button class="btn ghost" id="addNoteBtn" data-action="add-note">添加笔记</button>
+          <button class="btn ghost" id="starBtn" data-action="toggle-fav" aria-pressed="false">☆ 收藏</button>
+        </div>
+
+        <div class="meta">预留 Hook: <code>#variants .variant</code>、按钮的 <code>data-action</code> 将被脚本识别并处理。</div>
+      </aside>
+
+      <!-- RIGHT: senses table + semantic graph + legend -->
+      <section class="card" aria-labelledby="right-title">
+        <div class="sense-header">
+          <div>
+            <h3 id="right-title" style="margin:0;font-weight:800">词义（按词性分组）</h3>
+            <div class="sense-count" id="senseCount">3 个释义（示例）</div>
+          </div>
+          <div>
+            <!-- POS legend compact: emoji-based -->
+            <div class="legend" aria-hidden="true">
+              <div class="legend-item">🧍 名 (noun)</div>
+              <div class="legend-item">⚡ 动 (verb)</div>
+              <div class="legend-item">💬 形 (adj)</div>
+              <div class="legend-item">🧠 副 (adv)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="senses" id="senses">
+          <table class="senses" role="table" aria-label="senses table">
+            <thead>
+              <tr><th style="width:16%">词性</th><th style="width:60%">释义</th><th style="width:24%">例句 / 语料</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="pos-emoji" title="verb">⚡</div></td>
+                <td>
+                  <div class="meaning-title">使产生灵感；鼓舞（to fill with the urge or ability to do or feel something）</div>
+                  <div class="meaning-note" style="color:var(--muted);font-size:13px">常用于“激发创造力/情感/行动”</div>
+                </td>
+                <td>
+                  <div class="example">Her courage inspired others to act. <br><span style="color:var(--muted);font-size:12px">（新闻语料）</span></div>
+                </td>
+              </tr>
+
+              <tr>
+                <td><div class="pos-emoji" title="noun">🧍</div></td>
+                <td>
+                  <div class="meaning-title">灵感（a sudden brilliant or timely idea）</div>
+                  <div class="meaning-note" style="color:var(--muted);font-size:13px">名词形式通常为 <code>inspiration</code></div>
+                </td>
+                <td>
+                  <div class="example">The painting was his greatest inspiration. <br><span style="color:var(--muted);font-size:12px">（文学语料）</span></div>
+                </td>
+              </tr>
+
+              <tr>
+                <td><div class="pos-emoji" title="adj / derived">💬</div></td>
+                <td>
+                  <div class="meaning-title">鼓舞人心的（inspirational）——形容词用法（衍生）</div>
+                </td>
+                <td>
+                  <div class="example">An inspirational speech moved the crowd. <br><span style="color:var(--muted);font-size:12px">（演讲语料）</span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- semantic graph: 纯展示占位，JS 可以在这里绘制网络图 -->
+        <div class="graph" id="semanticGraph" data-graph-ready="true" aria-hidden="false">
+          语义网络（占位）— JS 可在此处渲染 force-graph / d3 可视化
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <div class="meta">词频: 高 · 语域: 中性/正式</div>
+          <div style="font-size:13px;color:var(--muted)">来源示例：新闻语料 / 出版物</div>
+        </div>
+      </section>
+
+      <!-- Embeded JSON data (方便 JS 直接 parse) -->
+      <!-- 注：这只是静态示例数据；真实环境下可以用 fetch 更新该 script 的内容或另行加载 -->
+      <script type="application/json" id="entry-data">
+{
+  "lemma": "inspire",
+  "ipa": "/ɪnˈspaɪər/",
+  "audio": "audio/inspire-us.mp3",
+  "etymology": "From Latin <i>inspirare</i> (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'.",
+  "literal": "to breathe into; to infuse with spirit",
+  "badges": ["Latin", "common", "formal"],
+  "inflections": ["inspire", "inspires", "inspired", "inspiring", "inspiration", "inspirational"],
+  "senses": [
+    {
+      "pos": "verb",
+      "emoji": "⚡",
+      "gloss": "to fill (someone) with the urge or ability to do or feel something, especially to do something creative.",
+      "example": "Her courage inspired others to act.",
+      "register": "news"
+    },
+    {
+      "pos": "noun",
+      "emoji": "🧍",
+      "gloss": "a sudden brilliant or timely idea; a source of such ideas.",
+      "example": "The painting was his greatest inspiration.",
+      "register": "literature"
+    },
+    {
+      "pos": "adjective (derived)",
+      "emoji": "💬",
+      "gloss": "inspirational; providing inspiration.",
+      "example": "An inspirational speech moved the crowd.",
+      "register": "speech"
+    }
+  ],
+  "meta": {"frequency":"high","domain":"general","source":"demo-corpus"}
+}
+      </script>
+
+    </main>
   </div>
-</div>
 </body>
 </html>
