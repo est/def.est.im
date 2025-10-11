@@ -3,598 +3,254 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Fancy Web Dictionary</title>
-
-<!-- Google Fonts（可选） -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<title>Fancy Web Dictionary – example</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-  :root{
-    --bg1: linear-gradient(135deg,#0f172a 0%,#0b1020 40%, #071426 100%);
-    --card: rgba(255,255,255,0.06);
-    --glass: rgba(255,255,255,0.06);
-    --accent: linear-gradient(90deg,#7c3aed,#06b6d4);
-    --muted: rgba(255,255,255,0.65);
-    --glass-border: rgba(255,255,255,0.08);
-    --shadow: 0 10px 30px rgba(2,6,23,0.7);
-    color-scheme: dark;
-  }
+:root{
+  --bg1: linear-gradient(135deg,#0f172a 0%,#0b1020 40%, #071426 100%);
+  --glass: rgba(255,255,255,0.06);
+  --accent: linear-gradient(90deg,#7c3aed,#06b6d4);
+  --muted: rgba(255,255,255,0.65);
+  --border: rgba(255,255,255,0.05);
+  color-scheme: dark;
+}
 
-  html,body{
-    height:100%;
-    margin:0;
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft Yahei", sans-serif;
-    background: var(--bg1);
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-    color: #e6eef8;
-  }
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg1);
+  color:#e6eef8;
+  font-family:"Inter",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
 
-  /* page layout */
-  .wrap{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:48px;
-    box-sizing:border-box;
-    gap:28px;
-  }
+.wrap{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:48px;
+}
 
-  .panel{
-    width:1200px;
-    max-width:calc(100% - 80px);
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-radius:20px;
-    padding:28px;
-    box-shadow:var(--shadow);
-    border:1px solid rgba(255,255,255,0.03);
-    backdrop-filter: blur(8px) saturate(120%);
-    display:grid;
-    grid-template-columns: 320px 200px 1fr;
-    gap:20px;
-    position:relative;
-    overflow:hidden;
-  }
+.panel{
+  width:1200px;
+  max-width:calc(100% - 80px);
+  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));
+  border-radius:20px;
+  padding:28px;
+  border:1px solid var(--border);
+  box-shadow:0 10px 40px rgba(0,0,0,0.5);
+  backdrop-filter:blur(8px) saturate(130%);
+  display:grid;
+  grid-template-columns:320px 200px 1fr;
+  gap:20px;
+  position:relative;
+  overflow:hidden;
+}
+.panel::before, .panel::after{
+  content:"";
+  position:absolute;
+  width:420px;height:420px;
+  border-radius:50%;
+  filter:blur(60px);
+  opacity:0.12;
+  pointer-events:none;
+}
+.panel::before{background:linear-gradient(45deg,#7c3aed,#06b6d4);left:-120px;top:-120px;}
+.panel::after{background:linear-gradient(45deg,#f97316,#f43f5e);right:-140px;bottom:-120px;}
 
-  /* decorative gradient lines */
-  .panel::before, .panel::after{
-    content:"";
-    position:absolute;
-    width:420px;
-    height:420px;
-    border-radius:50%;
-    filter:blur(60px);
-    opacity:0.12;
-    transform:translate(-20%,-10%) rotate(10deg);
-    pointer-events:none;
-  }
-  .panel::before{ background: linear-gradient(45deg,#7c3aed,#06b6d4); left:-120px; top:-120px;}
-  .panel::after{ background: linear-gradient(45deg,#f97316,#f43f5e); right:-140px; bottom:-120px; }
+.header{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.header .title{
+  font-family:"Playfair Display",serif;
+  font-size:24px;
+  font-weight:700;
+  background:var(--accent);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.header .sub{font-size:13px;color:var(--muted);}
 
-  /* header / search */
-  .header {
-    grid-column: 1 / -1;
-    display:flex;
-    align-items:center;
-    gap:18px;
-    margin-bottom:6px;
-  }
-  .logo {
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-    line-height:1;
-  }
-  .logo .title {
-    font-family: "Playfair Display", serif;
-    font-size:22px;
-    font-weight:700;
-    letter-spacing:0.2px;
-    background: var(--accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .logo .sub {
-    font-size:12px;
-    color:var(--muted);
-  }
+.col{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.00));
+}
 
-  .search {
-    margin-left:auto;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    min-width:360px;
-  }
-  .search input{
-    width:100%;
-    padding:12px 16px;
-    border-radius:12px;
-    border:1px solid var(--glass-border);
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    color:inherit;
-    outline:none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
-    font-weight:600;
-    letter-spacing:0.4px;
-  }
-  .search button{
-    padding:10px 14px;
-    border-radius:10px;
-    border:none;
-    background:var(--accent);
-    font-weight:700;
-    color:#fff;
-    cursor:pointer;
-    box-shadow:0 6px 20px rgba(124,58,237,0.16);
-  }
+.word-large{
+  font-family:"Playfair Display",serif;
+  font-size:36px;
+  font-weight:700;
+}
+.pron{
+  font-weight:700;
+  font-size:15px;
+  color:#dbeafe;
+  background:rgba(255,255,255,0.03);
+  padding:6px 10px;
+  border-radius:10px;
+  display:inline-block;
+  margin-top:8px;
+}
+.etym,.literal{
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.4;
+  margin-top:10px;
+}
+.badge-row{
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+}
 
-  /* left column: pronunciation + etymology */
-  .col-left{
-    padding:18px;
-    border-radius:14px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid var(--glass-border);
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    position:relative;
-    overflow:hidden;
-  }
-  .word-large{
-    font-family: "Playfair Display", serif;
-    font-size:36px;
-    font-weight:700;
-    letter-spacing:0.6px;
-    margin:0;
-  }
-  .pron{
-    font-weight:700;
-    font-size:14px;
-    color:#dbeafe;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0));
-    padding:8px 10px;
-    border-radius:10px;
-    display:inline-block;
-    margin-top:6px;
-  }
-  .etym, .literal{
-    font-size:13px;
-    color:var(--muted);
-    line-height:1.4;
-  }
-  .badge-row{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-top:10px;
-  }
-  .badge{
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:12px;
-    font-weight:600;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid rgba(255,255,255,0.03);
-  }
+/* middle */
+.inflection{
+  min-width:80px;
+  padding:8px 10px;
+  border-radius:10px;
+  text-align:center;
+  font-weight:700;
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.05);
+  margin:4px;
+  display:inline-block;
+}
+.inflection.highlight{
+  background:linear-gradient(90deg,#0ea5e9,#7c3aed);
+  color:#fff;
+  box-shadow:0 6px 14px rgba(7,89,133,0.25);
+}
+.mid-title{
+  font-weight:800;
+  font-size:13px;
+  margin-bottom:8px;
+}
 
-  /* middle column: inflections */
-  .col-mid{
-    padding:18px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,0.03);
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    align-items:stretch;
-  }
-  .mid-title{
-    font-weight:800;
-    font-size:13px;
-    letter-spacing:0.6px;
-    color:#fff;
-  }
-  .inflections{
-    margin-top:6px;
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  .inflection{
-    min-width:80px;
-    padding:8px 10px;
-    border-radius:10px;
-    text-align:center;
-    font-weight:700;
-    background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
-    border:1px solid rgba(255,255,255,0.02);
-  }
-  .inflection.highlight{
-    background: linear-gradient(90deg,#0ea5e9 0%, #7c3aed 100%);
-    color:#fff;
-    box-shadow: 0 8px 20px rgba(7,89,133,0.18);
-    transform:translateY(-4px);
-  }
-
-  /* right column: senses table */
-  .col-right{
-    padding:18px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,0.03);
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
-  .sense-title{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
-  .sense-title h3{
-    margin:0;
-    font-size:15px;
-    font-weight:800;
-    letter-spacing:0.6px;
-  }
-  .senses-table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:6px;
-    font-size:14px;
-  }
-  .senses-table thead th{
-    text-align:left;
-    font-size:12px;
-    color:var(--muted);
-    padding:10px 12px;
-    border-bottom: 1px dashed rgba(255,255,255,0.03);
-    vertical-align:bottom;
-    font-weight:700;
-  }
-  .senses-table tbody td{
-    padding:12px;
-    vertical-align:top;
-    border-bottom:1px dotted rgba(255,255,255,0.02);
-  }
-  .pos-pill{
-    display:inline-block;
-    padding:6px 8px;
-    border-radius:8px;
-    font-weight:800;
-    font-size:12px;
-    background:rgba(255,255,255,0.02);
-    border:1px solid rgba(255,255,255,0.02);
-  }
-  .example{
-    margin-top:8px;
-    font-style:italic;
-    color:rgba(230,238,248,0.85);
-  }
-
-  /* footer small */
-  .meta{
-    font-size:12px;
-    color:var(--muted);
-    margin-top:8px;
-  }
-
-  /* responsiveness */
-  @media (max-width:1100px){
-    .panel { grid-template-columns: 1fr; }
-    .header{ flex-wrap:wrap; }
-    .search{ width:100%; margin-left:0; }
-  }
-
-  /* small animation */
-  .pulse {
-    animation: pulse-thing 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse-thing{
-    0%{ transform:scale(1); opacity:1; }
-    50%{ transform:scale(1.02); opacity:0.96; }
-    100%{ transform:scale(1); opacity:1; }
-  }
+/* right table */
+.senses-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:6px;
+  font-size:14px;
+}
+.senses-table thead th{
+  text-align:left;
+  font-size:12px;
+  color:var(--muted);
+  padding:10px 12px;
+  border-bottom:1px dashed rgba(255,255,255,0.05);
+}
+.senses-table tbody td{
+  padding:12px;
+  vertical-align:top;
+  border-bottom:1px dotted rgba(255,255,255,0.05);
+}
+.pos-pill{
+  display:inline-block;
+  padding:6px 8px;
+  border-radius:8px;
+  font-weight:800;
+  font-size:12px;
+  background:rgba(255,255,255,0.03);
+}
+.example{
+  margin-top:8px;
+  font-style:italic;
+  color:rgba(230,238,248,0.85);
+}
+.meta{font-size:12px;color:var(--muted);margin-top:8px;}
+@media(max-width:1100px){.panel{grid-template-columns:1fr;}}
 </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="panel" role="application" aria-label="Fancy dictionary panel">
+<div class="wrap">
+  <div class="panel">
+    <div class="header">
+      <div>
+        <div class="title">LumenLex</div>
+        <div class="sub">aesthetic web dictionary · static showcase</div>
+      </div>
+    </div>
 
-      <div class="header" aria-hidden="false">
-        <div class="logo">
-          <div class="title">LumenLex</div>
-          <div class="sub">aesthetic web dictionary · bold typography</div>
-        </div>
+    <!-- 第一栏 -->
+    <section class="col">
+      <div class="word-large">example</div>
+      <div class="pron">/ɪɡˈzɑːmpəl/</div>
 
-        <div class="search" role="search" aria-label="search word">
-          <input id="q" type="search" placeholder="输入单词或词组，按回车或点击搜索" aria-label="search input" />
-          <button id="searchBtn" aria-label="搜索按钮">Search</button>
-        </div>
+      <div class="etym">词源：Late Middle English from Old French <i>example</i>, from Latin <i>exemplum</i> “sample, pattern”.</div>
+      <div class="literal">字面意思：取出的一部分；作为样本。</div>
+
+      <div class="badge-row">
+        <div class="badge">Latin</div>
+        <div class="badge">Common</div>
+        <div class="badge">Academic</div>
       </div>
 
-      <!-- Left column: pronunciation & etymology -->
-      <section class="col-left" aria-labelledby="left-title">
-        <div>
-          <h1 id="wordDisplay" class="word-large">—</h1>
-          <div id="pronDisplay" class="pron">/—/</div>
-        </div>
+      <div class="meta">频率：高 · 语域：一般用语 · 来源：Oxford Style Data</div>
+    </section>
 
-        <div>
-          <div class="etym" id="etymDisplay">词源：<span style="opacity:0.85">—</span></div>
-          <div class="literal" id="literalDisplay">字面意思：—</div>
-        </div>
+    <!-- 第二栏 -->
+    <section class="col">
+      <div class="mid-title">词形变化（Inflections）</div>
+      <div>
+        <span class="inflection highlight">example</span>
+        <span class="inflection">examples</span>
+        <span class="inflection">exampled</span>
+        <span class="inflection">exampling</span>
+      </div>
+      <div class="meta">点击可查询不同词形（演示仅静态）</div>
+    </section>
 
-        <div class="badge-row" id="badgeRow" aria-hidden="true">
-          <!-- badges: language origin, frequency, domain etc -->
-        </div>
+    <!-- 第三栏 -->
+    <section class="col">
+      <table class="senses-table">
+        <thead>
+          <tr>
+            <th style="width:18%">词性</th>
+            <th style="width:60%">释义</th>
+            <th style="width:22%">例句</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pos-pill">n.</span></td>
+            <td><strong>实例、范例：</strong> 某物的典型样式或示范。</td>
+            <td><div class="example">This painting is a fine example of her early work.</div></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><strong>榜样：</strong> 值得模仿的人或事物。</td>
+            <td><div class="example">He set an example for the younger players.</div></td>
+          </tr>
+          <tr>
+            <td><span class="pos-pill">v.</span></td>
+            <td><strong>示范；作为例证：</strong> 用例子说明某事。</td>
+            <td><div class="example">He exampled his point with data from recent studies.</div></td>
+          </tr>
+        </tbody>
+      </table>
 
-        <div class="meta" id="metaInfo">加载后将显示词频、语言、语域等信息。</div>
-      </section>
-
-      <!-- Middle column: inflections / variants -->
-      <aside class="col-mid" aria-labelledby="mid-title">
-        <div class="mid-title">词形变化（Inflections）</div>
-        <div class="inflections" id="inflections">
-          <!-- JS will inject .inflection items -->
-          <div class="inflection" style="opacity:0.22">暂无数据</div>
-        </div>
-
-        <div style="margin-top:auto">
-          <div style="font-size:12px;color:var(--muted);">提示：点击某个词形可以快速以该形式检索并替换左侧主词。</div>
-        </div>
-      </aside>
-
-      <!-- Right column: senses table -->
-      <main class="col-right" aria-labelledby="right-title">
-        <div class="sense-title">
-          <h3>词义（按词性分组）</h3>
-          <div style="font-size:12px;color:var(--muted)" id="senseCount">— senses</div>
-        </div>
-
-        <div style="overflow:auto">
-          <table class="senses-table" id="sensesTable" aria-describedby="senses-desc">
-            <thead>
-              <tr>
-                <th style="width:18%">词性</th>
-                <th style="width:60%">含义（简述）</th>
-                <th style="width:22%">例句</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="3" style="color:var(--muted)">尚无词义数据 —— 使用搜索加载。</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="meta" id="sourceInfo">来源：本示例数据由你的词典 API 填充。</div>
-      </main>
-
-    </div>
+      <div class="meta">共 3 个释义 · 数据示例仅用于展示排版风格</div>
+    </section>
   </div>
-
-<script>
-/*
-  使用说明（JS 部分）：
-  - 页面通过 loadEntry(word) 发起 fetch 请求到你的后端 API，例如 /api/dict?word=...
-  - 期待得到的 JSON 结构（仅示例）：
-    {
-      "word": "example",
-      "pronunciation": "/ɪɡˈzɑːmpəl/",
-      "etymology": "Late Middle English from Latin exemplum...",
-      "literal": "something taken out, a sample",
-      "badges": ["Old English", "common", "formal"],
-      "inflections": ["example", "examples"],
-      "senses": [
-        {
-          "pos": "noun",
-          "meanings": [
-            {
-              "gloss": "a thing characteristic of its kind",
-              "example": "This painting is a good example of her early work."
-            },
-            {
-              "gloss": "a representative instance",
-              "example": "An example of success."
-            }
-          ]
-        },
-        {
-          "pos": "verb",
-          "meanings":[
-            {
-              "gloss": "to illustrate by example",
-              "example": "He exampled his point by citing research."
-            }
-          ]
-        }
-      ],
-      "meta": {"frequency":"common","language":"English","source":"Oxford-ish"}
-    }
-
-  - 你可以根据后端实际结构调整字段映射部分（下面有注释）
-*/
-
-const qInput = document.getElementById('q');
-const searchBtn = document.getElementById('searchBtn');
-
-searchBtn.addEventListener('click', ()=> performSearch());
-qInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') performSearch(); });
-
-function performSearch(){
-  const w = (qInput.value || '').trim();
-  if(!w) {
-    flashEmpty();
-    return;
-  }
-  loadEntry(w);
-}
-
-function flashEmpty(){
-  const el = document.getElementById('wordDisplay');
-  el.classList.add('pulse');
-  setTimeout(()=> el.classList.remove('pulse'), 800);
-}
-
-/* 主加载函数：将调用 fetch 并把返回的数据填入 DOM */
-/* 注意：替换 fetch URL 到你自己的后端接口 */
-async function loadEntry(word){
-  // 显示正在加载占位
-  setPlaceholderLoading();
-
-  try{
-    // ====== 将下面的 URL 换成你的 API ======
-    const resp = await fetch(`/api/dict?word=${encodeURIComponent(word)}`);
-    if(!resp.ok) throw new Error('network');
-    const data = await resp.json();
-
-    // 如果你的后端字段名不同，这里改映射即可
-    renderEntryFromData(data);
-  }catch(err){
-    console.error(err);
-    // 如果 fetch 失败，示例：模拟数据填充（你可以移除这个备用示例）
-    renderFallbackSample(word);
-  }
-}
-
-/* 渲染函数：把 data 映射到右侧 DOM */
-function renderEntryFromData(d){
-  // 安全地取值（避免 undefined）
-  const word = d.word || d.headword || d.lemma || document.getElementById('q').value.trim();
-  const pron = d.pronunciation || d.pron || d.phonetic || '—';
-  const etym = d.etymology || d.etym || '暂无词源信息';
-  const literal = d.literal || d.meaning_literal || '—';
-  const badges = d.badges || d.tags || [];
-  const inflections = d.inflections || d.variants || [];
-  const senses = d.senses || d.meanings || [];
-  const meta = d.meta || d.info || {};
-
-  document.getElementById('wordDisplay').textContent = word;
-  document.getElementById('pronDisplay').textContent = pron;
-  document.getElementById('etymDisplay').innerHTML = '词源：<span style="opacity:0.9">' + escapeHtml(etym) + '</span>';
-  document.getElementById('literalDisplay').textContent = '字面意思：' + literal;
-
-  // badges
-  const br = document.getElementById('badgeRow');
-  br.innerHTML = '';
-  (badges.length ? badges : []).forEach(b=>{
-    const el = document.createElement('div');
-    el.className = 'badge';
-    el.textContent = b;
-    br.appendChild(el);
-  });
-
-  // inflections
-  const infc = document.getElementById('inflections');
-  infc.innerHTML = '';
-  if(inflections.length === 0){
-    infc.innerHTML = '<div class="inflection" style="opacity:0.22">—</div>';
-  }else{
-    inflections.forEach(i=>{
-      const node = document.createElement('div');
-      node.className = 'inflection';
-      node.textContent = i;
-      node.title = '点击以搜索此词形';
-      node.addEventListener('click', ()=> {
-        qInput.value = i;
-        loadEntry(i);
-      });
-      // highlight the exact match
-      if(i.toLowerCase() === (word||'').toLowerCase()) node.classList.add('highlight');
-      infc.appendChild(node);
-    });
-  }
-
-  // senses -> table
-  const tbody = document.querySelector('#sensesTable tbody');
-  tbody.innerHTML = '';
-  if(senses.length === 0){
-    tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">没有词义数据。</td></tr>';
-  }else{
-    let senseCount = 0;
-    senses.forEach(group=>{
-      const pos = group.pos || group.partOfSpeech || '—';
-      const meanings = group.meanings || group.defs || [];
-      meanings.forEach((m, idx)=>{
-        senseCount++;
-        const tr = document.createElement('tr');
-
-        const tdPos = document.createElement('td');
-        tdPos.innerHTML = idx === 0 ? `<div class="pos-pill">${escapeHtml(pos)}</div>` : '';
-        tr.appendChild(tdPos);
-
-        const tdGloss = document.createElement('td');
-        tdGloss.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${escapeHtml(m.gloss || m.def || m.meaning || '—')}</div>
-                             ${m.note ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(m.note)}</div>` : ''}`;
-        tr.appendChild(tdGloss);
-
-        const tdEx = document.createElement('td');
-        tdEx.innerHTML = m.example ? `<div class="example">"${escapeHtml(m.example)}"</div>` : '<span style="color:var(--muted)">无例句</span>';
-        tr.appendChild(tdEx);
-
-        tbody.appendChild(tr);
-      });
-    });
-    document.getElementById('senseCount').textContent = `${senseCount} 个释义`;
-  }
-
-  // meta info
-  document.getElementById('metaInfo').textContent = `频率：${meta.frequency || '—'} · 语域：${meta.register || meta.domain || '—'} · 来源：${meta.source || '—'}`;
-  document.getElementById('sourceInfo').textContent = `来源：${meta.source || (d.source || '你的词典 API')}`;
-
-}
-
-/* 备用示例（当请求失败时展示，方便离线预览） */
-function renderFallbackSample(word){
-  const sample = {
-    word,
-    pronunciation: "/sæmˈpəl/",
-    etymology: "From Latin 'exemplum' → Old French → English",
-    literal: "a small part representative of a whole",
-    badges: ["Latin", "common", "literary"],
-    inflections: [word, word + 's', word + 'ing', word + 'ed'],
-    senses: [
-      { pos: "noun", meanings: [
-        { gloss: "a representative part or a single item from a larger whole", example: `This ${word} illustrates the method.` }
-      ]},
-      { pos: "verb", meanings: [
-        { gloss: "to take or use a sample", example: `They ${word}ed the product for testing.` }
-      ]}
-    ],
-    meta: {frequency: "common", source: "示例数据"}
-  };
-  renderEntryFromData(sample);
-}
-
-/* small helper to set loading placeholders */
-function setPlaceholderLoading(){
-  document.getElementById('wordDisplay').textContent = '加载中...';
-  document.getElementById('pronDisplay').textContent = '—';
-  document.getElementById('etymDisplay').innerHTML = '词源：<span style="opacity:0.85">加载中…</span>';
-  document.getElementById('literalDisplay').textContent = '字面意思：加载中…';
-  document.getElementById('inflections').innerHTML = '<div class="inflection" style="opacity:0.3">加载中…</div>';
-  const tbody = document.querySelector('#sensesTable tbody');
-  tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">正在加载词义……</td></tr>';
-  document.getElementById('metaInfo').textContent = '正在从 API 获取元数据…';
-}
-
-/* 安全输出（简单转义） */
-function escapeHtml(str){
-  if(!str && str !== 0) return '';
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
-
-/* -- 自动示例加载（可注释） -- */
-// 如果打开页面希望默认示例，请取消注释下一行
-// renderFallbackSample('example');
-
-</script>
+</div>
 </body>
 </html>
