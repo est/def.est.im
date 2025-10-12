@@ -27,6 +27,18 @@ Hosting Webster’s 1913 dictionary online.
 
 突破「词典」的固有形态，做一个「英语」的说明书。
 
+
+
+## 其他词典的问题：
+
+1. Oxford English Dictionary 收费。滚
+2. merriam-webster 用高级词汇解释简单词汇。需要thesaurus和dictionary合并到一个界面
+3. cambridge 可以，就是排版字体略乱
+4. collins 最适合
+5. onelook 需要点两下
+6. websters1913 最美。适合凭感觉学习。抛开一切语法和构词造句，纯粹体会词义之妙以及如何运用
+7. wordreference 最简单明了。比如 `inspire [sb] == awaken [sb]'s creative ideas` 比一个 `[T]` (transitive) 符号更容易理解得多
+
 ## Credits
 
 - ❌ Google Dictionary API 
