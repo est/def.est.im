@@ -1,473 +1,315 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Web 词典 — inspire（示例）</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inspire — Web Dictionary (demo)</title>
+  <style>
+    /* Reset & base */
+    :root{
+      --bg: #fff;
+      --card: #fbfbfd;
+      --accent-a: #2b6cb0; /* blue */
+      --accent-b: #e879f9; /* pink */
+      --muted: #6b7280;
+      --glass: rgba(255,255,255,0.6);
+      --glass-2: rgba(255,255,255,0.85);
+      --radius: 18px;
+      --maxw: 1100px;
+      --gap: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: light;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 400px at 10% 0%, rgba(232,121,249,0.07), transparent 10%),
+                  radial-gradient(800px 300px at 95% 30%, rgba(43,108,176,0.05), transparent 10%);
+      background-color:var(--bg);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:32px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      gap:24px;
+      font-size:16px;
+    }
 
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    .container{
+      width:100%;
+      max-width:var(--maxw);
+    }
 
-<style>
-  :root{
-    --bg:#0f1724;
-    --card:#0b1220;
-    --accent:#7dd3fc;
-    --muted:#9aa7b2;
-    --glass: rgba(255,255,255,0.03);
-    --glass-2: rgba(255,255,255,0.02);
-    --radius:18px;
-    --max-width:1100px;
-  }
+    /* Header card */
+    .hero{
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
+      border-radius:var(--radius);
+      padding:28px;
+      box-shadow: 0 8px 30px rgba(17,24,39,0.06);
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:20px;
+      align-items:center;
+      margin-bottom:22px;
+      border: 1px solid rgba(16,24,40,0.03);
+      backdrop-filter: blur(6px) saturate(120%);
+    }
 
-  html,body{
-    height:100%;
-    margin:0;
-    font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
-    background: radial-gradient(1200px 600px at 10% 10%, rgba(125,211,252,0.06), transparent 10%),
-                radial-gradient(900px 400px at 90% 90%, rgba(99,102,241,0.04), transparent 10%),
-                var(--bg);
-    color:#e6eef6;
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-    padding:28px;
-    box-sizing:border-box;
-  }
+    .word-col{
+      padding-left:8px;
+    }
+    #word{font-size:48px;font-weight:700;letter-spacing:-0.02em;margin:0;color:var(--accent-a)}
+    .subline{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px}
+    .ipa{font-family: "Times New Roman", serif;font-size:20px;color:var(--muted)}
+    .audio-btn{border-radius:10px;padding:8px 12px;border:0;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));color:white;font-weight:600;cursor:pointer}
+    .meta{margin-top:16px;color:var(--muted);line-height:1.45}
 
-  .container{
-    max-width:var(--max-width);
-    margin:0 auto;
-    display:flex;
-    flex-direction:column;
-    gap:22px;
-  }
+    /* Ety card */
+    .ety{
+      background: linear-gradient(180deg,#fff,#fff);border-radius:12px;padding:12px;border:1px solid rgba(16,24,40,0.03);
+    }
+    .ety h4{margin:0 0 8px 0;font-size:14px;color:var(--muted);}
+    .ety p{margin:0;font-size:14px}
 
-  /* Header card - word + phonetics */
-  .hero{
-    background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-radius:var(--radius);
-    padding:22px;
-    display:flex;
-    gap:20px;
-    align-items:center;
-    box-shadow: 0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
-    border:1px solid rgba(255,255,255,0.03);
-    flex-wrap:wrap;
-  }
+    /* Main content */
+    .main{
+      display:flex;flex-direction:column;gap:18px
+    }
 
-  .word-left{
-    flex:0 0 auto;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:220px;
-  }
+    /* Meanings table */
+    .meanings{
+      background:linear-gradient(180deg,var(--card),#fff);
+      border-radius:14px;padding:18px;border:1px solid rgba(16,24,40,0.04);
+      box-shadow: 0 6px 18px rgba(17,24,39,0.04);
+      overflow:hidden;
+    }
 
-  #word-main{
-    font-family:"Playfair Display", serif;
-    font-size:44px;
-    letter-spacing:0.6px;
-    line-height:1;
-    color:#fff;
-    margin:0;
-    font-weight:700;
-  }
+    .table{
+      width:100%;border-collapse:collapse;font-size:15px
+    }
 
-  #word-sub{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    color:var(--muted);
-    font-size:14px;
-  }
+    .table thead{display:none}
 
-  /* phonetics badge */
-  .phonetic{
-    background:linear-gradient(90deg, rgba(125,211,252,0.08), rgba(99,102,241,0.04));
-    padding:8px 12px;
-    border-radius:999px;
-    font-weight:600;
-    color:var(--accent);
-    border:1px solid rgba(125,211,252,0.08);
-  }
+    .row{display:grid;grid-template-columns:150px 1fr 220px;gap:12px;padding:16px 12px;border-radius:12px;align-items:start}
+    .row + .row{margin-top:12px}
+    .row:hover{background:linear-gradient(90deg, rgba(43,108,176,0.03), rgba(232,121,249,0.02));}
 
-  /* right column - etymology + quick facts */
-  .meta{
-    flex:1 1 420px;
-    display:flex;
-    gap:14px;
-    align-items:flex-start;
-    flex-wrap:wrap;
-  }
+    /* Column A */
+    .col-a{display:flex;flex-direction:column;gap:6px}
+    .pos{font-weight:700;color:#0f172a}
+    .grammar{font-size:12px;color:var(--muted)}
+    .grammar .hint{border-bottom:1px dashed rgba(0,0,0,0.08);cursor:help}
+    /* tooltip */
+    .hint[data-tooltip]{position:relative}
+    .hint[data-tooltip]:hover::after{
+      content:attr(data-tooltip);
+      position:absolute;left:0;top:calc(100% + 8px);white-space:nowrap;background:#fff;border-radius:8px;padding:8px 10px;border:1px solid rgba(16,24,40,0.06);box-shadow:0 8px 24px rgba(2,6,23,0.06);z-index:30;font-size:13px;color:var(--muted)}
 
-  .meta-card{
-    background:linear-gradient(180deg, var(--glass), var(--glass-2));
-    padding:12px 14px;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,0.02);
-    min-width:220px;
-  }
+    .tags{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{font-size:12px;padding:6px 8px;border-radius:999px;background:linear-gradient(90deg,rgba(43,108,176,0.08),rgba(232,121,249,0.03));color:var(--accent-a);border:1px solid rgba(43,108,176,0.06)}
 
-  .meta-card h4{ margin:0 0 6px 0; font-size:13px; color:var(--muted); font-weight:600;}
-  .meta-card p{ margin:0; font-size:14px; color:#dff3ff; }
+    /* Column B */
+    .col-b{display:flex;flex-direction:column;gap:8px}
+    .definition{font-size:15px;line-height:1.55}
+    .def-other{font-size:13px;color:var(--muted);margin-top:6px}
+    .example{font-style:italic;color:#0f172a}
+    .translation{font-size:13px;color:var(--muted)}
 
-  /* Etymology/Breakdown area - emphasized */
-  .etymology{
-    padding:18px;
-    border-radius:16px;
-    background:linear-gradient(90deg, rgba(125,211,252,0.02), rgba(139,92,246,0.01));
-    border:1px solid rgba(255,255,255,0.02);
-  }
+    /* Column C */
+    .col-c{display:flex;flex-direction:column;gap:8px}
+    .forms{font-size:14px}
+    .syn{font-size:13px}
+    .syn-list{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{font-size:13px;padding:6px 8px;border-radius:8px;background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid rgba(16,24,40,0.04)}
 
-  .etymology h3{
-    margin:0 0 8px 0;
-    font-size:16px;
-    color:var(--accent);
-    font-weight:700;
-    letter-spacing:0.6px;
-  }
-  .etymology p{ margin:0; color:#dbeefc; font-size:14px; line-height:1.6; }
+    /* Responsive */
+    @media (max-width:900px){
+      .hero{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr;}
+      .col-c{order:3}
+    }
 
-  /* Main meanings table */
-  .meanings{
-    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-    border-radius:16px;
-    padding:6px;
-    border:1px solid rgba(255,255,255,0.03);
-    overflow:hidden;
-  }
+    @media (max-width:560px){
+      #word{font-size:36px}
+    }
 
-  .m-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 16px;
-    border-bottom:1px dashed rgba(255,255,255,0.02);
-  }
-  .m-head h2{ margin:0; font-size:18px; font-weight:700; letter-spacing:0.4px; color:#fff; }
-  .m-head .note{ color:var(--muted); font-size:13px; }
+    /* Fancy accent bar */
+    .accent-bar{height:6px;border-radius:8px;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));margin-top:12px}
 
-  /* table layout */
-  .dict-table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:15px;
-    /* use grid-like columns for responsive */
-    display:grid;
-    grid-template-columns: 1fr;
-  }
+    /* small caption */
+    .muted-sm{font-size:13px;color:var(--muted)}
 
-  /* Each meaning row is a three-column grid on wide screens, stacked on small */
-  .meaning-row{
-    display:grid;
-    grid-template-columns: 220px 1fr 220px;
-    gap:16px;
-    align-items:start;
-    padding:18px;
-    border-bottom:1px solid rgba(255,255,255,0.02);
-  }
-
-  /* A column (pos/grammar/tags) */
-  .col-a{
-    background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
-    padding:12px;
-    border-radius:10px;
-    min-height:90px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .pos-main{ font-weight:700; font-size:15px; color:#fff; }
-  .grammar{
-    font-size:12px;
-    color:var(--muted);
-    padding:6px 8px;
-    border-radius:8px;
-    display:inline-block;
-    cursor:help;
-    position:relative;
-  }
-
-  /* tooltip via data-title attribute */
-  .grammar[data-tooltip]:hover::after{
-    content: attr(data-tooltip);
-    position:absolute;
-    left:0;
-    top:calc(100% + 10px);
-    white-space:nowrap;
-    background:rgba(6,8,23,0.95);
-    color:#dff3ff;
-    padding:8px 10px;
-    font-size:13px;
-    border-radius:10px;
-    box-shadow:0 8px 30px rgba(2,6,23,0.6);
-    transform-origin:top left;
-    z-index:40;
-  }
-
-  .tags{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  .tag{
-    background:rgba(255,255,255,0.02);
-    padding:6px 8px;
-    font-size:12px;
-    border-radius:999px;
-    color:var(--muted);
-    border:1px solid rgba(255,255,255,0.02);
-  }
-
-  /* B column (definitions + examples) */
-  .col-b{
-    padding:6px 0;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-  .def-text{
-    font-size:15px;
-    color:#e6faff;
-    line-height:1.5;
-  }
-  .def-translation{
-    color:var(--muted);
-    font-size:13px;
-  }
-  .example{
-    font-size:14px;
-    background:linear-gradient(90deg, rgba(125,211,252,0.01), rgba(99,102,241,0.01));
-    padding:10px;
-    border-radius:10px;
-    color:#dff3ff;
-    border:1px solid rgba(255,255,255,0.02);
-  }
-  .example .en{ font-weight:600; display:block; margin-bottom:6px; }
-  .example .cn{ color:var(--muted); font-size:13px; }
-
-  /* C column (forms + synonyms/antonyms) */
-  .col-c{
-    padding:12px;
-    border-radius:10px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
-    min-height:90px;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-  .forms{ font-size:13px; color:var(--muted); }
-  .list-inline{ display:flex; gap:8px; flex-wrap:wrap; }
-  .pill{ background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px; font-size:13px; color:#dff3ff; border:1px solid rgba(255,255,255,0.02); }
-
-  /* small decorative footer */
-  .foot{
-    text-align:center; color:var(--muted); font-size:13px; padding:12px 6px;
-  }
-
-  /* Responsive adjustments */
-  @media (max-width:980px){
-    .meaning-row{ grid-template-columns: 1fr; gap:12px; }
-    .col-c, .col-a{ min-width:unset; }
-    .word-left{ min-width:unset; }
-    #word-main{ font-size:36px; }
-  }
-
-  @media (max-width:520px){
-    .hero{ padding:14px; gap:12px; }
-    #word-main{ font-size:28px; }
-    .meta-card{ min-width:unset; }
-  }
-</style>
+  </style>
 </head>
 <body>
   <div class="container">
 
-    <!-- HERO: Word + phonetics + etymology summary -->
-    <section class="hero" aria-labelledby="word-main">
-      <div class="word-left">
-        <h1 id="word-main">inspire</h1> <!-- id: word-main -->
-        <div id="word-sub">
-          <div id="phonetics" class="phonetic">/ɪnˈspaɪər/</div> <!-- id: phonetics -->
-          <div id="pos-quick" style="color:var(--muted); font-size:13px;">verb</div> <!-- id: pos-quick -->
+    <section class="hero" aria-labelledby="word">
+      <div class="word-col">
+        <h1 id="word">inspire</h1>
+        <div class="subline">
+          <div id="ipa" class="ipa">/ɪnˈspaɪər/</div>
+          <button id="audio" class="audio-btn" aria-label="Play pronunciation">▶ Play</button>
+          <div id="frequency" class="muted-sm">Frequency: <strong>Common</strong></div>
+        </div>
+
+        <div class="accent-bar" aria-hidden="true"></div>
+
+        <div class="meta">
+          <div id="definition_short">To fill (someone) with the urge or ability to do or feel something, especially to do something creative.</div>
+          <div style="margin-top:10px;color:var(--muted)" id="word_note">Design-focused layout — IDs are present for fetch() to replace content.</div>
         </div>
       </div>
 
-      <div class="meta">
-        <div class="meta-card etymology" id="etymology-card">
-          <h3>Etymology</h3>
-          <p id="etymology">
-            <!-- id: etymology -->
-            from <em>Latin</em> <strong>inspirare</strong> “to breathe into”; later via Old French <em>inspirer</em>. (原义：向内呼吸 / 注入气息)
-          </p>
-        </div>
-
-        <div class="meta-card" id="first-attested">
-          <h4>First attested</h4>
-          <p id="attested">late Middle English (c. 14th–15th cent.)</p>
-        </div>
-
-        <div class="meta-card" id="literal-breakdown">
-          <h4>Literal breakdown</h4>
-          <p id="breakdown">in- (into) + spirare (to breathe) → “breathe into”</p>
-        </div>
-      </div>
+      <aside class="ety" id="etymology">
+        <h4>词根 · 词源 · 首次出现</h4>
+        <p id="etym_text">From Latin inspirare "to breathe into" (in- 'into' + spirare 'to breathe'). First recorded in English late Middle English; earliest attestation c. 14th–15th century.</p>
+        <div style="height:10px"></div>
+        <div id="first_appearance" class="muted-sm">First attested: <strong>c. 14th century</strong></div>
+      </aside>
     </section>
 
-    <!-- Meanings / main table -->
-    <section class="meanings" aria-labelledby="meanings-title">
-      <div class="m-head">
-        <h2 id="meanings-title">Meanings</h2>
-        <div class="note">每一行表示一个独立的词义；A列：语法信息；B列：释义与例句；C列：词形/同/反义词</div>
-      </div>
+    <main class="main">
 
-      <div class="dict-table" id="dict-table">
+      <section class="meanings" aria-labelledby="meanings_title">
+        <h2 id="meanings_title" style="margin:0 0 12px 0;font-size:20px">Meanings</h2>
 
-        <!-- ===== Meaning 1 ===== -->
-        <article class="meaning-row" id="meaning-1">
-          <!-- A column -->
-          <div class="col-a" id="def1_a">
-            <div class="pos-main" id="def1_a_pos">inspire <span style="opacity:0.85;">[sb] / [sth]</span></div> <!-- id: def1_a_pos -->
-            <div class="grammar" id="def1_a_grammar" data-tooltip="vtr = transitive verb；常见结构：inspire sb (to do sth), inspire sb with sth, inspire sth in sb">
-              vtr + prep
-            </div> <!-- id: def1_a_grammar -->
-            <div class="tags" id="def1_a_tags">
-              <span class="tag">核心词汇</span>
-              <span class="tag">常用词</span>
-              <span class="tag">书面语</span>
-            </div> <!-- id: def1_a_tags -->
-          </div>
+        <!-- Table: each .row is one meaning -->
+        <div id="meanings_table">
 
-          <!-- B column -->
-          <div class="col-b" id="def1_b">
-            <div class="def-text" id="def1_b_def">
-              to fill someone with the urge or ability to do or feel something, especially something creative or beneficial. / 用英文简要补充其他语言释义（占位）。
-            </div> <!-- id: def1_b_def -->
-
-            <div class="example" id="def1_b_example">
-              <span class="en" id="def1_b_example_en">Her creativity and courage inspired her students to work harder.</span> <!-- id: def1_b_example_en -->
-              <span class="cn" id="def1_b_example_cn">她的创造力与勇气激励了她的学生更加努力。</span> <!-- id: def1_b_example_cn -->
-            </div>
-
-            <div id="def1_b_notes" class="def-translation">
-              <!-- id: def1_b_notes -->
-              usage note: often followed by an infinitive (inspire sb to do sth) or a noun (inspire confidence).
-            </div>
-          </div>
-
-          <!-- C column -->
-          <div class="col-c" id="def1_c">
-            <div class="forms" id="def1_c_forms"><strong>Forms:</strong> inspire · inspires · inspired · inspiring</div>
-            <div><strong>Synonyms</strong></div>
-            <div class="list-inline" id="def1_c_syn">
-              <span class="pill">motivate</span>
-              <span class="pill">encourage</span>
-              <span class="pill">stimulate</span>
-              <span class="pill">animate</span>
-            </div>
-            <div><strong>Antonyms</strong></div>
-            <div class="list-inline" id="def1_c_ant">
-              <span class="pill">discourage</span>
-              <span class="pill">demotivate</span>
-            </div>
-          </div>
-        </article>
-
-        <!-- ===== Meaning 2 ===== -->
-        <article class="meaning-row" id="meaning-2">
-          <div class="col-a" id="def2_a">
-            <div class="pos-main" id="def2_a_pos">inspire [sth]</div>
-            <div class="grammar" id="def2_a_grammar" data-tooltip="vt + noun; e.g., inspire confidence, inspire fear — cause a feeling or quality in someone or something">
-              vt + noun
-            </div>
-            <div class="tags" id="def2_a_tags">
-              <span class="tag">常用搭配</span>
-              <span class="tag">情感用法</span>
-            </div>
-          </div>
-
-          <div class="col-b" id="def2_b">
-            <div class="def-text" id="def2_b_def">
-              to cause a particular feeling or attitude in someone (e.g., to inspire confidence, fear, respect). / 可补充多语种释义占位。
-            </div>
-
-            <div class="example" id="def2_b_example">
-              <div class="example">
-                <span class="en" id="def2_b_example_en">His calm manner inspired confidence in the team.</span>
-                <span class="cn" id="def2_b_example_cn">他冷静的举止使团队产生了信心。</span>
+          <!-- Meaning 1 -->
+          <article class="row" id="meaning1">
+            <div class="col-a">
+              <div id="meaning1_pos" class="pos">inspire (somebody) — <span style="font-weight:600">v.</span></div>
+              <div id="meaning1_grammar" class="grammar"><span class="hint" data-tooltip="v. transitive (takes a direct object). 'vtr + prep' means transitive verb often followed by a preposition.">vtr</span> + <span class="hint" data-tooltip="usage label: often used with object 'sb'">object</span></div>
+              <div id="meaning1_tags" class="tags">
+                <span class="tag">常用词</span>
+                <span class="tag">核心词汇</span>
+                <span class="tag">写作</span>
               </div>
             </div>
-          </div>
 
-          <div class="col-c" id="def2_c">
-            <div class="forms" id="def2_c_forms"><strong>Forms:</strong> inspire · inspires · inspired · inspiring</div>
-            <div><strong>Synonyms</strong></div>
-            <div class="list-inline" id="def2_c_syn">
-              <span class="pill">arouse</span>
-              <span class="pill">instill</span>
-              <span class="pill">evoke</span>
-            </div>
-            <div><strong>Antonyms</strong></div>
-            <div class="list-inline" id="def2_c_ant">
-              <span class="pill">suppress</span>
-            </div>
-          </div>
-        </article>
-
-        <!-- ===== Meaning 3 (archaic/medical) ===== -->
-        <article class="meaning-row" id="meaning-3">
-          <div class="col-a" id="def3_a">
-            <div class="pos-main" id="def3_a_pos">inspire (archaic/technical)</div>
-            <div class="grammar" id="def3_a_grammar" data-tooltip="in earlier use: to breathe in; opposite of expire. 现多出现在医学或诗歌里">
-              intransitive / archaic
-            </div>
-            <div class="tags" id="def3_a_tags">
-              <span class="tag">过时词汇</span>
-              <span class="tag">医学/诗歌</span>
-            </div>
-          </div>
-
-          <div class="col-b" id="def3_b">
-            <div class="def-text" id="def3_b_def">
-              (archaic) to inhale; to breathe in.（古义：吸气、吸入）可在医学或文学史料中见到。
-            </div>
-
-            <div class="example" id="def3_b_example">
-              <div class="example">
-                <span class="en" id="def3_b_example_en">He inspired deeply and began to speak.</span>
-                <span class="cn" id="def3_b_example_cn">他深深吸了一口气，然后开始说话。</span>
+            <div class="col-b">
+              <div id="meaning1_def" class="definition">To fill (someone) with the urge or ability to do or feel something, especially to do something creative.</div>
+              <div id="meaning1_other" class="def-other">中文: 激发；鼓舞；启发</div>
+              <div style="height:6px"></div>
+              <div id="meaning1_example">
+                <div class="example" id="meaning1_example_en">"His teacher's encouragement inspired her to become a writer."</div>
+                <div class="translation" id="meaning1_example_cn">“老师的鼓励激发了她成为一名作家的热情。”</div>
               </div>
             </div>
-          </div>
 
-          <div class="col-c" id="def3_c">
-            <div class="forms" id="def3_c_forms"><strong>Forms:</strong> inspire · inspired · inspiring</div>
-            <div><strong>Notes</strong></div>
-            <div class="list-inline" id="def3_c_notes">
-              <span class="pill">旧义 - inhale</span>
+            <div class="col-c">
+              <div id="meaning1_forms" class="forms">Forms: <span class="pill">inspire</span>, <span class="pill">inspires</span>, <span class="pill">inspired</span>, <span class="pill">inspiring</span></div>
+              <div id="meaning1_syn" class="syn">Synonyms:
+                <div class="syn-list">
+                  <span class="pill">encourage</span>
+                  <span class="pill">motivate</span>
+                  <span class="pill">stimulate</span>
+                  <span class="pill">spark</span>
+                </div>
+              </div>
+              <div id="meaning1_ant" class="syn">Antonyms:
+                <div class="syn-list">
+                  <span class="pill">discourage</span>
+                  <span class="pill">dishearten</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-      </div> <!-- end dict-table -->
-    </section>
+          <!-- Meaning 2 -->
+          <article class="row" id="meaning2">
+            <div class="col-a">
+              <div id="meaning2_pos" class="pos">inspire (something) — <span style="font-weight:600">v.</span></div>
+              <div id="meaning2_grammar" class="grammar"><span class="hint" data-tooltip="v. transitive — this sense takes an abstract object often (e.g. 'fear', 'confidence')">vtr</span> + <span class="hint" data-tooltip="e.g. inspire confidence / inspire fear">noun</span></div>
+              <div id="meaning2_tags" class="tags">
+                <span class="tag">常用词</span>
+                <span class="tag">商务</span>
+              </div>
+            </div>
 
-    <div class="foot" id="footer-note">
-      <!-- id: footer-note -->
-      Tip: 所有可替换字段均已标注 id，后端可通过 fetch() 将具体释义、发音音频 URL、同/反义词、例句等注入到对应 ID 中以实现动态渲染。
-    </div>
+            <div class="col-b">
+              <div id="meaning2_def" class="definition">To cause (a feeling or reaction) to occur in someone; e.g. to give rise to a feeling.</div>
+              <div id="meaning2_other" class="def-other">中文: 使产生（某种感情或反应）</div>
+              <div style="height:6px"></div>
+              <div id="meaning2_example">
+                <div class="example" id="meaning2_example_en">"The novel inspired great loyalty among its readers."</div>
+                <div class="translation" id="meaning2_example_cn">“那本小说激发了读者们强烈的忠诚感。”</div>
+              </div>
+            </div>
 
-  </div><!-- end container -->
+            <div class="col-c">
+              <div id="meaning2_forms" class="forms">Forms: <span class="pill">inspire</span>, <span class="pill">inspired</span></div>
+              <div id="meaning2_syn" class="syn">Synonyms:
+                <div class="syn-list">
+                  <span class="pill">arouse</span>
+                  <span class="pill">evoke</span>
+                  <span class="pill">engender</span>
+                </div>
+              </div>
+              <div id="meaning2_ant" class="syn">Antonyms:
+                <div class="syn-list">
+                  <span class="pill">suppress</span>
+                </div>
+              </div>
+            </div>
+          </article>
 
-  <!--
-    说明（仅供开发者参考）：
-    - 常用 id 列表：
-      #word-main, #phonetics, #pos-quick
-      #etymology, #attested, #breakdown
-      每个词义: #meaning-N, 内部 #defN_a_pos, #defN_a_grammar, #defN_a_tags
-                #defN_b_def, #defN_b_example_en, #defN_b_example_cn
-                #defN_c_forms, #defN_c_syn, #defN_c_ant
-    - 不含任何 JS；若希望由 fetch 填充，前端可选择把 JSON 映射到对应 ID 插入 innerHTML
-  -->
+          <!-- Meaning 3: figurative / archaic -->
+          <article class="row" id="meaning3">
+            <div class="col-a">
+              <div id="meaning3_pos" class="pos">inspire — <span style="font-weight:600">v. (archaic / literary)</span></div>
+              <div id="meaning3_grammar" class="grammar"><span class="hint" data-tooltip="archaic use: often in older texts to mean 'to breathe in' or 'to inhale'">v.</span></div>
+              <div id="meaning3_tags" class="tags">
+                <span class="tag">过时词汇</span>
+                <span class="tag">文学</span>
+              </div>
+            </div>
+
+            <div class="col-b">
+              <div id="meaning3_def" class="definition">(archaic) To inhale or breathe in.</div>
+              <div id="meaning3_other" class="def-other">中文: 吸入（过时用法）</div>
+              <div style="height:6px"></div>
+              <div id="meaning3_example">
+                <div class="example" id="meaning3_example_en">"He inspired the sweet air of the valley."</div>
+                <div class="translation" id="meaning3_example_cn">“他吸入了山谷中甘甜的空气。”</div>
+              </div>
+            </div>
+
+            <div class="col-c">
+              <div id="meaning3_forms" class="forms">Forms: <span class="pill">inspire</span>, <span class="pill">inspired</span></div>
+              <div id="meaning3_syn" class="syn">Synonyms:
+                <div class="syn-list">
+                  <span class="pill">inhale</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+
+      </section>
+
+      <section class="meanings" aria-labelledby="usage_title">
+        <h2 id="usage_title" style="margin:0 0 12px 0;font-size:20px">Usage Notes & Collocations</h2>
+        <div id="usage_notes" style="color:var(--muted);line-height:1.6">
+          <p id="usage1"><strong>Collocations:</strong> inspire confidence, inspire fear, be inspired by, find inspiration in.</p>
+          <p id="usage2"><strong>Register:</strong> widely used in both formal and informal registers; very common in writing about art, leadership and motivation.</p>
+        </div>
+      </section>
+
+      <section class="meanings">
+        <h2 style="margin:0 0 12px 0;font-size:20px">Notes for Fetch Integration</h2>
+        <div style="color:var(--muted);line-height:1.6">
+          <p>All visible content elements have stable <code>id</code> attributes (e.g. <code>meaning1_def</code>, <code>etym_text</code>, <code>ipa</code>) so a simple <code>fetch()</code> can replace innerText/innerHTML.</p>
+          <p>There is no JavaScript in this file by design. Add a small script to fetch JSON and populate these IDs. The layout is responsive and will gracefully stack on narrow screens.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
 </body>
 </html>
