@@ -287,7 +287,11 @@ Do not wrap the JSON. Format is: {
         /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(
         /^\s*```json/, '').replace(/```\s*$/, '')
       console.info(ans)
-      return JSON.parse(ans)
+      const data = Object.fromEntries(
+          // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
+          Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
+        )
+      return data
     }
     btnAudio.onclick=()=>{
       speechSynthesis.cancel()
