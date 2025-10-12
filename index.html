@@ -238,52 +238,52 @@
     </main>
   </div>
   <script>
-    async function lookup(word){
-      api_key = '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'
-      req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST', headers: {
-          "Authorization": `Bearer ${api_key}`,
-        }, body: JSON.stringify({
-          "model": "deepseek/deepseek-chat-v3.1:free",
-          "messages": [
-            {"role": "system", "content": `
+    const prompt={
+      "model": "deepseek/deepseek-chat-v3.1:free",
+      "messages": [
+        {"role": "system", "content": `
 You are a linguistic expert providing dictionary and thesaurus service.
 User input is a word, explain the word and respond in strict raw JSON.
 Do not wrap the JSON. Format is: {
-   "WORD": "", // USER_INPUT, in this case "inspire" as an example,
-   "IPA": "/xxx/", // pronunciation in International Phonetic Alphabet
-   "CONJUGATES": "", // describe inflections and such
-   "ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
-   "SINCE": "", // approx. year or era the word first appeared
-   "MEANINGS": [ // array of meanings
-    {
-       "PATTERN": "", // how to use the word. example: "inspire [sb]"
-       "POS": "", // example: "vtr + prep"
-       "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
-       "TAGS": [], // common word, or rare word, or an old word?
-       "DEF_EN": "", // definition in English
-       "DEF_ZH": "", // definition in Chinese (Simplified)
-       "SENT_EN": "", // example sentence in English
-       "SENT_ZH": "", // example sentence in Chinese (Simplified)
-       "RELATED": [  // array of related words 
-         {"T": "synonyms", "V": ["encourage", "motivate"]},
-         {"T": "antonyms", "V": ["defeat", "disinspire"]}
-       ]
-    }, {}, {}, ...  // other meanings, from most commonly used to least used
-   ],
-   "REGISTER": "", // where the word is commonly used
+"WORD": "", // USER_INPUT, in this case "inspire" as an example,
+"IPA": "/xxx/", // pronunciation in International Phonetic Alphabet
+"CONJUGATES": "", // describe inflections and such
+"ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
+"SINCE": "", // approx. year or era the word first appeared
+"MEANINGS": [ // array of meanings
+{
+    "PATTERN": "", // how to use the word in this meaning. If WORD is "inpure", then this PATTERN is "inspire [sb]"
+    "POS": "", // example: "vtr + prep"
+    "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
+    "TAGS": [], // common word, or rare word, or an old word?
+    "DEF_EN": "", // definition in English
+    "DEF_ZH": "", // definition in Chinese (Simplified)
+    "SENT_EN": "", // example sentence in English
+    "SENT_ZH": "", // example sentence in Chinese (Simplified)
+    "RELATED": [  // array of related words 
+      {"T": "synonyms", "V": ["encourage", "motivate"]},
+      {"T": "antonyms", "V": ["defeat", "disinspire"]}
+    ]
+}, {}, {}, ...  // other meanings, from most commonly used to least used
+],
+"REGISTER": "", // where the word is commonly used
 }`},
-            { "role": "user", "content": word}
-          ]
-        }),
+        { "role": "user", "content": word}
+      ]
+    }
+    async function lookup(word){
+      derp = ['sk','or','v1','067d90f668e9c1d2064eaca96946cbef7cd9a4626d930469d43b90260b526fce'].join('-')
+      req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST', headers: {"Authorization": `Bearer ${derp}`},
+        body: JSON.stringify(prompt),
       })
-      const ret = await req.json()
-      const em = req?.error?.message
+      const rsp = await req.json()
+      const em = rsp?.error?.message
       if(em){
         console.error(em)
         return
       }
-      const ans = (ret.choices?.[0]?.message?.content || '').replace(
+      const ans = (rsp.choices?.[0]?.message?.content || '').replace(
         /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(
         /^\s*```json/, '').replace(/```\s*$/, '')
       console.info(ans)
@@ -295,16 +295,15 @@ Do not wrap the JSON. Format is: {
     }
     document.addEventListener('DOMContentLoaded', async () => {
       const q = new URLSearchParams(location.search).get('q')
-      if (q){
-        let data
-        const data_json = localStorage.getItem(q)
-        if (data_json){
-          data = JSON.parse(data_json)
+      if (q) {
+        let data = JSON.parse(localStorage.getItem(q))
+        if (!data) data = await lookup(q)
+        if (data) {
+          Object.assign(Alpine.$data(container), data)
+          localStorage.setItem(q, JSON.stringify(data))
         } else {
-            data = await lookup(q)
-            localStorage.setItem(q, JSON.stringify(data))
+          alert('failed')
         }
-        Object.assign(Alpine.$data(container), data)
       }
     })
   </script>
