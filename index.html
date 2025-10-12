@@ -37,7 +37,7 @@
       font-size:16px;
     }
 
-    .container{
+    #container{
       width:100%;
       max-width:var(--maxw);
     }
@@ -119,8 +119,8 @@
 
     /* Column C */
     .col-c{display:flex;flex-direction:column;gap:8px;font-size:13px}
-    .words-list{display:flex;gap:8px;flex-wrap:wrap}
-    .words-list small{padding:6px 8px;border-radius:8px;background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid rgba(16,24,40,0.04)}
+    .related-words{display:flex;gap:8px;flex-wrap:wrap}
+    .related-words small{padding:6px 8px;border-radius:8px;background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid rgba(16,24,40,0.04)}
 
     /* Responsive */
     @media (max-width:900px){
@@ -140,16 +140,18 @@
     .muted-sm{font-size:13px;color:var(--muted)}
 
   </style>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
+  <script defer init="false" src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div class="container">
-
+  <div id="container" x-data="{
+      WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
+      MEANINGS:[],REGISTER:'',
+    }">
     <section class="hero" aria-labelledby="word">
       <div class="word-col">
-        <h1 id="word" x-text="WORD">{{ WORD }}</h1>
+        <h1 id="word" x-text="WORD"></h1>
         <div class="subline">
-          <div id="ipa" class="ipa">{{ IPA }}</div>
+          <div id="ipa" class="ipa" x-text="IPA"></div>
           <button id="btnAudio" type="button" aria-label="Play pronunciation">▶ Play</button>
           <!-- div id="frequency" class="muted-sm">Frequency: <strong>Common</strong></div -->
         </div>
@@ -157,16 +159,16 @@
         <div class="accent-bar" aria-hidden="true"></div>
 
         <div class="meta">
-          <div id="other_forms">{{ CONJUGATES}}</div>
+          <div id="other_forms" x-text="CONJUGATES"></div>
           <!-- div style="margin-top:10px;color:var(--muted)" id="word_note">def.est.im 基于数字媒介优先，智利提供先进词汇解释和翻译。</div -->
         </div>
       </div>
 
       <aside class="ety" id="etymology">
         <h4>Origin 词源</h4>
-        <p id="etym_text">{{ ETYM }}</p>
+        <p id="etym_text" x-text="ETYMOLOGY"></p>
         <div style="height:10px"></div>
-        <div id="first_appearance" class="muted-sm">首现: <strong>{{ SINCE }}</strong></div>
+        <div id="first_appearance" class="muted-sm">首现: <strong x-text="SINCE"></strong></div>
       </aside>
     </section>
 
@@ -177,35 +179,44 @@
 
         <!-- Table: each .row is one meaning -->
         <div id="meanings_table">
-
-          <!-- Meaning 1 -->
-          <article class="row"">
-            <div class="col-a">
-              <div id="meaning1_pos" class="pos">{{ WORD_POS }} — <span style="font-weight:600">{{ WORD_T}}</span></div>
-              <div id="meaning1_grammar" class="grammar"><span class="hint" data-tooltip="{{ T_TIP }}">{{ T }}</span></div>
-              <div id="meaning1_tags" class="tags">
-                <span class="tag">{{ TAG }}</span>
-              </div>
-            </div>
-
-            <div class="col-b">
-              <div id="meaning1_def" class="definition">{{ WORD_DEF_EN }}</div>
-              <div id="meaning1_other" class="def-other">{{ WORD_DEF_ZH }}</div>
-              <div style="height:6px"></div>
-              <div id="meaning1_example">
-                <div class="example" id="meaning1_example_en">{{ SENT_EN }}</div>
-                <div class="translation" id="meaning1_example_cn">{{ SENT_ZH }}</div>
-              </div>
-            </div>
-
-            <div class="col-c">
-              <div>{{ WORDS_REL_TYPE }}:
-                <div class="related-words">
-                  <small>{{ WORD_REL_VAL }}</small>
+          <template x-for="meaning in MEANINGS">
+            <article class="row">
+              <div class="col-a">
+                <div class="pos" x-text="meaning.POS + ' — ' + (meaning.PATTERN || '')"></div>
+                <div class="grammar">
+                  <span class="hint" x-bind:data-tooltip="meaning.POS_TIP" x-text="meaning.POS"></span>
+                </div>
+                <div class="tags">
+                  <template x-for="tag in meaning.TAGS">
+                    <span class="tag" x-text="tag"></span>
+                  </template>
                 </div>
               </div>
-            </div>
-          </article>
+
+              <div class="col-b">
+                <div class="definition" x-text="meaning.DEF_EN"></div>
+                <div class="def-other" x-text="meaning.DEF_ZH"></div>
+                <div style="height:6px"></div>
+                <div>
+                  <div class="example" x-text="meaning.SENT_EN"></div>
+                  <div class="translation" x-text="meaning.SENT_ZH"></div>
+                </div>
+              </div>
+
+              <div class="col-c">
+                <template x-for="related in meaning.RELATED" :key="related.T">
+                  <div>
+                    <span x-text="related.T + ': '"></span>
+                    <div class="related-words">
+                      <template x-for="word in related.V">
+                        <small x-text="word"></small>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </article>
+          </template>
         </div>
 
       </section>
@@ -213,7 +224,7 @@
       <section class="meanings" aria-labelledby="usage_title">
         <h2 id="usage_title" style="margin:0 0 12px 0;font-size:20px">使用</h2>
         <div id="usage_notes" style="color:var(--muted);line-height:1.6">
-          <p id="usage2"><strong>Register:</strong> widely used in both formal and informal registers; very common in writing about art, leadership and motivation.</p>
+          <p id="usage2"><strong>Register:</strong> <span x-text="REGISTER"></span></p>
         </div>
       </section>
 
@@ -246,14 +257,14 @@ Do not wrap the JSON. Format is: {
    "SINCE": "", // approx. year or era the word first appeared
    "MEANINGS": [ // array of meanings
     {
-       "PATTERN": "", // example: "inspire [sb]"
+       "PATTERN": "", // how to use the word. example: "inspire [sb]"
        "POS": "", // example: "vtr + prep"
        "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
        "TAGS": [], // common word, or rare word, or an old word?
        "DEF_EN": "", // definition in English
-       "DEF_ZH": "", // definition in Chinese
+       "DEF_ZH": "", // definition in Chinese (Simplified)
        "SENT_EN": "", // example sentence in English
-       "SENT_ZH": "", // example sentence in Chinese
+       "SENT_ZH": "", // example sentence in Chinese (Simplified)
        "RELATED": [  // array of related words 
          {"T": "synonyms", "V": ["encourage", "motivate"]},
          {"T": "antonyms", "V": ["defeat", "disinspire"]}
@@ -282,11 +293,20 @@ Do not wrap the JSON. Format is: {
       speechSynthesis.cancel()
       speechSynthesis.speak(new SpeechSynthesisUtterance(word.innerText))
     }
-    document.addEventListener('DOMContentLoaded', async ()=>{
+    document.addEventListener('DOMContentLoaded', async () => {
       const q = new URLSearchParams(location.search).get('q')
-      if (q){await lookup(q)}
+      if (q){
+        let data
+        const data_json = localStorage.getItem(q)
+        if (data_json){
+          data = JSON.parse(data_json)
+        } else {
+            data = await lookup(q)
+            localStorage.setItem(q, JSON.stringify(data))
+        }
+        Object.assign(Alpine.$data(container), data)
+      }
     })
-      
   </script>
 </body>
 </html>
