@@ -238,10 +238,7 @@
     </main>
   </div>
   <script>
-    const prompt={
-      "model": "deepseek/deepseek-chat-v3.1:free",
-      "messages": [
-        {"role": "system", "content": `
+    const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
 User input is a word, explain the word and respond in strict raw JSON.
 Do not wrap the JSON. Format is: {
@@ -267,15 +264,18 @@ Do not wrap the JSON. Format is: {
 }, {}, {}, ...  // other meanings, from most commonly used to least used
 ],
 "REGISTER": "", // where the word is commonly used
-}`},
-        { "role": "user", "content": word}
-      ]
-    }
+}`
     async function lookup(word){
       derp = ['sk','or','v1','067d90f668e9c1d2064eaca96946cbef7cd9a4626d930469d43b90260b526fce'].join('-')
       req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST', headers: {"Authorization": `Bearer ${derp}`},
-        body: JSON.stringify(prompt),
+        body: JSON.stringify({
+      "model": "deepseek/deepseek-chat-v3.1:free",
+      "messages": [
+        {"role": "system", "content": sys_prompt},
+        { "role": "user", "content": word}
+      ]
+    }),
       })
       const rsp = await req.json()
       const em = rsp?.error?.message
