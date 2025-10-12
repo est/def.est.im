@@ -3,534 +3,471 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Take — Fancy Web Dictionary (Demo)</title>
+<title>Web 词典 — inspire（示例）</title>
+
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
   :root{
-    --bg: linear-gradient(180deg,#071126 0%, #081428 45%, #06121a 100%);
-    --card: rgba(255,255,255,0.03);
-    --glass: rgba(255,255,255,0.04);
-    --muted: rgba(230,238,248,0.72);
-    --accent1: #7c3aed;
-    --accent2: #06b6d4;
-    --accent-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
-    --radius: 16px;
-    color-scheme: dark;
-    font-size:16px;
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "PingFang SC", "Microsoft Yahei", sans-serif;
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#7dd3fc;
+    --muted:#9aa7b2;
+    --glass: rgba(255,255,255,0.03);
+    --glass-2: rgba(255,255,255,0.02);
+    --radius:18px;
+    --max-width:1100px;
   }
 
-  html,body{height:100%;margin:0;background:var(--bg);-webkit-font-smoothing:antialiased;color:#e8f7ff}
-  .wrap{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:36px;
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(125,211,252,0.06), transparent 10%),
+                radial-gradient(900px 400px at 90% 90%, rgba(99,102,241,0.04), transparent 10%),
+                var(--bg);
+    color:#e6eef6;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:28px;
     box-sizing:border-box;
   }
 
-  .panel{
-    width:1150px;
-    max-width:calc(100% - 48px);
-    border-radius:20px;
-    padding:24px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    box-shadow: 0 20px 60px rgba(2,6,23,0.7);
+  .container{
+    max-width:var(--max-width);
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+
+  /* Header card - word + phonetics */
+  .hero{
+    background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:var(--radius);
+    padding:22px;
+    display:flex;
+    gap:20px;
+    align-items:center;
+    box-shadow: 0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
     border:1px solid rgba(255,255,255,0.03);
-    backdrop-filter: blur(8px) saturate(120%);
+    flex-wrap:wrap;
+  }
+
+  .word-left{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:220px;
+  }
+
+  #word-main{
+    font-family:"Playfair Display", serif;
+    font-size:44px;
+    letter-spacing:0.6px;
+    line-height:1;
+    color:#fff;
+    margin:0;
+    font-weight:700;
+  }
+
+  #word-sub{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  /* phonetics badge */
+  .phonetic{
+    background:linear-gradient(90deg, rgba(125,211,252,0.08), rgba(99,102,241,0.04));
+    padding:8px 12px;
+    border-radius:999px;
+    font-weight:600;
+    color:var(--accent);
+    border:1px solid rgba(125,211,252,0.08);
+  }
+
+  /* right column - etymology + quick facts */
+  .meta{
+    flex:1 1 420px;
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .meta-card{
+    background:linear-gradient(180deg, var(--glass), var(--glass-2));
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.02);
+    min-width:220px;
+  }
+
+  .meta-card h4{ margin:0 0 6px 0; font-size:13px; color:var(--muted); font-weight:600;}
+  .meta-card p{ margin:0; font-size:14px; color:#dff3ff; }
+
+  /* Etymology/Breakdown area - emphasized */
+  .etymology{
+    padding:18px;
+    border-radius:16px;
+    background:linear-gradient(90deg, rgba(125,211,252,0.02), rgba(139,92,246,0.01));
+    border:1px solid rgba(255,255,255,0.02);
+  }
+
+  .etymology h3{
+    margin:0 0 8px 0;
+    font-size:16px;
+    color:var(--accent);
+    font-weight:700;
+    letter-spacing:0.6px;
+  }
+  .etymology p{ margin:0; color:#dbeefc; font-size:14px; line-height:1.6; }
+
+  /* Main meanings table */
+  .meanings{
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+    border-radius:16px;
+    padding:6px;
+    border:1px solid rgba(255,255,255,0.03);
     overflow:hidden;
   }
 
-  /* decorative glows */
-  .panel::before, .panel::after{
-    content:"";
-    position:absolute;
-    width:360px;height:360px;border-radius:50%;
-    filter:blur(80px);
-    opacity:0.12;pointer-events:none;
-  }
-  .panel::before{left:-120px;top:-120px;background:var(--accent-grad)}
-  .panel::after{right:-140px;bottom:-120px;background:linear-gradient(90deg,#f97316,#fb7185)}
-
-  /* top header */
-  .header{
-    display:flex;
-    align-items:flex-start;
-    gap:18px;
-    margin-bottom:18px;
-  }
-  .leftCol{
-    min-width:320px;
-    max-width:360px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-radius:14px;
-    padding:18px;
-    border:1px solid rgba(255,255,255,0.03);
-  }
-
-  .lemma{
-    font-family: "Playfair Display", serif;
-    font-size:44px;
-    font-weight:700;
-    line-height:1;
-    margin:0;
-    letter-spacing:0.4px;
-    background: var(--accent-grad);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .ipa{
-    margin-top:10px;
-    display:inline-block;
-    padding:8px 12px;
-    border-radius:12px;
-    background: rgba(255,255,255,0.02);
-    border:1px solid rgba(255,255,255,0.02);
-    font-weight:700;
-    color:#dbeafe;
-  }
-  .etym, .literal, .firstAttested{
-    margin-top:12px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.45;
-  }
-  .literal strong{color:#fff}
-
-  .badges{
-    margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;
-  }
-  .badge{
-    padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid rgba(255,255,255,0.03);
-    color: #eaf6ff;
-  }
-
-  /* main content area */
-  .main{
-    margin-left:18px;
-  }
-
-  /* place the senses in a visually prominent card */
-  .sensesCard{
-    border-radius:14px;
-    padding:14px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
-    border:1px solid rgba(255,255,255,0.03);
-    box-shadow: 0 6px 30px rgba(3,8,18,0.6);
-  }
-
-  .senses-title{
+  .m-head{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:12px;
-    margin-bottom:12px;
+    padding:12px 16px;
+    border-bottom:1px dashed rgba(255,255,255,0.02);
   }
-  .senses-title h2{margin:0;font-size:18px;color:#fff;font-weight:800}
-  .senses-title p{margin:0;color:var(--muted);font-size:13px}
+  .m-head h2{ margin:0; font-size:18px; font-weight:700; letter-spacing:0.4px; color:#fff; }
+  .m-head .note{ color:var(--muted); font-size:13px; }
 
   /* table layout */
-  .sensesTable{
+  .dict-table{
     width:100%;
     border-collapse:collapse;
-    table-layout:fixed;
-    font-size:14px;
+    font-size:15px;
+    /* use grid-like columns for responsive */
+    display:grid;
+    grid-template-columns: 1fr;
   }
-  .sensesTable thead th{
-    text-align:left;
+
+  /* Each meaning row is a three-column grid on wide screens, stacked on small */
+  .meaning-row{
+    display:grid;
+    grid-template-columns: 220px 1fr 220px;
+    gap:16px;
+    align-items:start;
+    padding:18px;
+    border-bottom:1px solid rgba(255,255,255,0.02);
+  }
+
+  /* A column (pos/grammar/tags) */
+  .col-a{
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+    padding:12px;
+    border-radius:10px;
+    min-height:90px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .pos-main{ font-weight:700; font-size:15px; color:#fff; }
+  .grammar{
     font-size:12px;
     color:var(--muted);
-    padding:10px 12px;
-    border-bottom:1px dashed rgba(255,255,255,0.03);
-    vertical-align:bottom;
-    font-weight:700;
-  }
-  .sensesTable tbody td{
-    padding:14px 12px;
-    vertical-align:top;
-    border-bottom:1px dotted rgba(255,255,255,0.02);
-    background: linear-gradient(180deg, rgba(255,255,255,0.005), rgba(255,255,255,0.00));
-  }
-
-  /* Column A (pos + grammar + tags) */
-  .pos-wrap{display:flex;flex-direction:column;gap:8px}
-  .pos-line{font-weight:800;font-size:15px}
-  .pos-skel{color:#e8f7ff;font-weight:700;background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:8px;display:inline-block}
-  .grammar{
-    font-size:12px;color:var(--muted);
-    margin-top:6px;
+    padding:6px 8px;
+    border-radius:8px;
     display:inline-block;
-    padding:4px 8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02)
-  }
-  /* tooltip for grammar explanation */
-  .grammar[data-tooltip]:hover::after{
-    content: attr(data-tooltip);
-    position: absolute;
-    transform: translateY(-8px);
-  }
-  /* small style tooltip (CSS-only) */
-  .grammar{
+    cursor:help;
     position:relative;
   }
-  .grammar[data-tooltip]::after{
+
+  /* tooltip via data-title attribute */
+  .grammar[data-tooltip]:hover::after{
     content: attr(data-tooltip);
     position:absolute;
-    left:50%;
-    transform:translate(-50%, 10px);
+    left:0;
+    top:calc(100% + 10px);
     white-space:nowrap;
+    background:rgba(6,8,23,0.95);
+    color:#dff3ff;
     padding:8px 10px;
-    font-size:12px;
-    color:#0b1220;
-    background:#f8fafc;
-    border-radius:8px;
-    box-shadow:0 6px 18px rgba(2,6,23,0.5);
-    opacity:0;
-    pointer-events:none;
-    transition:all .15s ease;
+    font-size:13px;
+    border-radius:10px;
+    box-shadow:0 8px 30px rgba(2,6,23,0.6);
+    transform-origin:top left;
     z-index:40;
   }
-  .grammar:hover::after{opacity:1;transform:translate(-50%, -12px)}
 
-  .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-  .tag{font-size:11px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);color:var(--muted)}
-
-  /* Column B (definition & examples) */
-  .def-line{font-weight:700;margin-bottom:6px;color:#f8fbff}
-  .def-alt{font-size:13px;color:var(--muted);margin-bottom:8px}
-  .example{font-style:italic;color:#d9eefc;margin-top:6px}
-  .trans{display:block;color:var(--muted);font-size:13px;margin-top:6px}
-
-  /* Column C (inflections & synonyms/antonyms) */
-  .inflections{font-size:13px;color:var(--muted);margin-bottom:8px}
-  .syns{display:flex;gap:8px;flex-wrap:wrap}
-  .chip{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:#eaf6ff;font-size:13px}
-
-  /* layout adjustments */
-  @media (max-width:1000px){
-    .header{flex-direction:column;gap:12px}
-    .leftCol{width:100%}
-    .main{margin-left:0;margin-top:8px}
-    .panel{padding:18px}
+  .tags{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .tag{
+    background:rgba(255,255,255,0.02);
+    padding:6px 8px;
+    font-size:12px;
+    border-radius:999px;
+    color:var(--muted);
+    border:1px solid rgba(255,255,255,0.02);
   }
 
-  @media (max-width:720px){
-    .panel{padding:14px}
-    .lemma{font-size:36px}
-    .sensesTable thead th{display:none}
-    .sensesTable, .sensesTable tbody, .sensesTable tr, .sensesTable td{display:block;width:100%}
-    .sensesTable tr{margin-bottom:14px;border-bottom:none}
-    .sensesTable td{padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00))}
-    .pos-wrap{order:1}
-    .def-line{order:2}
-    .inflections{order:3}
+  /* B column (definitions + examples) */
+  .col-b{
+    padding:6px 0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .def-text{
+    font-size:15px;
+    color:#e6faff;
+    line-height:1.5;
+  }
+  .def-translation{
+    color:var(--muted);
+    font-size:13px;
+  }
+  .example{
+    font-size:14px;
+    background:linear-gradient(90deg, rgba(125,211,252,0.01), rgba(99,102,241,0.01));
+    padding:10px;
+    border-radius:10px;
+    color:#dff3ff;
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .example .en{ font-weight:600; display:block; margin-bottom:6px; }
+  .example .cn{ color:var(--muted); font-size:13px; }
+
+  /* C column (forms + synonyms/antonyms) */
+  .col-c{
+    padding:12px;
+    border-radius:10px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+    min-height:90px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .forms{ font-size:13px; color:var(--muted); }
+  .list-inline{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pill{ background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px; font-size:13px; color:#dff3ff; border:1px solid rgba(255,255,255,0.02); }
+
+  /* small decorative footer */
+  .foot{
+    text-align:center; color:var(--muted); font-size:13px; padding:12px 6px;
   }
 
-  /* small helper styles */
-  .muted{color:var(--muted);font-size:13px}
-  code{background:rgba(255,255,255,0.02);padding:2px 6px;border-radius:6px}
+  /* Responsive adjustments */
+  @media (max-width:980px){
+    .meaning-row{ grid-template-columns: 1fr; gap:12px; }
+    .col-c, .col-a{ min-width:unset; }
+    .word-left{ min-width:unset; }
+    #word-main{ font-size:36px; }
+  }
+
+  @media (max-width:520px){
+    .hero{ padding:14px; gap:12px; }
+    #word-main{ font-size:28px; }
+    .meta-card{ min-width:unset; }
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="panel" role="article" aria-label="Dictionary entry for take">
+  <div class="container">
 
-      <!-- HEADER: left column (lemma + metadata) + main right (senses) -->
-      <div class="header">
-
-        <!-- LEFT: phonetic, etymology, literal, first attested -->
-        <aside id="left-column" class="leftCol" aria-labelledby="lemma-label">
-          <div id="lemma" class="lemma">take</div>
-          <div id="ipa" class="ipa">/teɪk/</div>
-
-          <div id="etym" class="etym" aria-label="etymology">
-            词根/词源：<strong>Old English</strong> <em>tacan</em>（或来自 Proto-Germanic *takwaz），原意“拿、取”。（示例占位）
-          </div>
-
-          <div id="literal" class="literal">
-            字面分解：<strong>to grasp or seize</strong> — 基本动作是“伸手取得某物/占有/接受（抽象或具体）”。
-          </div>
-
-          <div id="firstAttested" class="firstAttested">
-            首见年代：约 <strong>c. 1000</strong>（Old English 文献中已见）。
-          </div>
-
-          <div class="badges" aria-hidden="true">
-            <div class="badge">核心词汇</div>
-            <div class="badge">高频</div>
-            <div class="badge">小学必备</div>
-          </div>
-        </aside>
-
-        <!-- MAIN: senses card (占主体位置) -->
-        <main id="main-senses" class="main" role="main" aria-labelledby="senses-heading">
-          <section class="sensesCard">
-            <div class="senses-title">
-              <h2 id="senses-heading">释义 / Senses</h2>
-              <p id="sensesMeta" class="muted">每行为一个义项 — 点击或 hover（JS 可扩展）以显示更多上下文</p>
-            </div>
-
-            <!-- Table: columns A / B / C -->
-            <table id="sensesTable" class="sensesTable" aria-describedby="senses-heading">
-              <thead>
-                <tr>
-                  <th style="width:20%;">A — 词性 / grammar / tags</th>
-                  <th style="width:55%;">B — English gloss & example / 其他语言注释</th>
-                  <th style="width:25%;">C — forms / synonyms / antonyms</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <!-- SENSE 1 -->
-                <tr id="sense-1" data-sense-id="1">
-                  <!-- A column -->
-                  <td>
-                    <div class="pos-wrap">
-                      <div class="pos-line"><span class="pos-skel">⚡ take — vtr (sth / sb)</span></div>
-                      <div class="grammar" data-tooltip="vtr = transitive verb; often used with a preposition to indicate direction/recipient (e.g. 'take sth from sb', 'take sb to ...')">
-                        <small>vtr + prep</small>
-                      </div>
-                      <div class="tag-row" aria-label="tags">
-                        <span class="tag">核心词汇</span>
-                        <span class="tag">常用词</span>
-                        <span class="tag">口语</span>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- B column -->
-                  <td>
-                    <div class="def-line" id="sense-1-gloss">
-                      to get into one's possession, control, or occupancy by force, skill, purchase, or favor. — <small class="muted">（拿走；取得；接受）</small>
-                    </div>
-                    <div class="def-alt" id="sense-1-alt">
-                      <em>其他语言注释：</em> 西班牙语 <code>tomar</code>，法语 <code>prendre</code>（部分语义重合）。
-                    </div>
-                    <div class="example" id="sense-1-example">
-                      Example: <q>He took the book from the shelf.</q>
-                      <span class="trans">译：他从书架上取下那本书。</span>
-                    </div>
-                  </td>
-
-                  <!-- C column -->
-                  <td>
-                    <div class="inflections" id="sense-1-forms">forms: take • takes • took • taken • taking</div>
-                    <div class="syns" id="sense-1-syns">
-                      <div class="chip">grab</div>
-                      <div class="chip">seize</div>
-                      <div class="chip">pick up</div>
-                    </div>
-                    <div style="margin-top:10px;font-size:13px;color:var(--muted)">
-                      antonyms:
-                      <span class="chip" style="background:rgba(255,255,255,0.02);margin-left:6px">give</span>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- SENSE 2: RECEIVE / ACCEPT -->
-                <tr id="sense-2" data-sense-id="2">
-                  <td>
-                    <div class="pos-wrap">
-                      <div class="pos-line"><span class="pos-skel">⚡ take — vtr (sth)</span></div>
-                      <div class="grammar" data-tooltip="Here 'take' means 'receive' or 'accept' (take sth from sb; take an offer) — pattern: subject + take + object">
-                        <small>vtr</small>
-                      </div>
-                      <div class="tag-row">
-                        <span class="tag">中学常考</span>
-                        <span class="tag">考研/考试常见</span>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="def-line" id="sense-2-gloss">
-                      to accept or receive (something offered). — <small class="muted">（接受；领受）</small>
-                    </div>
-                    <div class="def-alt" id="sense-2-alt">
-                      <em>其他语言注释：</em> 德语 <code>nehmen</code>（在“接受”义项下相近）。
-                    </div>
-                    <div class="example" id="sense-2-example">
-                      Example: <q>She took the job without hesitation.</q>
-                      <span class="trans">译：她毫不犹豫地接受了那份工作。</span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="inflections" id="sense-2-forms">forms: take • takes • took • taken • taking</div>
-                    <div style="margin-top:8px">synonyms:
-                      <div class="syns" id="sense-2-syns">
-                        <div class="chip">accept</div>
-                        <div class="chip">receive</div>
-                      </div>
-                    </div>
-                    <div style="margin-top:8px;font-size:13px;color:var(--muted)">
-                      antonyms: <span class="chip">refuse</span>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- SENSE 3: TIME / DURATION -->
-                <tr id="sense-3" data-sense-id="3">
-                  <td>
-                    <div class="pos-wrap">
-                      <div class="pos-line"><span class="pos-skel">⚡ take — v (sth) / vtr</span></div>
-                      <div class="grammar" data-tooltip="When used about time, 'take' is used intransitively or with object indicating duration: e.g. 'It takes three hours.'">
-                        <small>v (time)</small>
-                      </div>
-                      <div class="tag-row">
-                        <span class="tag">日常用法</span>
-                        <span class="tag">实用表达</span>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="def-line" id="sense-3-gloss">
-                      to require as necessary or appropriate (of time, effort, etc.). — <small class="muted">（（某事）需要（多少时间/努力））</small>
-                    </div>
-                    <div class="def-alt" id="sense-3-alt">
-                      <em>其他语言注释：</em> 中文常用“需要（时间）”，例如“需要三小时”。
-                    </div>
-                    <div class="example" id="sense-3-example">
-                      Example: <q>It takes about ten minutes to get there by bus.</q>
-                      <span class="trans">译：坐公交去那儿大约需要十分钟。</span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="inflections" id="sense-3-forms">forms: take • takes • took • taken • taking</div>
-                    <div style="margin-top:8px">synonyms:
-                      <div class="syns" id="sense-3-syns">
-                        <div class="chip">require</div>
-                        <div class="chip">need</div>
-                      </div>
-                    </div>
-                    <div style="margin-top:8px;color:var(--muted)">antonyms: <span class="chip">save (time)</span></div>
-                  </td>
-                </tr>
-
-                <!-- SENSE 4: PHRASE / IDIOM EXAMPLE -->
-                <tr id="sense-4" data-sense-id="4">
-                  <td>
-                    <div class="pos-wrap">
-                      <div class="pos-line"><span class="pos-skel">⚡ take — phrasal / idiom</span></div>
-                      <div class="grammar" data-tooltip="Phrasal verbs: 'take on', 'take off', 'take up', 'take over' — each has its own syntactic/semantic pattern.">
-                        <small>v + particle / phrasal</small>
-                      </div>
-                      <div class="tag-row"><span class="tag">常见短语</span><span class="tag">口语</span></div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="def-line" id="sense-4-gloss">
-                      Phrasal verbs build different meanings: e.g. <strong>take off</strong> = to leave the ground / to remove clothing; <strong>take on</strong> = to accept responsibility.
-                    </div>
-                    <div class="def-alt" id="sense-4-alt">
-                      <em>其他语言注释：</em> 短语动词通常需逐一学习，不能直接字面翻译。
-                    </div>
-                    <div class="example" id="sense-4-example">
-                      Examples:
-                      <div class="example">She <b>took off</b> her coat. — 译：她脱下了外套。</div>
-                      <div class="example">The plane <b>took off</b> at noon. — 译：飞机中午起飞。</div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="inflections" id="sense-4-forms">forms: take • takes • took • taken • taking</div>
-                    <div style="margin-top:8px">related phrases:
-                      <div class="syns" id="sense-4-syns">
-                        <div class="chip">take off</div>
-                        <div class="chip">take on</div>
-                        <div class="chip">take up</div>
-                      </div>
-                    </div>
-                    <div style="margin-top:8px;color:var(--muted)">antonyms: depend on phrase</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="muted" style="margin-top:12px">注：每行展示一个义项，A 列呈现词性/结构/标签，B 列给出英语释义与例句（并附简短其它语种注释），C 列列出形态与近反义词。页面为静态示例；所有 <code>id</code> 与 <code>data-*</code> 已预留供脚本替换。</div>
-          </section>
-        </main>
+    <!-- HERO: Word + phonetics + etymology summary -->
+    <section class="hero" aria-labelledby="word-main">
+      <div class="word-left">
+        <h1 id="word-main">inspire</h1> <!-- id: word-main -->
+        <div id="word-sub">
+          <div id="phonetics" class="phonetic">/ɪnˈspaɪər/</div> <!-- id: phonetics -->
+          <div id="pos-quick" style="color:var(--muted); font-size:13px;">verb</div> <!-- id: pos-quick -->
+        </div>
       </div>
 
-      <!-- bottom: optional notes / source (secondary content) -->
-      <footer style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div id="notes" class="muted">来源：示例语料 / 编写说明（静态示例）</div>
-        <div class="muted" id="updateHint">占位: <code>id="sensesTable"</code> 可被 fetch 填充替换</div>
-      </footer>
+      <div class="meta">
+        <div class="meta-card etymology" id="etymology-card">
+          <h3>Etymology</h3>
+          <p id="etymology">
+            <!-- id: etymology -->
+            from <em>Latin</em> <strong>inspirare</strong> “to breathe into”; later via Old French <em>inspirer</em>. (原义：向内呼吸 / 注入气息)
+          </p>
+        </div>
 
-      <!-- embedded JSON (示例数据) -->
-      <script type="application/json" id="entry-data">
-{
-  "lemma": "take",
-  "ipa": "/teɪk/",
-  "etymology": "Old English 'tacan' / Proto-Germanic '*takwaz' — originally 'to grasp, to take hold of'.",
-  "literal": "to grasp, seize, or receive",
-  "firstAttested": "c. 1000 (Old English)",
-  "badges": ["核心词汇", "高频", "小学必备"],
-  "senses": [
-    {
-      "id": 1,
-      "pos": "vtr",
-      "skeleton": "sth / sb",
-      "grammar": "vtr + prep (e.g. take sth from sb)",
-      "tags": ["核心词汇","常用词","口语"],
-      "gloss": "to get into one's possession, control, or occupancy",
-      "altNotes": "ES: tomar; FR: prendre",
-      "example": "He took the book from the shelf. — 译：他从书架上取下那本书。",
-      "forms": ["take","takes","took","taken","taking"],
-      "synonyms": ["grab","seize","pick up"],
-      "antonyms": ["give"]
-    },
-    {
-      "id": 2,
-      "pos": "vtr",
-      "skeleton": "sth",
-      "grammar": "vtr (accept/receive)",
-      "tags": ["中学常考","考试常见"],
-      "gloss": "to accept or receive (something offered)",
-      "altNotes": "DE: nehmen",
-      "example": "She took the job without hesitation. — 译：她毫不犹豫地接受了那份工作。",
-      "forms": ["take","takes","took","taken","taking"],
-      "synonyms": ["accept","receive"],
-      "antonyms": ["refuse"]
-    },
-    {
-      "id": 3,
-      "pos": "v",
-      "skeleton": "(time) it takes + X",
-      "grammar": "v (time/duration)",
-      "tags": ["日常用法"],
-      "gloss": "to require as necessary or appropriate (of time, effort)",
-      "altNotes": "",
-      "example": "It takes about ten minutes to get there by bus. — 译：坐公交去那儿大约需要十分钟。",
-      "forms": ["take","takes","took","taken","taking"],
-      "synonyms": ["require","need"],
-      "antonyms": ["save (time)"]
-    },
-    {
-      "id": 4,
-      "pos": "phrasal",
-      "skeleton": "v + particle",
-      "grammar": "phrasal verbs: take off / take on / take up",
-      "tags": ["常见短语","口语"],
-      "gloss": "various idiomatic meanings depending on particle",
-      "altNotes": "",
-      "example": "She took off her coat. — 译：她脱下了外套。",
-      "forms": ["take","takes","took","taken","taking"],
-      "synonyms": ["(varies)"],
-      "antonyms": []
-    }
-  ]
-}
-      </script>
+        <div class="meta-card" id="first-attested">
+          <h4>First attested</h4>
+          <p id="attested">late Middle English (c. 14th–15th cent.)</p>
+        </div>
 
+        <div class="meta-card" id="literal-breakdown">
+          <h4>Literal breakdown</h4>
+          <p id="breakdown">in- (into) + spirare (to breathe) → “breathe into”</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Meanings / main table -->
+    <section class="meanings" aria-labelledby="meanings-title">
+      <div class="m-head">
+        <h2 id="meanings-title">Meanings</h2>
+        <div class="note">每一行表示一个独立的词义；A列：语法信息；B列：释义与例句；C列：词形/同/反义词</div>
+      </div>
+
+      <div class="dict-table" id="dict-table">
+
+        <!-- ===== Meaning 1 ===== -->
+        <article class="meaning-row" id="meaning-1">
+          <!-- A column -->
+          <div class="col-a" id="def1_a">
+            <div class="pos-main" id="def1_a_pos">inspire <span style="opacity:0.85;">[sb] / [sth]</span></div> <!-- id: def1_a_pos -->
+            <div class="grammar" id="def1_a_grammar" data-tooltip="vtr = transitive verb；常见结构：inspire sb (to do sth), inspire sb with sth, inspire sth in sb">
+              vtr + prep
+            </div> <!-- id: def1_a_grammar -->
+            <div class="tags" id="def1_a_tags">
+              <span class="tag">核心词汇</span>
+              <span class="tag">常用词</span>
+              <span class="tag">书面语</span>
+            </div> <!-- id: def1_a_tags -->
+          </div>
+
+          <!-- B column -->
+          <div class="col-b" id="def1_b">
+            <div class="def-text" id="def1_b_def">
+              to fill someone with the urge or ability to do or feel something, especially something creative or beneficial. / 用英文简要补充其他语言释义（占位）。
+            </div> <!-- id: def1_b_def -->
+
+            <div class="example" id="def1_b_example">
+              <span class="en" id="def1_b_example_en">Her creativity and courage inspired her students to work harder.</span> <!-- id: def1_b_example_en -->
+              <span class="cn" id="def1_b_example_cn">她的创造力与勇气激励了她的学生更加努力。</span> <!-- id: def1_b_example_cn -->
+            </div>
+
+            <div id="def1_b_notes" class="def-translation">
+              <!-- id: def1_b_notes -->
+              usage note: often followed by an infinitive (inspire sb to do sth) or a noun (inspire confidence).
+            </div>
+          </div>
+
+          <!-- C column -->
+          <div class="col-c" id="def1_c">
+            <div class="forms" id="def1_c_forms"><strong>Forms:</strong> inspire · inspires · inspired · inspiring</div>
+            <div><strong>Synonyms</strong></div>
+            <div class="list-inline" id="def1_c_syn">
+              <span class="pill">motivate</span>
+              <span class="pill">encourage</span>
+              <span class="pill">stimulate</span>
+              <span class="pill">animate</span>
+            </div>
+            <div><strong>Antonyms</strong></div>
+            <div class="list-inline" id="def1_c_ant">
+              <span class="pill">discourage</span>
+              <span class="pill">demotivate</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- ===== Meaning 2 ===== -->
+        <article class="meaning-row" id="meaning-2">
+          <div class="col-a" id="def2_a">
+            <div class="pos-main" id="def2_a_pos">inspire [sth]</div>
+            <div class="grammar" id="def2_a_grammar" data-tooltip="vt + noun; e.g., inspire confidence, inspire fear — cause a feeling or quality in someone or something">
+              vt + noun
+            </div>
+            <div class="tags" id="def2_a_tags">
+              <span class="tag">常用搭配</span>
+              <span class="tag">情感用法</span>
+            </div>
+          </div>
+
+          <div class="col-b" id="def2_b">
+            <div class="def-text" id="def2_b_def">
+              to cause a particular feeling or attitude in someone (e.g., to inspire confidence, fear, respect). / 可补充多语种释义占位。
+            </div>
+
+            <div class="example" id="def2_b_example">
+              <div class="example">
+                <span class="en" id="def2_b_example_en">His calm manner inspired confidence in the team.</span>
+                <span class="cn" id="def2_b_example_cn">他冷静的举止使团队产生了信心。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-c" id="def2_c">
+            <div class="forms" id="def2_c_forms"><strong>Forms:</strong> inspire · inspires · inspired · inspiring</div>
+            <div><strong>Synonyms</strong></div>
+            <div class="list-inline" id="def2_c_syn">
+              <span class="pill">arouse</span>
+              <span class="pill">instill</span>
+              <span class="pill">evoke</span>
+            </div>
+            <div><strong>Antonyms</strong></div>
+            <div class="list-inline" id="def2_c_ant">
+              <span class="pill">suppress</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- ===== Meaning 3 (archaic/medical) ===== -->
+        <article class="meaning-row" id="meaning-3">
+          <div class="col-a" id="def3_a">
+            <div class="pos-main" id="def3_a_pos">inspire (archaic/technical)</div>
+            <div class="grammar" id="def3_a_grammar" data-tooltip="in earlier use: to breathe in; opposite of expire. 现多出现在医学或诗歌里">
+              intransitive / archaic
+            </div>
+            <div class="tags" id="def3_a_tags">
+              <span class="tag">过时词汇</span>
+              <span class="tag">医学/诗歌</span>
+            </div>
+          </div>
+
+          <div class="col-b" id="def3_b">
+            <div class="def-text" id="def3_b_def">
+              (archaic) to inhale; to breathe in.（古义：吸气、吸入）可在医学或文学史料中见到。
+            </div>
+
+            <div class="example" id="def3_b_example">
+              <div class="example">
+                <span class="en" id="def3_b_example_en">He inspired deeply and began to speak.</span>
+                <span class="cn" id="def3_b_example_cn">他深深吸了一口气，然后开始说话。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-c" id="def3_c">
+            <div class="forms" id="def3_c_forms"><strong>Forms:</strong> inspire · inspired · inspiring</div>
+            <div><strong>Notes</strong></div>
+            <div class="list-inline" id="def3_c_notes">
+              <span class="pill">旧义 - inhale</span>
+            </div>
+          </div>
+        </article>
+
+      </div> <!-- end dict-table -->
+    </section>
+
+    <div class="foot" id="footer-note">
+      <!-- id: footer-note -->
+      Tip: 所有可替换字段均已标注 id，后端可通过 fetch() 将具体释义、发音音频 URL、同/反义词、例句等注入到对应 ID 中以实现动态渲染。
     </div>
-  </div>
+
+  </div><!-- end container -->
+
+  <!--
+    说明（仅供开发者参考）：
+    - 常用 id 列表：
+      #word-main, #phonetics, #pos-quick
+      #etymology, #attested, #breakdown
+      每个词义: #meaning-N, 内部 #defN_a_pos, #defN_a_grammar, #defN_a_tags
+                #defN_b_def, #defN_b_example_en, #defN_b_example_cn
+                #defN_c_forms, #defN_c_syn, #defN_c_ant
+    - 不含任何 JS；若希望由 fetch 填充，前端可选择把 JSON 映射到对应 ID 插入 innerHTML
+  -->
 </body>
 </html>
