@@ -3,3 +3,5 @@
 venv/
 ssdb_server_x86/var
 .DS_Store
+.env
+

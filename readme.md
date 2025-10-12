@@ -28,7 +28,6 @@ Hosting Webster’s 1913 dictionary online.
 突破「词典」的固有形态，做一个「英语」的说明书。
 
 
-
 ## 其他词典的问题：
 
 1. Oxford English Dictionary 收费。滚
@@ -39,9 +38,15 @@ Hosting Webster’s 1913 dictionary online.
 6. websters1913 最美。适合凭感觉学习。抛开一切语法和构词造句，纯粹体会词义之妙以及如何运用
 7. wordreference 最简单明了。比如 `inspire [sb] == awaken [sb]'s creative ideas` 比一个 `[T]` (transitive) 符号更容易理解得多
 
+## Technicals
+
+- jinja2：SSR，适合SEO
+- alpinejs：拿来练手
+
 ## Credits
 
 - ❌ Google Dictionary API 
+- DeepSeek R1 (free) by OpenRouter
 
 ## License
 
