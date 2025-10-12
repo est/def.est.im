@@ -147,7 +147,7 @@
 
     <section class="hero" aria-labelledby="word">
       <div class="word-col">
-        <h1 id="word">{{ WORD }}</h1>
+        <h1 id="word" x-text="WORD">{{ WORD }}</h1>
         <div class="subline">
           <div id="ipa" class="ipa">{{ IPA }}</div>
           <button id="btnAudio" type="button" aria-label="Play pronunciation">▶ Play</button>
@@ -157,7 +157,7 @@
         <div class="accent-bar" aria-hidden="true"></div>
 
         <div class="meta">
-          <div id="definition_short">{{ WORD_DEF_SHORT}}</div>
+          <div id="other_forms">{{ CONJUGATES}}</div>
           <!-- div style="margin-top:10px;color:var(--muted)" id="word_note">def.est.im 基于数字媒介优先，智利提供先进词汇解释和翻译。</div -->
         </div>
       </div>
@@ -227,10 +227,66 @@
     </main>
   </div>
   <script>
+    async function lookup(word){
+      api_key = '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'
+      req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST', headers: {
+          "Authorization": `Bearer ${api_key}`,
+        }, body: JSON.stringify({
+          "model": "deepseek/deepseek-chat-v3.1:free",
+          "messages": [
+            {"role": "system", "content": `
+You are a linguistic expert providing dictionary and thesaurus service.
+User input is a word, explain the word and respond in strict raw JSON.
+Do not wrap the JSON. Format is: {
+   "WORD": "", // USER_INPUT, in this case "inspire" as an example,
+   "IPA": "/xxx/", // pronunciation in International Phonetic Alphabet
+   "CONJUGATES": "", // describe inflections and such
+   "ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
+   "SINCE": "", // approx. year or era the word first appeared
+   "MEANINGS": [ // array of meanings
+    {
+       "PATTERN": "", // example: "inspire [sb]"
+       "POS": "", // example: "vtr + prep"
+       "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
+       "TAGS": [], // common word, or rare word, or an old word?
+       "DEF_EN": "", // definition in English
+       "DEF_ZH": "", // definition in Chinese
+       "SENT_EN": "", // example sentence in English
+       "SENT_ZH": "", // example sentence in Chinese
+       "RELATED": [  // array of related words 
+         {"T": "synonyms", "V": ["encourage", "motivate"]},
+         {"T": "antonyms", "V": ["defeat", "disinspire"]}
+       ]
+    }, {}, {}, ...  // other meanings, from most commonly used to least used
+   ],
+   "REGISTER": "", // where the word is commonly used
+}`},
+            { "role": "user", "content": word}
+          ]
+        }),
+      })
+      const ret = await req.json()
+      const em = req?.error?.message
+      if(em){
+        console.error(em)
+        return
+      }
+      const ans = (ret.choices?.[0]?.message?.content || '').replace(
+        /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(
+        /^\s*```json/, '').replace(/```\s*$/, '')
+      console.info(ans)
+      return JSON.parse(ans)
+    }
     btnAudio.onclick=()=>{
       speechSynthesis.cancel()
       speechSynthesis.speak(new SpeechSynthesisUtterance(word.innerText))
     }
+    document.addEventListener('DOMContentLoaded', async ()=>{
+      const q = new URLSearchParams(location.search).get('q')
+      if (q){await lookup(q)}
+    })
+      
   </script>
 </body>
 </html>

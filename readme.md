@@ -40,8 +40,12 @@ Hosting Webster’s 1913 dictionary online.
 
 ## Technicals
 
-- jinja2：SSR，适合SEO
-- alpinejs：拿来练手
+- [❌] jinja2：SSR，适合SEO
+- [X] alpinejs：拿来练手
+- 达到MVP路径
+   - [X] index.html 改成模板
+   - [X] 调通openrouter。特别是CORS问题
+   - [X] JSON包裹的一坨
 
 ## Credits
 

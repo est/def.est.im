@@ -1,0 +1,51 @@
+{
+   "WORD": "quest",
+   "IPA": "/kwɛst/",
+   "CONJUGATES": "quests (plural), quested (past tense), questing (present participle/gerund)",
+   "ETYMOLOGY": "From Middle English quest(e), from Old French queste, from Medieval Latin questa, from Latin quaesita, feminine past participle of quaerere 'to seek, ask'.",
+   "SINCE": "14th century",
+   "MEANINGS": [
+      {
+         "PATTERN": "quest [for/after sth]",
+         "POS": "v intr",
+         "POS_TIP": "verb, intransitive (does not take a direct object in this pattern)",
+         "TAGS": [],
+         "DEF_EN": "To go in search of something; to seek something persistently.",
+         "DEF_ZH": "追寻，寻求",
+         "SENT_EN": "He quested for the truth his entire life.",
+         "SENT_ZH": "他一生都在追寻真相。",
+         "RELATED": [
+            {"T": "synonyms", "V": ["search", "hunt", "pursue"]},
+            {"T": "antonyms", "V": ["ignore", "disregard"]}
+         ]
+      },
+      {
+         "PATTERN": "quest [sth]",
+         "POS": "v tr",
+         "POS_TIP": "verb, transitive (takes a direct object)",
+         "TAGS": [],
+         "DEF_EN": "To seek or search for something specific.",
+         "DEF_ZH": "寻求（某物）",
+         "SENT_EN": "The knights quested the Holy Grail.",
+         "SENT_ZH": "骑士们寻找圣杯。",
+         "RELATED": [
+            {"T": "synonyms", "V": ["seek", "pursue"]},
+            {"T": "antonyms", "V": ["abandon", "ignore"]}
+         ]
+      },
+      {
+         "PATTERN": "quest",
+         "POS": "n",
+         "TAGS": [],
+         "DEF_EN": "A long or arduous search for something.",
+         "DEF_ZH": "寻求，探索",
+         "SENT_EN": "His quest for knowledge was unending.",
+         "SENT_ZH": "他对知识的追求是永无止境的。",
+         "RELATED": [
+            {"T": "synonyms", "V": ["adventure", "expedition", "journey"]},
+            {"T": "antonyms", "V": []}
+         ]
+      }
+   ],
+   "REGISTER": "The noun form is common in all registers. The verb form is more common in literary or formal contexts."
+}

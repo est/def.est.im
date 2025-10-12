@@ -1,0 +1,36 @@
+{
+   "WORD": "inspire",
+   "IPA": "/ɪnˈspaɪr/",
+   "CONJUGATES": "inspires, inspiring, inspired",
+   "ETYMOLOGY": "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'",
+   "SINCE": "Mid-16th century",
+   "MEANINGS": [
+      {
+         "PATTERN": "inspire [sb]",
+         "POS": "vtr + prep",
+         "POS_TIP": "vtr = transitive verb; prep = preposition",
+         "DEF_EN": "to fill someone with the urge or ability to do or feel something, especially something creative",
+         "DEF_ZH": "激励，鼓舞；使产生灵感",
+         "SENT_EN": "His speech inspired the team to victory.",
+         "SENT_ZH": "他的演讲激励团队取得了胜利。",
+         "RELATED": [
+            {"T": "synonyms", "V": ["encourage", "motivate", "stimulate"]},
+            {"T": "antonyms", "V": ["discourage", "dishearten", "deter"]}
+         ]
+      },
+      {
+         "PATTERN": "inspire [sth]",
+         "POS": "vtr + n",
+         "POS_TIP": "vtr = transitive verb; n = noun",
+         "DEF_EN": "to give rise to; to bring about",
+         "DEF_ZH": "引发，导致",
+         "SENT_EN": "The new policy has inspired much controversy.",
+         "SENT_ZH": "新政策引发了很多争议。",
+         "RELATED": [
+            {"T": "synonyms", "V": ["cause", "prompt", "produce"]},
+            {"T": "antonyms", "V": ["prevent", "deter", "inhibit"]}
+         ]
+      }
+   ],
+   "REGISTER": "Common in all contexts, including academic, business, and everyday language"
+}
