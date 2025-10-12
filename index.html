@@ -92,7 +92,7 @@
 
     .table thead{display:none}
 
-    .row{display:grid;grid-template-columns:150px 1fr 220px;gap:12px;padding:16px 12px;border-radius:12px;align-items:start}
+    .row{display:grid;grid-template-columns:15em 1fr 10em;gap:12px;padding:16px 12px;border-radius:12px;align-items:start}
     .row + .row{margin-top:12px}
     .row:hover{background:linear-gradient(90deg, rgba(43,108,176,0.03), rgba(232,121,249,0.02));}
 
@@ -240,23 +240,23 @@
   <script>
     const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
-User input is a word, explain the word and respond in strict raw JSON.
+User inputs a WORD, explain it and respond in strict raw JSON.
 Do not wrap the JSON. Format is: {
-"WORD": "", // USER_INPUT, in this case "inspire" as an example,
+"WORD": "", // the word to be explained
 "IPA": "/xxx/", // pronunciation in International Phonetic Alphabet
 "CONJUGATES": "", // describe inflections and such
 "ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
 "SINCE": "", // approx. year or era the word first appeared
 "MEANINGS": [ // array of meanings
 {
-    "PATTERN": "", // patterns to use the word under this meaning, optionally applied with [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]"
+    "PATTERN": "", // patterns to use the WORD under this meaning, optionally applied with tokens like [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]"
     "POS": "", // grammartically description of the PATTERN. example: "vtr + prep"
     "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
-    "TAGS": [], // common word, or rare word, or an old word? Be creative.
+    "TAGS": [], // core word, common/rare, old word? Be creative.
     "DEF_EN": "", // definition in simple English
-    "DEF_ZH": "", // definition in simple zh-cn
-    "SENT_EN": "", // example sentence in English
-    "SENT_ZH": "", // example sentence in zn-cn
+    "DEF_ZH": "", // definition in simple simple Chinese (mainland)
+    "SENT_EN": "", // example sentence in simple English
+    "SENT_ZH": "", // example sentence in simple Chinese (mainland)
     "RELATED": [  // array of related words under this meaning
       {"T": "synonyms", "V": ["encourage", "motivate"]},
       {"T": "antonyms", "V": ["defeat", "disinspire"]}
@@ -270,7 +270,7 @@ Do not wrap the JSON. Format is: {
       req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST', headers: {"Authorization": `Bearer ${derp}`},
         body: JSON.stringify({
-      "model": "deepseek/deepseek-chat-v3.1:free",
+      "model": "google/gemini-2.0-flash-exp:free",
       "messages": [
         {"role": "system", "content": sys_prompt},
         { "role": "user", "content": word}
@@ -305,8 +305,6 @@ Do not wrap the JSON. Format is: {
         if (data) {
           Object.assign(Alpine.$data(container), data)
           localStorage.setItem(q, JSON.stringify(data))
-        } else {
-          alert('failed')
         }
       }
     })
