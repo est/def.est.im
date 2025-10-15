@@ -61,6 +61,45 @@
       padding-left:8px;
     }
     #word{font-size:48px;font-weight:700;letter-spacing:-0.02em;margin:0;color:var(--accent-a)}
+    
+    /* Search input styling */
+    .search-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .search-input {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent-a);
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      width: 100%;
+      font-family: inherit;
+    }
+    
+    .search-input::placeholder {
+      color: rgba(43, 108, 176, 0.3);
+    }
+    
+    .search-icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+      flex-shrink: 0;
+    }
+    
+    .search-icon:hover {
+      opacity: 1;
+    }
     .subline{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px}
     .ipa{font-family: "Times New Roman", serif;font-size:20px;color:var(--muted)}
     #btnAudio{border-radius:10px;padding:0.5em;font-size:0.7em;border:0;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));color:white;font-weight:600;cursor:pointer}
@@ -130,7 +169,7 @@
     }
 
     @media (max-width:560px){
-      #word{font-size:36px}
+      .search-input{font-size:36px}
     }
 
     /* Fancy accent bar */
@@ -140,16 +179,22 @@
     .muted-sm{font-size:13px;color:var(--muted)}
 
   </style>
-  <script defer init="false" src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div id="container" x-data="{
-      WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
-      MEANINGS:[],REGISTER:'',
-    }">
+  <div id="container" x-data="init()">
     <section class="hero" aria-labelledby="word">
       <div class="word-col">
-        <h1 id="word" x-text="WORD"></h1>
+        <div class="search-container">
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="..."
+            x-model="WORD" 
+            @keydown.enter="lookup()"
+            @blur="lookup()"
+          />
+          <div class="search-icon" @click="lookup()" title="Search">🔍</div>
+        </div>
         <div class="subline">
           <div id="ipa" class="ipa" x-text="IPA"></div>
           <button id="btnAudio" type="button" aria-label="Play pronunciation">▶ Play</button>
@@ -296,7 +341,13 @@ Do not wrap the JSON. Format is: {
     }
     btnAudio.onclick=()=>{
       speechSynthesis.cancel()
-      speechSynthesis.speak(new SpeechSynthesisUtterance(word.innerText))
+      speechSynthesis.speak(new SpeechSynthesisUtterance(container.querySelector('.search-input').value || container.querySelector('.search-input').placeholder))
+    }
+    function init(){
+      return {
+        WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
+        MEANINGS:[], REGISTER:'', lookup: lookup
+      }
     }
     document.addEventListener('DOMContentLoaded', async () => {
       const q = new URLSearchParams(location.search).get('q')
@@ -310,5 +361,6 @@ Do not wrap the JSON. Format is: {
       }
     })
   </script>
+  <script defer init="false" src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </body>
 </html>

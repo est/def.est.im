@@ -38,7 +38,7 @@ Hosting Webster’s 1913 dictionary online.
 6. websters1913 最美。适合凭感觉学习。抛开一切语法和构词造句，纯粹体会词义之妙以及如何运用
 7. wordreference 最简单明了。比如 `inspire [sb] == awaken [sb]'s creative ideas` 比一个 `[T]` (transitive) 符号更容易理解得多
 
-## Technicals
+## 
 
 - [❌] jinja2：SSR，适合SEO
 - [X] alpinejs：拿来练手
@@ -46,6 +46,8 @@ Hosting Webster’s 1913 dictionary online.
    - [X] index.html 改成模板
    - [X] 调通openrouter。特别是CORS问题
    - [X] JSON包裹的一坨
+- [ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)
+- [ ] how to search for new words?
 
 ## Credits
 
