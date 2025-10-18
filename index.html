@@ -314,7 +314,7 @@
     }
 
     async function handlePathChange() {
-      const word = decodeURI(location.pathname.substring(1)).strip();
+      const word = decodeURI(location.pathname.substring(1)).trim();
       if (!word) return;
 
       const alpineData = Alpine.$data(container);
