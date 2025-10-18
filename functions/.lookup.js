@@ -15,9 +15,9 @@ export async function onRequest(context) {
     return Response.json({'em': 'empty'})
   }
   // read from KV cache
-  const exist = await context.kv_def.get(word)
+  const exist = await context.env.kv_def.get(word)
   if(exist){
-    return Response.json({'result': exist})
+    return Response.json({'result': JSON.parse(exist)})
   }
   let {LLM_API, LLM_MODEL, LLM_TOKEN} = context.env
   let api
@@ -36,17 +36,17 @@ Do not wrap the JSON. Format is:
 {
   "WORD": "", // the word to be explained
   "IPA": "/xxx/", // pronunciation in International Phonetic Alphabet. Make sure it's wrapped in double quotation marks
-  "CONJUGATES": "", // inflections and such, seprate by " | "
+  "CONJUGATES": "", // inflections and such seprated by " | "
   "ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
   "SINCE": "", // approx. year or era the word first appeared
   "MEANINGS": [ // array of meanings
     {
-      "PATTERN": "", // how to use WORD under this meaning, optionally applied with markers like [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]". Separate by newline instead of vertical bar
+      "PATTERN": "", // how to use WORD under this meaning, optionally applied with markers like [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]".
       "POS": "", // grammartically description of the PATTERN. example: "vtr + prep"
       "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
       "TAGS": [], // core word, common/rare, old word? Be creative.
-      "DEF_EN": "", // definition in simple English
-      "DEF_ZH": "", // definition in simple simple Chinese (mainland)
+      "DEF_EN": "", // definition in simple, short English
+      "DEF_ZH": "", // definition in simple, short Chinese (mainland)
       "SENT_EN": "", // example sentence in simple English
       "SENT_ZH": "", // example sentence in simple Chinese (mainland)
       "RELATED": [  // synonyms and antonyms under this meaning if any, also give "related" if similar or derivative word/brand/concept is more well known. Only list word itself in "V", no explain
@@ -91,10 +91,11 @@ Do not wrap the JSON. Format is:
     /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
   console.debug(ans)
   const data = Object.fromEntries(
-      // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
-      Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
-    )
+    // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
+    Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
+  )
+  data.MEANINGS.forEach((x)=>{x.POS=x.POS.replace(' | ', '\n')})
   // @ToDo write to cloudflare KV cache for {data.WORD: data}
-  await context.kv_def.put(data.WORD, data)
+  await context.env.kv_def.put(data.WORD, JSON.stringify(data))
   return Response.json({result: data})
 }

@@ -1,0 +1,7 @@
+name = "def"
+compatibility_date = "2025-10-18"
+
+[[kv_namespaces]]
+binding = "kv_def"
+id = "kv_def"
+preview_id = "kv_def"
