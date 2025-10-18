@@ -60,7 +60,6 @@
     .word-col{
       padding-left:8px;
     }
-    #word{font-size:48px;font-weight:700;letter-spacing:-0.02em;margin:0;color:var(--accent-a)}
     
     /* Search input styling */
     .search-container {
@@ -191,10 +190,9 @@
             placeholder="..."
             x-model="WORD" 
             autofocus
-            @keydown.enter="lookup(WORD)"
-            @blur="lookup(WORD)"
+            @keydown.enter="refresh()"
           />
-          <div class="search-icon" @click="lookup(WORD)" title="Search">🔍</div>
+          <div class="search-icon" @click="refresh()" title="Search">🔍</div>
         </div>
         <div class="subline">
           <div class="ipa" x-text="IPA"></div>
@@ -224,7 +222,7 @@
         <h2 style="margin:0 0 12px 0;font-size:20px">释义</h2>
 
         <!-- Table: each .row is one meaning -->
-        <div">
+        <div>
           <template x-for="meaning in MEANINGS">
             <article class="row">
               <div class="col-a">
@@ -284,7 +282,6 @@
     </main>
   </div>
   <script>
-
     async function lookup(word){
       req = await fetch('/.lookup?q=' + encodeURI(word), {
         method: '!',
@@ -299,7 +296,15 @@
     function init(){
       return {
         WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
-        MEANINGS:[], REGISTER:'', lookup: lookup
+        MEANINGS:[], REGISTER:'', refresh: async function(){
+          let data
+          try{
+            data = await lookup(this.WORD)
+          } catch (ex) {
+            return
+          }
+          Object.assign(this, data)
+        }
       }
     }
     document.addEventListener('DOMContentLoaded', async () => {
