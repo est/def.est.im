@@ -179,6 +179,11 @@
 
     /* Fancy accent bar */
     .accent-bar{height:6px;border-radius:8px;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));margin-top:12px}
+    .accent-bar.loading{background-size:200% 100%;animation:scroll-bg 1s linear infinite}
+    @keyframes scroll-bg {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
 
     /* small caption */
     .muted-sm{font-size:13px;color:var(--muted)}
@@ -202,11 +207,11 @@
         </div>
         <div class="subline">
           <div class="ipa" x-text="IPA"></div>
-          <button id="btnAudio" type="button" aria-label="Play pronunciation">▶ Play</button>
+          <button id="btnAudio" type="button" aria-label="Play pronunciation" x-show="WORD.trim()">▶ Play</button>
           <!-- div id="frequency" class="muted-sm">Frequency: <strong>Common</strong></div -->
         </div>
 
-        <div class="accent-bar" aria-hidden="true"></div>
+        <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
 
         <div class="meta">
           <div id="other_forms" x-text="CONJUGATES"></div>
@@ -299,6 +304,7 @@
       speechSynthesis.cancel()
       speechSynthesis.speak(new SpeechSynthesisUtterance(inputWord.value || inputWord.placeholder))
     }
+    let isLoading = false
     function init(){
       return {
         WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
@@ -314,9 +320,12 @@
     }
 
     async function handlePathChange() {
+      if (isLoading) return;
       const word = decodeURI(location.pathname.substring(1)).trim();
-      if (!word) return;
+      if (!/[a-z]/i.test(word)) return;
 
+      isLoading = true
+      accentBar.classList.add('loading')
       const alpineData = Alpine.$data(container);
       alpineData.WORD = word;
 
@@ -330,6 +339,9 @@
       } catch (ex) {
           console.error('Failed to load word:', ex);
           return;
+      } finally {
+        isLoading = false
+        accentBar.classList.remove('loading')
       }
 
       if (data) {

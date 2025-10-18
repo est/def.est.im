@@ -6,3 +6,4 @@ ssdb_server_x86/var
 .env
 node_modules/
 .wrangler
+.dev.vars
