@@ -164,7 +164,7 @@
     /* Column C */
     .col-c{display:flex;flex-direction:column;gap:8px;font-size:13px}
     .related-words{display:flex;gap:8px;flex-wrap:wrap}
-    .related-words small{padding:6px 8px;border-radius:8px;background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid rgba(16,24,40,0.04)}
+    .related-words a{padding:6px 8px;border-radius:8px;background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid rgba(16,24,40,0.04);text-decoration:none;color:inherit;}
 
     /* Responsive */
     @media (max-width:900px){
@@ -264,7 +264,7 @@
                     <span x-text="related.T + ': '"></span>
                     <div class="related-words">
                       <template x-for="word in related.V">
-                        <small x-text="word"></small>
+                        <a x-bind:href="'/' + word" x-text="word"></a>
                       </template>
                     </div>
                   </div>

@@ -14,13 +14,11 @@ ChatGPT 出来之后，干脆外包给AI做吧。
 
 ## ToDo
 
-[ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)
-[ ] jinja2：SSR，适合SEO。有闲心再说
-
-[X] alpinejs：拿来练手
-[X] how to search for new words?
-
-达到MVP：
+- [ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)
+- [ ] jinja2：SSR，适合SEO。有闲心再说
+- [X] alpinejs：拿来练手
+- [X] how to search for new words?
+- 达到MVP：
    - [X] index.html 改成模板
    - [X] 调通openrouter。特别是CORS问题
    - [X] JSON包裹的一坨

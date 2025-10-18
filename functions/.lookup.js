@@ -41,7 +41,7 @@ Do not wrap the JSON. Format is:
   "SINCE": "", // approx. year or era the word first appeared
   "MEANINGS": [ // array of meanings
     {
-      "PATTERN": "", // how to use WORD under this meaning, optionally applied with markers like [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]".
+      "PATTERN": "", // how to use WORD under this meaning, optionally applied with markers like [sb] [sth]. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]".
       "POS": "", // grammartically description of the PATTERN. example: "vtr + prep"
       "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
       "TAGS": [], // core word, common/rare, old word? Be creative.
