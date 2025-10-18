@@ -264,7 +264,7 @@
                     <span x-text="related.T + ': '"></span>
                     <div class="related-words">
                       <template x-for="word in related.V">
-                        <a x-bind:href="'/' + word" x-text="word"></a>
+                        <a x-bind:href="'/' + word" x-text="word" @click.prevent="WORD=word; refresh()"></a>
                       </template>
                     </div>
                   </div>
