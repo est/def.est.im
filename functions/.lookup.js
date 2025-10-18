@@ -31,7 +31,7 @@ export async function onRequest(context) {
   }
   const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
-User inputs a WORD, fix misspelling if possible, explain it and respond in strict raw JSON.
+User inputs a WORD, fix misspelling & to lower case if possible, explain it and respond in strict raw JSON.
 Do not wrap the JSON. Format is:
 {
   "WORD": "", // the word to be explained
@@ -94,8 +94,9 @@ Do not wrap the JSON. Format is:
     // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
     Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
   )
-  data.MEANINGS.forEach((x)=>{x.POS=x.POS.replace(' | ', '\n')})
+  data.MEANINGS.forEach((x)=>{x.PATTERN=x.PATTERN.replace(' | ', '\n')})
   // @ToDo write to cloudflare KV cache for {data.WORD: data}
   await context.env.kv_def.put(data.WORD, JSON.stringify(data))
-  return Response.json({result: data})
+  return Response.json({result: data}, {headers: {
+    'Cache-Control': 'public, max-age=3600'}})
 }
