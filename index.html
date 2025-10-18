@@ -302,28 +302,50 @@
     function init(){
       return {
         WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
-        MEANINGS:[], REGISTER:'', refresh: async function(){
-          let data
-          try{
-            data = await lookup(this.WORD)
-          } catch (ex) {
-            return
-          }
-          Object.assign(this, data)
+        MEANINGS:[], REGISTER:'',
+        refresh: function() {
+          const word = this.WORD.trim();
+          if (!word || word === decodeURI(location.pathname.substring(1))) return;
+          const url = '/' + encodeURI(word);
+          history.pushState({word: word}, '', url);
+          handlePathChange();
         }
       }
     }
-    document.addEventListener('DOMContentLoaded', async () => {
-      const q = new URLSearchParams(location.search).get('q')
-      if (q) {
-        let data = JSON.parse(localStorage.getItem(q))
-        if (!data) data = await lookup(q)
-        if (data) {
-          Object.assign(Alpine.$data(container), data.result)
-          localStorage.setItem(q, JSON.stringify(data))
-        }
+
+    async function handlePathChange() {
+      const word = decodeURI(location.pathname.substring(1)).strip();
+      if (!word) return;
+
+      const alpineData = Alpine.$data(container);
+      alpineData.WORD = word;
+
+      let data;
+      try {
+          data = JSON.parse(localStorage.getItem(word));
+          if (!data) {
+              data = await lookup(word);
+              if (data) localStorage.setItem(word, JSON.stringify(data));
+          }
+      } catch (ex) {
+          console.error('Failed to load word:', ex);
+          return;
       }
-    })
+
+      if (data) {
+          Object.assign(alpineData, data)
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const q = new URLSearchParams(location.search).get('q');
+      if (q) {
+        history.replaceState(null, '', '/' + encodeURI(q));
+      }
+      handlePathChange();
+
+      window.addEventListener('popstate', handlePathChange);
+    });
   </script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </body>
