@@ -1,3 +1,8 @@
+const CORS = {
+
+}
+
+
 export async function onRequest(context) {
   const { req } = context
 
@@ -52,7 +57,7 @@ Do not wrap the JSON. Format is:
 `
   const gatewayRequest = await fetch(`${api.origin}${api.pathname}${api.search}`, {
     method: 'POST',
-    headers: {'Authentication': `Bearer ${LLM_TOKEN}`, ''},
+    headers: {'Authentication': `Bearer ${LLM_TOKEN}`},
     body: JSON.stringify({
       "model": LLM_MODEL,
       "messages": [
