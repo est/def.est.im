@@ -4,7 +4,7 @@ const CORS = {
 
 
 export async function onRequest(context) {
-  const { req } = context
+  const req = context.request
 
   // only POST
   if (req.method !== '!') {

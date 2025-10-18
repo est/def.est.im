@@ -70,7 +70,7 @@
       gap: 12px;
     }
     
-    .search-input {
+    #inputWord {
       font-size: 48px;
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -84,7 +84,7 @@
       font-family: inherit;
     }
     
-    .search-input::placeholder {
+    #inputWord::placeholder {
       color: rgba(43, 108, 176, 0.3);
     }
     
@@ -169,7 +169,7 @@
     }
 
     @media (max-width:560px){
-      .search-input{font-size:36px}
+      #inputWord{font-size:36px}
     }
 
     /* Fancy accent bar */
@@ -182,21 +182,22 @@
 </head>
 <body>
   <div id="container" x-data="init()">
-    <section class="hero" aria-labelledby="word">
+    <section class="hero">
       <div class="word-col">
         <div class="search-container">
           <input 
             type="text" 
-            class="search-input" 
+            id="inputWord" 
             placeholder="..."
             x-model="WORD" 
-            @keydown.enter="lookup()"
-            @blur="lookup()"
+            autofocus
+            @keydown.enter="lookup(WORD)"
+            @blur="lookup(WORD)"
           />
-          <div class="search-icon" @click="lookup()" title="Search">🔍</div>
+          <div class="search-icon" @click="lookup(WORD)" title="Search">🔍</div>
         </div>
         <div class="subline">
-          <div id="ipa" class="ipa" x-text="IPA"></div>
+          <div class="ipa" x-text="IPA"></div>
           <button id="btnAudio" type="button" aria-label="Play pronunciation">▶ Play</button>
           <!-- div id="frequency" class="muted-sm">Frequency: <strong>Common</strong></div -->
         </div>
@@ -213,17 +214,17 @@
         <h4>Origin 词源</h4>
         <p id="etym_text" x-text="ETYMOLOGY"></p>
         <div style="height:10px"></div>
-        <div id="first_appearance" class="muted-sm">首现: <strong x-text="SINCE"></strong></div>
+        <div class="muted-sm">首现: <strong x-text="SINCE"></strong></div>
       </aside>
     </section>
 
     <main class="main">
 
-      <section class="meanings" aria-labelledby="meanings_title">
-        <h2 id="meanings_title" style="margin:0 0 12px 0;font-size:20px">释义</h2>
+      <section class="meanings">
+        <h2 style="margin:0 0 12px 0;font-size:20px">释义</h2>
 
         <!-- Table: each .row is one meaning -->
-        <div id="meanings_table">
+        <div">
           <template x-for="meaning in MEANINGS">
             <article class="row">
               <div class="col-a">
@@ -266,10 +267,10 @@
 
       </section>
 
-      <section class="meanings" aria-labelledby="usage_title">
-        <h2 id="usage_title" style="margin:0 0 12px 0;font-size:20px">使用</h2>
-        <div id="usage_notes" style="color:var(--muted);line-height:1.6">
-          <p id="usage2"><strong>Register:</strong> <span x-text="REGISTER"></span></p>
+      <section class="meanings">
+        <h2 style="margin:0 0 12px 0;font-size:20px">使用</h2>
+        <div style="color:var(--muted);line-height:1.6">
+          <p><strong>Register:</strong> <span x-text="REGISTER"></span></p>
         </div>
       </section>
 
@@ -293,7 +294,7 @@
     }
     btnAudio.onclick=()=>{
       speechSynthesis.cancel()
-      speechSynthesis.speak(new SpeechSynthesisUtterance(container.querySelector('.search-input').value || container.querySelector('.search-input').placeholder))
+      speechSynthesis.speak(new SpeechSynthesisUtterance(inputWord.value || inputWord.placeholder))
     }
     function init(){
       return {
@@ -307,7 +308,7 @@
         let data = JSON.parse(localStorage.getItem(q))
         if (!data) data = await lookup(q)
         if (data) {
-          Object.assign(Alpine.$data(container), data)
+          Object.assign(Alpine.$data(container), data.result)
           localStorage.setItem(q, JSON.stringify(data))
         }
       }
