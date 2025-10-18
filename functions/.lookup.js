@@ -10,7 +10,15 @@ export async function onRequest(context) {
   if (req.method !== 'POST') {
     return new Response('', {status: 405 })
   }
-
+  const word = (new URL(req.url).searchParams.get('q') || '').trim()
+  if (!word){
+    return Response.json({'em': 'empty'})
+  }
+  // read from KV cache
+  const exist = await context.kv_def.get(word)
+  if(exist){
+    return Response.json({'result': exist})
+  }
   let {LLM_API, LLM_MODEL, LLM_TOKEN} = context.env
   let api
   try{
@@ -21,11 +29,6 @@ export async function onRequest(context) {
   if (!LLM_MODEL){
     return Response.json({'em': 'invalid LLM_MODEL'})
   }
-  const word = (new URL(req.url).searchParams.get('q') || '').trim()
-  if (!word){
-    return Response.json({'em': 'empty'})
-  }
-
   const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
 User inputs a WORD, fix misspelling if possible, explain it and respond in strict raw JSON.
@@ -91,5 +94,7 @@ Do not wrap the JSON. Format is:
       // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
       Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
     )
+  // @ToDo write to cloudflare KV cache for {data.WORD: data}
+  await context.kv_def.put(data.WORD, data)
   return Response.json({result: data})
 }
