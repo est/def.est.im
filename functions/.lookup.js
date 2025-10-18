@@ -7,7 +7,7 @@ export async function onRequest(context) {
   const req = context.request
 
   // only POST
-  if (req.method !== '!') {
+  if (req.method !== 'DEF') {
     return new Response('', {status: 405 })
   }
 
