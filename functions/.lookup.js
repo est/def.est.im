@@ -6,7 +6,7 @@ export async function onRequest(context) {
     return new Response('', {status: 405 })
   }
 
-  const {LLM_API, LLM_MODEL} = context.env
+  let {LLM_API, LLM_MODEL, LLM_TOKEN} = context.env
   let api
   try{
     api = new URL(LLM_API)
@@ -21,7 +21,6 @@ export async function onRequest(context) {
     return new Response.json({'em': 'empty'})
   }
 
-  const headers = Object.assign(req.headers, {'Authentication': `Bearer ${api.password}`})
   const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
 User inputs a WORD, fix misspelling if possible, explain it and respond in strict raw JSON.
@@ -53,7 +52,7 @@ Do not wrap the JSON. Format is:
 `
   const gatewayRequest = await fetch(`${api.origin}${api.pathname}${api.search}`, {
     method: 'POST',
-    headers: headers,
+    headers: {'Authentication': `Bearer ${LLM_TOKEN}`, ''},
     body: JSON.stringify({
       "model": LLM_MODEL,
       "messages": [
@@ -82,7 +81,7 @@ Do not wrap the JSON. Format is:
   const ans = (rsp.choices?.[0]?.message?.content || '').replace(
     /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
     /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
-  console.info(ans)
+  console.debug(ans)
   const data = Object.fromEntries(
       // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
       Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
