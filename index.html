@@ -99,6 +99,13 @@
     .search-icon:hover {
       opacity: 1;
     }
+    button.search-icon {
+      border: none;
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      font-size: inherit;
+    }
     .subline{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px}
     .ipa{font-family: "Times New Roman", serif;font-size:20px;color:var(--muted)}
     #btnAudio{border-radius:10px;padding:0.5em;font-size:0.7em;border:0;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));color:white;font-weight:600;cursor:pointer}
@@ -115,14 +122,13 @@
     .main{
       display:flex;flex-direction:column;gap:18px
     }
-
-    /* Meanings table */
-    .meanings{
+    .main section{
       background:linear-gradient(180deg,var(--card),#fff);
       border-radius:14px;padding:18px;border:1px solid rgba(16,24,40,0.04);
       box-shadow: 0 6px 18px rgba(17,24,39,0.04);
       overflow:hidden;
     }
+    .main section h2 {margin:0 0 12px 0;font-size:20px}
 
     .table{
       width:100%;border-collapse:collapse;font-size:15px
@@ -192,7 +198,7 @@
             autofocus
             @keydown.enter="refresh()"
           />
-          <div class="search-icon" @click="refresh()" title="Search">🔍</div>
+          <button class="search-icon" @click="refresh()" title="Search" aria-label="Search">🔍</button>
         </div>
         <div class="subline">
           <div class="ipa" x-text="IPA"></div>
@@ -218,8 +224,8 @@
 
     <main class="main">
 
-      <section class="meanings">
-        <h2 style="margin:0 0 12px 0;font-size:20px">释义</h2>
+      <section>
+        <h2>释义</h2>
 
         <!-- Table: each .row is one meaning -->
         <div>
@@ -265,15 +271,15 @@
 
       </section>
 
-      <section class="meanings">
-        <h2 style="margin:0 0 12px 0;font-size:20px">使用</h2>
+      <section>
+        <h2>使用</h2>
         <div style="color:var(--muted);line-height:1.6">
           <p><strong>Register:</strong> <span x-text="REGISTER"></span></p>
         </div>
       </section>
 
-      <section class="meanings">
-        <h2 style="margin:0 0 12px 0;font-size:20px">注意</h2>
+      <section>
+        <h2>注意</h2>
         <div style="color:var(--muted);line-height:1.6">
           <p>本词典由AI撰写。仅供参考。</p>
         </div>
@@ -319,6 +325,6 @@
       }
     })
   </script>
-  <script defer init="false" src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </body>
 </html>

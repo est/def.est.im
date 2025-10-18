@@ -11,8 +11,8 @@ export async function onRequest(context) {
     return new Response('', {status: 405 })
   }
   const word = (new URL(req.url).searchParams.get('q') || '').trim()
-  if (!word){
-    return Response.json({'em': 'empty'})
+  if (!word || word.length > 250){
+    return Response.json({'em': 'terrible request'})
   }
   // read from KV cache
   const exist = await context.env.kv_def.get(word)
@@ -78,21 +78,27 @@ Do not wrap the JSON. Format is:
   } catch (ex) {
     // If there's an error, return a 500 error to the client.
     console.error(ex, gatewayRequest.url, gatewayRequest.body)
-    return Response.json({'em': 'failed'}, {status: 502 })
+    return Response.json({'em': 'failed'})
   }
 
   const em = rsp?.error?.message
   if(em){
     console.error(em)
-    return Response.json({'em': 'gateway error'}, {status: 502})
+    return Response.json({'em': 'gateway error'})
   }
   const ans = (rsp.choices?.[0]?.message?.content || '').replace(
     /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
     /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
-  console.debug(ans)
+  let ans_data
+  try{
+    ans_data = JSON.parse(ans)
+  } catch (ex) {
+    console.debug(ans)
+    return Response.json({'em': 'AI error'})
+  }
   const data = Object.fromEntries(
     // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
-    Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
+    Object.entries(ans_data).map(([k, v]) => [k.toUpperCase(), v])
   )
   data.MEANINGS.forEach((x)=>{x.PATTERN=x.PATTERN.replace(' | ', '\n')})
   // @ToDo write to cloudflare KV cache for {data.WORD: data}
