@@ -7,7 +7,7 @@ export async function onRequest(context) {
   const req = context.request
 
   // only POST
-  if (req.method !== 'DEF') {
+  if (req.method !== 'POST') {
     return new Response('', {status: 405 })
   }
 
@@ -16,14 +16,14 @@ export async function onRequest(context) {
   try{
     api = new URL(LLM_API)
   } catch (ex) {
-    return new Response.json({'em': 'invalid LLM_API'}, {status: 500 })
+    return Response.json({'em': 'invalid LLM_API'}, {status: 500 })
   }
   if (!LLM_MODEL){
-    return new Response.json({'em': 'invalid LLM_MODEL'})
+    return Response.json({'em': 'invalid LLM_MODEL'})
   }
   const word = (new URL(req.url).searchParams.get('q') || '').trim()
   if (!word){
-    return new Response.json({'em': 'empty'})
+    return Response.json({'em': 'empty'})
   }
 
   const sys_prompt=`
@@ -55,9 +55,9 @@ Do not wrap the JSON. Format is:
   "REGISTER": "", // where the word is commonly used
 }
 `
-  const gatewayRequest = await fetch(`${api.origin}${api.pathname}${api.search}`, {
+  const gatewayRequest = new Request(`${api.origin}${api.pathname}${api.search}`, {
     method: 'POST',
-    headers: {'Authentication': `Bearer ${LLM_TOKEN}`},
+    headers: {'Authorization': `Bearer ${LLM_TOKEN}`, 'Content-Type': 'application/json'},
     body: JSON.stringify({
       "model": LLM_MODEL,
       "messages": [
@@ -70,18 +70,18 @@ Do not wrap the JSON. Format is:
   let rsp
   try {
     // Fetch the response from the gateway.
-    rsp = await fetch(gatewayRequest)
+    rsp = await (await fetch(gatewayRequest)).json()
     // Return the gateway's response to the client.
   } catch (ex) {
     // If there's an error, return a 500 error to the client.
-    console.error(ex)
-    return new Response.json({'em': 'failed'}, {status: 502 })
+    console.error(ex, gatewayRequest.url, gatewayRequest.body)
+    return Response.json({'em': 'failed'}, {status: 502 })
   }
 
   const em = rsp?.error?.message
   if(em){
     console.error(em)
-    return new Response.json({'em': 'gateway error'}, {status: 502})
+    return Response.json({'em': 'gateway error'}, {status: 502})
   }
   const ans = (rsp.choices?.[0]?.message?.content || '').replace(
     /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
@@ -91,5 +91,5 @@ Do not wrap the JSON. Format is:
       // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
       Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
     )
-  return new Response.json({result: data})
+  return Response.json({result: data})
 }
