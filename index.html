@@ -283,61 +283,13 @@
     </main>
   </div>
   <script>
-    const sys_prompt=`
-You are a linguistic expert providing dictionary and thesaurus service.
-User inputs a WORD, fix misspelling if possible, explain it and respond in strict raw JSON.
-Do not wrap the JSON. Format is: {
-"WORD": "", // the word to be explained
-"IPA": "/xxx/", // pronunciation in International Phonetic Alphabet. Make sure it's wrapped in double quotation marks
-"CONJUGATES": "", // inflections and such, seprate by " | "
-"ETYMOLOGY": "", // example: "From Latin inspirare (in- 'into' + spirare 'breathe'), originally 'to breathe into, infuse spirit'"
-"SINCE": "", // approx. year or era the word first appeared
-"MEANINGS": [ // array of meanings
-{
-    "PATTERN": "", // how to use WORD under this meaning, optionally applied with markers like [sb] [sth] etc. Example: if WORD is "inpure", one of the PATTERN is "inspire [sb]". Separate by newline instead of vertical bar
-    "POS": "", // grammartically description of the PATTERN. example: "vtr + prep"
-    "POS_TIP": "", // tooltip to explain like what is "vtr" and "prep"
-    "TAGS": [], // core word, common/rare, old word? Be creative.
-    "DEF_EN": "", // definition in simple English
-    "DEF_ZH": "", // definition in simple simple Chinese (mainland)
-    "SENT_EN": "", // example sentence in simple English
-    "SENT_ZH": "", // example sentence in simple Chinese (mainland)
-    "RELATED": [  // synonyms and antonyms under this meaning if any, also give "related" if similar or derivative word/brand/concept is more well known. Only list word itself in "V", no explain
-      {"T": "synonyms", "V": ["encourage", "motivate"]},
-      {"T": "antonyms", "V": ["defeat", "disinspire"]}
-    ]
-}, {}, {}, ...  // other meanings, from most commonly used to least used
-],
-"REGISTER": "", // where the word is commonly used
-}`
+
     async function lookup(word){
-      // derp = ['sk','or','v1','067d90f668e9c1d2064eaca96946cbef7cd9a4626d930469d43b90260b526fce'].join('-')
-      derp = ''
-      req = await fetch('', {
-        method: 'POST', headers: {"Authorization": `Bearer ${derp}`,'Content-Type':'application/json'},
-        body: JSON.stringify({
-      "model": "gemini-flash-latest",
-      "messages": [
-        {"role": "system", "content": sys_prompt},
-        {"role": "user", "content": word}
-      ]
-    }),
+      req = await fetch('/.lookup?q=' + encodeURI(word), {
+        method: '!',
       })
-      const rsp = await req.json()
-      const em = rsp?.error?.message
-      if(em){
-        console.error(em)
-        return
-      }
-      const ans = (rsp.choices?.[0]?.message?.content || '').replace(
-        /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(
-        /^\s*```json/, '').replace(/```\s*$/, '')
-      console.info(ans)
-      const data = Object.fromEntries(
-          // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
-          Object.entries(JSON.parse(ans)).map(([k, v]) => [k.toUpperCase(), v])
-        )
-      return data
+      const {result} = await req.json()
+      return result
     }
     btnAudio.onclick=()=>{
       speechSynthesis.cancel()
