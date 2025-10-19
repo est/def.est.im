@@ -19,7 +19,7 @@ ChatGPT 出来之后，干脆外包给AI做吧。
 - [ ] 把 register 包含 Common, General 的都cache一遍
 - [ ] 把中小学词汇都预热到KV cache里。省钱
 - [ ] 限流，防止API爆掉
-- [ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)
+- [ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)，[tab-to-search](https://www.chromium.org/tab-to-search/)
 - [ ] jinja2：SSR，适合SEO。有闲心再说
 - [X] alpinejs：拿来练手
 - [X] how to search for new words?

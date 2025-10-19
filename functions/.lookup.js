@@ -31,7 +31,7 @@ export async function onRequest(context) {
   }
   const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
-User inputs a WORD, fix misspelling & to lower case if possible, explain it and respond in strict raw JSON.
+User inputs a WORD, fix misspelling, to lower case if possible, restore to base form i explain it and respond in strict raw JSON.
 Do not wrap the JSON. Format is:
 {
   "WORD": "", // the word to be explained
@@ -86,9 +86,9 @@ Do not wrap the JSON. Format is:
     console.error(em)
     return Response.json({'em': 'gateway error'})
   }
-  const ans = (rsp.choices?.[0]?.message?.content || '').replace(
-    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
-    /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
+  const ans = (rsp.choices?.[0]?.message?.content || '').replaceAll(
+    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replaceAll(  // fix openrouter cheap models
+    /^\s*```json/, '').replaceAll(/```\s*$/, '')   // fix needless code block wraps
   let ans_data
   try{
     ans_data = JSON.parse(ans)
@@ -100,7 +100,7 @@ Do not wrap the JSON. Format is:
     // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
     Object.entries(ans_data).map(([k, v]) => [k.toUpperCase(), v])
   )
-  data.MEANINGS.forEach((x)=>{x.PATTERN=x.PATTERN.replace(' | ', '\n')})
+  data.MEANINGS.forEach((x)=>{x.PATTERN=x.PATTERN.replaceAll(' | ', '\n')})
   // @ToDo write to cloudflare KV cache for {data.WORD: data}
   await context.env.kv_def.put(data.WORD, JSON.stringify(data))
   return Response.json({result: data}, {headers: {
