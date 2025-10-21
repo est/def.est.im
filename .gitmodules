@@ -1,0 +1,3 @@
+[submodule ".dict_json"]
+	path = .dict_json
+	url = git@github.com:est/dict_json.git
