@@ -1,1 +1,1 @@
-/:word / 200
+/:word /?q=:word 200
