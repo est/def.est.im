@@ -15,10 +15,11 @@ export async function onRequest(context) {
     return Response.json({'em': 'terrible request'})
   }
   // read from KV cache
-  const exist = await context.env.kv_def.get(word)
-  if(exist){
-    return Response.json({'result': JSON.parse(exist)})
+  const e1 = await context.env.kv_def.get(word)
+  if(e1){
+    return Response.json({'result': JSON.parse(e1)})
   }
+
   let {LLM_API, LLM_MODEL, LLM_TOKEN} = context.env
   let api
   try{
@@ -86,9 +87,9 @@ Do not wrap the JSON. Format is:
     console.error(em)
     return Response.json({'em': 'gateway error'})
   }
-  const ans = (rsp.choices?.[0]?.message?.content || '').replaceAll(
-    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replaceAll(  // fix openrouter cheap models
-    /^\s*```json/, '').replaceAll(/```\s*$/, '')   // fix needless code block wraps
+  const ans = (rsp.choices?.[0]?.message?.content || '').replace(
+    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
+    /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
   let ans_data
   try{
     ans_data = JSON.parse(ans)
