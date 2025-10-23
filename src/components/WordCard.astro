@@ -1,0 +1,45 @@
+---
+export interface Props {
+  word: string;
+  ipa?: string;
+  conjugates?: string;
+  etymology?: string;
+  since?: string;
+  register?: string;
+}
+
+const { word, ipa, conjugates, etymology, since, register } = Astro.props;
+---
+
+<section class="hero">
+  <div class="word-col">
+    <div class="search-container">
+      <input 
+        type="text" 
+        id="inputWord" 
+        placeholder="..."
+        x-model="WORD" 
+        autofocus
+        @keydown.enter="refresh()"
+      />
+      <button class="search-icon" @click="refresh()" title="Search" aria-label="Search">🔍</button>
+    </div>
+    <div class="subline">
+      <div class="ipa" x-text="IPA">{ipa}</div>
+      <button id="btnAudio" type="button" aria-label="Play pronunciation" x-show="WORD.trim()">▶ Play</button>
+    </div>
+
+    <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
+
+    <div class="meta">
+      <div id="other_forms" x-text="CONJUGATES">{conjugates}</div>
+    </div>
+  </div>
+
+  <aside class="ety" id="etymology">
+    <h4>Origin 词源</h4>
+    <p id="etym_text" x-text="ETYMOLOGY">{etymology}</p>
+    <div style="height:10px"></div>
+    <div class="muted-sm">首现: <strong x-text="SINCE">{since}</strong></div>
+  </aside>
+</section>

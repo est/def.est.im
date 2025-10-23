@@ -1,124 +1,54 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import WordCard from '../components/WordCard.astro';
+import MeaningsSection from '../components/MeaningsSection.astro';
 
-export const prerender = false;
+export const prerender = false; // This is an SSR page, not prerendered
 
 const { word } = Astro.params;
 
-// Function to lookup word data (same as in the original)
-async function lookup(word: string) {
-  try {
-    // Try static JSON first
-    const r1 = await fetch(`/.dict_json/out/${word}.json`, {method: 'GET'});
-    if (r1.status == 200) return await r1.json();
-    
-    // Fallback to lookup API
-    const r2 = await fetch('/.lookup?q=' + encodeURI(word), {method: 'POST'});
-    const {result} = await r2.json();
-    return result;
-  } catch (error) {
-    console.error('Failed to lookup word:', error);
-    return null;
-  }
-}
-
-// Get word data for SSR
+// Try to load from cached JSON first
 let wordData = null;
-if (word && /[a-z]/i.test(word)) {
-  wordData = await lookup(word);
+try {
+  const response = await fetch(`${Astro.site}/.dict_json/out/${word}.json`);
+  if (response.ok) {
+    wordData = await response.json();
+  }
+} catch (error) {
+  console.log('No cached data found for:', word);
 }
 
-// If no word data found, redirect to home
-if (word && !wordData) {
-  return Astro.redirect('/');
+// If no cached data, we'll let the client-side handle the lookup
+if (!wordData) {
+  wordData = {
+    WORD: word,
+    IPA: '',
+    CONJUGATES: '',
+    ETYMOLOGY: '',
+    SINCE: '',
+    MEANINGS: [],
+    REGISTER: ''
+  };
 }
 ---
 
-<BaseLayout title={word ? `${word} - def.est.im` : "def.est.im"} word={word} wordData={wordData}>
-  <section class="hero">
-    <div class="word-col">
-      <div class="search-container">
-        <input 
-          type="text" 
-          id="inputWord" 
-          placeholder="..."
-          value={word || ''}
-          autofocus
-          onkeydown="if(event.key==='Enter') { const word = this.value.trim(); if(word) { navigateToWord(word); updateURL(word); } }"
-        />
-        <button class="search-icon" onclick="const word = document.getElementById('inputWord').value.trim(); if(word) { navigateToWord(word); updateURL(word); }" title="Search" aria-label="Search">🔍</button>
-      </div>
-      <div class="subline">
-        <div class="ipa">{wordData?.IPA || ''}</div>
-        {word && (
-          <button id="btnAudio" type="button" aria-label="Play pronunciation" onclick="playAudio(document.getElementById('inputWord').value || document.getElementById('inputWord').placeholder)">▶ Play</button>
-        )}
-      </div>
-
-      <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
-
-      <div class="meta">
-        <div id="other_forms">{wordData?.CONJUGATES || ''}</div>
-      </div>
-    </div>
-
-    <aside class="ety" id="etymology">
-      <h4>Origin 词源</h4>
-      <p id="etym_text">{wordData?.ETYMOLOGY || ''}</p>
-      <div style="height:10px"></div>
-      <div class="muted-sm">首现: <strong>{wordData?.SINCE || ''}</strong></div>
-    </aside>
-  </section>
+<BaseLayout title={`${word} - def.est.im`} word={word} wordData={wordData}>
+  <WordCard 
+    word={wordData.WORD}
+    ipa={wordData.IPA}
+    conjugates={wordData.CONJUGATES}
+    etymology={wordData.ETYMOLOGY}
+    since={wordData.SINCE}
+    register={wordData.REGISTER}
+  />
 
   <main class="main">
-    <section>
-      <h2>释义</h2>
-      <div>
-        {wordData?.MEANINGS?.map((meaning) => (
-          <article class="row">
-            <div class="col-a">
-              <div class="pos">{meaning.PATTERN || ''}</div>
-              <div class="grammar">
-                <span class="hint" data-tooltip={meaning.POS_TIP || ''}>{meaning.POS || ''}</span>
-              </div>
-              <div class="tags">
-                {meaning.TAGS?.map((tag) => (
-                  <span class="tag">{tag}</span>
-                ))}
-              </div>
-            </div>
-
-            <div class="col-b">
-              <div class="definition">{meaning.DEF_EN || ''}</div>
-              <div class="def-other">{meaning.DEF_ZH || ''}</div>
-              <div style="height:6px"></div>
-              <div>
-                <div class="example">{meaning.SENT_EN || ''}</div>
-                <div class="translation">{meaning.SENT_ZH || ''}</div>
-              </div>
-            </div>
-
-            <div class="col-c">
-              {meaning.RELATED?.map((related) => (
-                <div>
-                  <span>{related.T}: </span>
-                  <div class="related-words">
-                    {related.V?.map((relatedWord) => (
-                      <a href={`/${relatedWord}`} class="spa-link" onclick="event.preventDefault(); navigateToWord('{relatedWord}'); updateURL('{relatedWord}');">{relatedWord}</a>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
+    <MeaningsSection meanings={wordData.MEANINGS} />
 
     <section>
       <h2>使用</h2>
       <div style="color:var(--muted);line-height:1.6">
-        <p><strong>Register:</strong> <span>{wordData?.REGISTER || ''}</span></p>
+        <p><strong>Register:</strong> <span x-text="REGISTER">{wordData.REGISTER}</span></p>
       </div>
     </section>
 

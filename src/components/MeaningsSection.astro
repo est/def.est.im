@@ -1,0 +1,64 @@
+---
+export interface Props {
+  meanings: Array<{
+    PATTERN: string;
+    POS: string;
+    POS_TIP: string;
+    TAGS: string[];
+    DEF_EN: string;
+    DEF_ZH: string;
+    SENT_EN: string;
+    SENT_ZH: string;
+    RELATED: Array<{
+      T: string;
+      V: string[];
+    }>;
+  }>;
+}
+
+const { meanings } = Astro.props;
+---
+
+<section>
+  <h2>释义</h2>
+  <div>
+    {meanings.map((meaning) => (
+      <article class="row">
+        <div class="col-a">
+          <div class="pos">{meaning.PATTERN}</div>
+          <div class="grammar">
+            <span class="hint" data-tooltip={meaning.POS_TIP}>{meaning.POS}</span>
+          </div>
+          <div class="tags">
+            {meaning.TAGS.map((tag) => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+
+        <div class="col-b">
+          <div class="definition">{meaning.DEF_EN}</div>
+          <div class="def-other">{meaning.DEF_ZH}</div>
+          <div style="height:6px"></div>
+          <div>
+            <div class="example">{meaning.SENT_EN}</div>
+            <div class="translation">{meaning.SENT_ZH}</div>
+          </div>
+        </div>
+
+        <div class="col-c">
+          {meaning.RELATED.map((related) => (
+            <div>
+              <span>{related.T}: </span>
+              <div class="related-words">
+                {related.V.map((word) => (
+                  <a href={`/${word}`}>{word}</a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
+    ))}
+  </div>
+</section>

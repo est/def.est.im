@@ -1,54 +1,68 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-export const prerender = false;
+import WordCard from '../components/WordCard.astro';
+import MeaningsSection from '../components/MeaningsSection.astro';
 ---
 
 <BaseLayout title="def.est.im">
-  <section class="hero">
-    <div class="word-col">
-      <div class="search-container">
-        <input 
-          type="text" 
-          id="inputWord" 
-          placeholder="..."
-          autofocus
-          onkeydown="if(event.key==='Enter') { const word = this.value.trim(); if(word) { navigateToWord(word); updateURL(word); } }"
-        />
-        <button class="search-icon" onclick="const word = document.getElementById('inputWord').value.trim(); if(word) { navigateToWord(word); updateURL(word); }" title="Search" aria-label="Search">🔍</button>
-      </div>
-      <div class="subline">
-        <div class="ipa"></div>
-        <button id="btnAudio" type="button" aria-label="Play pronunciation" style="display:none;" onclick="playAudio(document.getElementById('inputWord').value || document.getElementById('inputWord').placeholder)">▶ Play</button>
-      </div>
-
-      <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
-
-      <div class="meta">
-        <div id="other_forms"></div>
-      </div>
-    </div>
-
-    <aside class="ety" id="etymology">
-      <h4>Origin 词源</h4>
-      <p id="etym_text"></p>
-      <div style="height:10px"></div>
-      <div class="muted-sm">首现: <strong></strong></div>
-    </aside>
-  </section>
+  <WordCard 
+    word=""
+    ipa=""
+    conjugates=""
+    etymology=""
+    since=""
+    register=""
+  />
 
   <main class="main">
     <section>
       <h2>释义</h2>
-      <div id="meanings-container">
-        <!-- Meanings will be populated by JavaScript -->
+      <div>
+        <template x-for="meaning in MEANINGS">
+          <article class="row">
+            <div class="col-a">
+              <div class="pos" x-text="meaning.PATTERN"></div>
+              <div class="grammar">
+                <span class="hint" x-bind:data-tooltip="meaning.POS_TIP" x-text="meaning.POS"></span>
+              </div>
+              <div class="tags">
+                <template x-for="tag in meaning.TAGS">
+                  <span class="tag" x-text="tag"></span>
+                </template>
+              </div>
+            </div>
+
+            <div class="col-b">
+              <div class="definition" x-text="meaning.DEF_EN"></div>
+              <div class="def-other" x-text="meaning.DEF_ZH"></div>
+              <div style="height:6px"></div>
+              <div>
+                <div class="example" x-text="meaning.SENT_EN"></div>
+                <div class="translation" x-text="meaning.SENT_ZH"></div>
+              </div>
+            </div>
+
+            <div class="col-c">
+              <template x-for="related in meaning.RELATED" :key="related.T">
+                <div>
+                  <span x-text="related.T + ': '"></span>
+                  <div class="related-words">
+                    <template x-for="word in related.V">
+                      <a x-bind:href="'/' + word" x-text="word" @click.prevent="WORD=word; refresh()"></a>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </article>
+        </template>
       </div>
     </section>
 
     <section>
       <h2>使用</h2>
       <div style="color:var(--muted);line-height:1.6">
-        <p><strong>Register:</strong> <span id="register"></span></p>
+        <p><strong>Register:</strong> <span x-text="REGISTER"></span></p>
       </div>
     </section>
 
