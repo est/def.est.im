@@ -1,9 +1,19 @@
+---
+export interface Props {
+  title?: string;
+  word?: string;
+  wordData?: any;
+}
+
+const { title = "def.est.im", word, wordData } = Astro.props;
+---
+
 <!doctype html>
 <html>
 <head>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://w3.org/2000/svg' viewBox='0 0 19 19'><text y=16>🔤</text></svg>">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>def.est.im</title>
+  <title>{title}</title>
   <style>
     /* Reset & base */
     :root{
@@ -188,178 +198,182 @@
     /* small caption */
     .muted-sm{font-size:13px;color:var(--muted)}
 
+    /* Loading states */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* SPA navigation styles */
+    .spa-link {
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div id="container" x-data="init()">
-    <section class="hero">
-      <div class="word-col">
-        <div class="search-container">
-          <input 
-            type="text" 
-            id="inputWord" 
-            placeholder="..."
-            x-model="WORD" 
-            autofocus
-            @keydown.enter="refresh()"
-          />
-          <button class="search-icon" @click="refresh()" title="Search" aria-label="Search">🔍</button>
-        </div>
-        <div class="subline">
-          <div class="ipa" x-text="IPA"></div>
-          <button id="btnAudio" type="button" aria-label="Play pronunciation" x-show="WORD.trim()">▶ Play</button>
-          <!-- div id="frequency" class="muted-sm">Frequency: <strong>Common</strong></div -->
-        </div>
-
-        <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
-
-        <div class="meta">
-          <div id="other_forms" x-text="CONJUGATES"></div>
-          <!-- div style="margin-top:10px;color:var(--muted)" id="word_note">def.est.im 基于数字媒介优先，智利提供先进词汇解释和翻译。</div -->
-        </div>
-      </div>
-
-      <aside class="ety" id="etymology">
-        <h4>Origin 词源</h4>
-        <p id="etym_text" x-text="ETYMOLOGY"></p>
-        <div style="height:10px"></div>
-        <div class="muted-sm">首现: <strong x-text="SINCE"></strong></div>
-      </aside>
-    </section>
-
-    <main class="main">
-
-      <section>
-        <!-- test -->
-        <h2>释义</h2>
-
-        <!-- Table: each .row is one meaning -->
-        <div>
-          <template x-for="meaning in MEANINGS">
-            <article class="row">
-              <div class="col-a">
-                <div class="pos" x-text="meaning.PATTERN"></div>
-                <div class="grammar">
-                  <span class="hint" x-bind:data-tooltip="meaning.POS_TIP" x-text="meaning.POS"></span>
-                </div>
-                <div class="tags">
-                  <template x-for="tag in meaning.TAGS">
-                    <span class="tag" x-text="tag"></span>
-                  </template>
-                </div>
-              </div>
-
-              <div class="col-b">
-                <div class="definition" x-text="meaning.DEF_EN"></div>
-                <div class="def-other" x-text="meaning.DEF_ZH"></div>
-                <div style="height:6px"></div>
-                <div>
-                  <div class="example" x-text="meaning.SENT_EN"></div>
-                  <div class="translation" x-text="meaning.SENT_ZH"></div>
-                </div>
-              </div>
-
-              <div class="col-c">
-                <template x-for="related in meaning.RELATED" :key="related.T">
-                  <div>
-                    <span x-text="related.T + ': '"></span>
-                    <div class="related-words">
-                      <template x-for="word in related.V">
-                        <a x-bind:href="'/' + word" x-text="word" @click.prevent="WORD=word; refresh()"></a>
-                      </template>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </article>
-          </template>
-        </div>
-
-      </section>
-
-      <section>
-        <h2>使用</h2>
-        <div style="color:var(--muted);line-height:1.6">
-          <p><strong>Register:</strong> <span x-text="REGISTER"></span></p>
-        </div>
-      </section>
-
-      <section>
-        <h2>注意</h2>
-        <div style="color:var(--muted);line-height:1.6">
-          <p>本词典由AI撰写。仅供参考。 <a href="https://github.com/est/def.est.im">Github</a> | <a href="https://blog.est.im/2025/stdout-12">Blog</a></p>
-        </div>
-      </section>
-
-    </main>
+  <div id="container">
+    <slot />
   </div>
+  
   <script>
-    async function lookup(word){
+    // Global word lookup function
+    async function lookup(word) {
       const r1 = await fetch(`/.dict_json/out/${word}.json`, {method: 'GET'})
       if (r1.status == 200) return await r1.json()
       const r2 = await fetch('/.lookup?q=' + encodeURI(word), {method: 'POST'})
       const {result} = await r2.json()
       return result
     }
-    btnAudio.onclick=()=>{
+
+    // Audio playback function
+    function playAudio(word) {
       speechSynthesis.cancel()
-      speechSynthesis.speak(new SpeechSynthesisUtterance(inputWord.value || inputWord.placeholder))
+      speechSynthesis.speak(new SpeechSynthesisUtterance(word))
     }
-    let isLoading = false
-    function init(){
-      return {
-        WORD:'', IPA: '', CONJUGATES:'',ETYMOLOGY: '', SINCE: '',
-        MEANINGS:[], REGISTER:'',
-        refresh: function() {
-          const word = this.WORD.trim();
-          if (!word || word === decodeURI(location.pathname.substring(1))) return;
-          const url = '/' + encodeURI(word);
-          history.pushState({word: word}, '', url);
-          handlePathChange();
+
+    // Global state management
+    window.appState = {
+      currentWord: '',
+      isLoading: false,
+      wordData: null
+    }
+
+    // SPA navigation function
+    async function navigateToWord(word) {
+      if (!word || word === window.appState.currentWord) return;
+      
+      window.appState.isLoading = true;
+      window.appState.currentWord = word;
+      
+      const accentBar = document.getElementById('accentBar');
+      if (accentBar) accentBar.classList.add('loading');
+      
+      try {
+        // Check localStorage first
+        let data = JSON.parse(localStorage.getItem(word));
+        if (!data) {
+          data = await lookup(word);
+          if (data) localStorage.setItem(word, JSON.stringify(data));
+        }
+        
+        if (data) {
+          window.appState.wordData = data;
+          updatePageContent(data);
+        }
+      } catch (ex) {
+        console.error('Failed to load word:', ex);
+      } finally {
+        window.appState.isLoading = false;
+        if (accentBar) accentBar.classList.remove('loading');
+      }
+    }
+
+    // Update page content for SPA navigation
+    function updatePageContent(data) {
+      // Update word input
+      const inputWord = document.getElementById('inputWord');
+      if (inputWord) inputWord.value = data.WORD || '';
+      
+      // Update IPA
+      const ipa = document.querySelector('.ipa');
+      if (ipa) ipa.textContent = data.IPA || '';
+      
+      // Update conjugates
+      const conjugates = document.getElementById('other_forms');
+      if (conjugates) conjugates.textContent = data.CONJUGATES || '';
+      
+      // Update etymology
+      const etymText = document.getElementById('etym_text');
+      if (etymText) etymText.textContent = data.ETYMOLOGY || '';
+      
+      const since = document.querySelector('.ety .muted-sm strong');
+      if (since) since.textContent = data.SINCE || '';
+      
+      // Show/hide audio button
+      const audioBtn = document.getElementById('btnAudio');
+      if (audioBtn) {
+        audioBtn.style.display = data.WORD ? 'block' : 'none';
+      }
+      
+      // Update meanings - try both possible containers
+      let meaningsContainer = document.querySelector('.main section:first-child > div');
+      if (!meaningsContainer) {
+        meaningsContainer = document.getElementById('meanings-container');
+      }
+      
+      if (meaningsContainer && data.MEANINGS) {
+        meaningsContainer.innerHTML = data.MEANINGS.map(meaning => `
+          <article class="row">
+            <div class="col-a">
+              <div class="pos">${meaning.PATTERN || ''}</div>
+              <div class="grammar">
+                <span class="hint" data-tooltip="${meaning.POS_TIP || ''}">${meaning.POS || ''}</span>
+              </div>
+              <div class="tags">
+                ${(meaning.TAGS || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
+              </div>
+            </div>
+            <div class="col-b">
+              <div class="definition">${meaning.DEF_EN || ''}</div>
+              <div class="def-other">${meaning.DEF_ZH || ''}</div>
+              <div style="height:6px"></div>
+              <div>
+                <div class="example">${meaning.SENT_EN || ''}</div>
+                <div class="translation">${meaning.SENT_ZH || ''}</div>
+              </div>
+            </div>
+            <div class="col-c">
+              ${(meaning.RELATED || []).map(related => `
+                <div>
+                  <span>${related.T}: </span>
+                  <div class="related-words">
+                    ${(related.V || []).map(word => `<a href="/${word}" class="spa-link" onclick="event.preventDefault(); navigateToWord('${word}'); updateURL('${word}');">${word}</a>`).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </article>
+        `).join('');
+      }
+      
+      // Update register
+      const registerSpan = document.getElementById('register');
+      if (registerSpan) {
+        registerSpan.textContent = data.REGISTER || '';
+      } else {
+        const registerSection = document.querySelector('.main section:nth-child(2) div');
+        if (registerSection) {
+          registerSection.innerHTML = `<p><strong>Register:</strong> <span>${data.REGISTER || ''}</span></p>`;
         }
       }
     }
 
-    async function handlePathChange() {
-      if (isLoading) return;
-      const word = decodeURI(location.pathname.substring(1)).trim();
-      if (!/[a-z]/i.test(word)) return;
-
-      isLoading = true
-      accentBar.classList.add('loading')
-      const alpineData = Alpine.$data(container);
-      alpineData.WORD = word;
-
-      let data;
-      try {
-          data = JSON.parse(localStorage.getItem(word));
-          if (!data) {
-              data = await lookup(word);
-              if (data) localStorage.setItem(word, JSON.stringify(data));
-          }
-      } catch (ex) {
-          console.error('Failed to load word:', ex);
-          return;
-      } finally {
-        isLoading = false
-        accentBar.classList.remove('loading')
-      }
-
-      if (data) {
-          Object.assign(alpineData, data)
-      }
+    // Update URL without page reload
+    function updateURL(word) {
+      const url = '/' + encodeURI(word);
+      history.pushState({word: word}, '', url);
     }
 
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+      const word = decodeURI(location.pathname.substring(1)).trim();
+      if (/[a-z]/i.test(word)) {
+        navigateToWord(word);
+      }
+    });
+
+    // Initialize SPA functionality
     document.addEventListener('DOMContentLoaded', () => {
       const q = new URLSearchParams(location.search).get('q');
       if (q) {
         history.replaceState(null, '', '/' + encodeURI(q));
       }
-      handlePathChange();
-
-      window.addEventListener('popstate', handlePathChange);
+      
+      const word = decodeURI(location.pathname.substring(1)).trim();
+      if (/[a-z]/i.test(word)) {
+        navigateToWord(word);
+      }
     });
   </script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.15.0/cdn.min.js" integrity="sha512-4M615JhFufNLsrK5+qpW7oZJ8ooDJlzcUqd/+LVic8e9+0JuoO0KLnIf0NGg3e3tvFxRRdngx1VLtiOwPtYM4A==" crossorigin="anonymous"></script>
 </body>
 </html>

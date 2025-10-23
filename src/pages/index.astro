@@ -1,0 +1,62 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = false;
+---
+
+<BaseLayout title="def.est.im">
+  <section class="hero">
+    <div class="word-col">
+      <div class="search-container">
+        <input 
+          type="text" 
+          id="inputWord" 
+          placeholder="..."
+          autofocus
+          onkeydown="if(event.key==='Enter') { const word = this.value.trim(); if(word) { navigateToWord(word); updateURL(word); } }"
+        />
+        <button class="search-icon" onclick="const word = document.getElementById('inputWord').value.trim(); if(word) { navigateToWord(word); updateURL(word); }" title="Search" aria-label="Search">🔍</button>
+      </div>
+      <div class="subline">
+        <div class="ipa"></div>
+        <button id="btnAudio" type="button" aria-label="Play pronunciation" style="display:none;" onclick="playAudio(document.getElementById('inputWord').value || document.getElementById('inputWord').placeholder)">▶ Play</button>
+      </div>
+
+      <div id="accentBar" class="accent-bar" aria-hidden="true"></div>
+
+      <div class="meta">
+        <div id="other_forms"></div>
+      </div>
+    </div>
+
+    <aside class="ety" id="etymology">
+      <h4>Origin 词源</h4>
+      <p id="etym_text"></p>
+      <div style="height:10px"></div>
+      <div class="muted-sm">首现: <strong></strong></div>
+    </aside>
+  </section>
+
+  <main class="main">
+    <section>
+      <h2>释义</h2>
+      <div id="meanings-container">
+        <!-- Meanings will be populated by JavaScript -->
+      </div>
+    </section>
+
+    <section>
+      <h2>使用</h2>
+      <div style="color:var(--muted);line-height:1.6">
+        <p><strong>Register:</strong> <span id="register"></span></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>注意</h2>
+      <div style="color:var(--muted);line-height:1.6">
+        <p>本词典由AI撰写。仅供参考。 <a href="https://github.com/est/def.est.im">Github</a> | <a href="https://blog.est.im/2025/stdout-12">Blog</a></p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

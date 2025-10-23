@@ -1,6 +1,10 @@
 name = "def"
 compatibility_date = "2025-10-18"
 
+# Cloudflare Pages configuration
+pages_build_output_dir = "dist"
+
+# KV namespaces for data storage
 [[kv_namespaces]]
 binding = "kv_def"
 id = "kv_def"
