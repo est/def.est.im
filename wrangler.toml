@@ -2,8 +2,6 @@ name = "def"
 compatibility_date = "2025-10-18"
 compatibility_flags = [ "nodejs_compat" ]
 
-main = "./src/index.js"
-
 # Cloudflare Pages configuration
 pages_build_output_dir = "dist"
 
