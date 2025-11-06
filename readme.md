@@ -35,6 +35,31 @@ ChatGPT 出来之后，干脆外包给AI做吧。
 - DeepSeek R1 (free) by OpenRouter
 - Gemini Flash
 
+## Configuration
+
+### Environment Variables
+
+The following environment variables must be configured in the Cloudflare Pages dashboard:
+
+- `LLM_API`: URL endpoint for the LLM API (e.g., OpenRouter API)
+- `LLM_MODEL`: Model name to use for the LLM API
+- `LLM_TOKEN`: Authentication token for the LLM API
+
+### KV Namespaces
+
+Configure the `kv_def` KV namespace binding in the Cloudflare Pages dashboard for production.
+
+For local development, you can add your KV namespace IDs to `wrangler.toml`:
+1. Get your KV namespace ID: `wrangler kv:namespace list`
+2. Uncomment and fill in the `id` and `preview_id` fields in `wrangler.toml`
+
+### Deployment
+
+The project is configured for Cloudflare Pages with:
+- Build output directory: `dist`
+- SSR enabled with `@astrojs/cloudflare` adapter
+- Dynamic routing for `/[word]` pages
+
 ## License
 
 BSD
