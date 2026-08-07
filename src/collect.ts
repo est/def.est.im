@@ -48,6 +48,7 @@ const WORDS_DIR = join(DATA_DIR, "words");
 const FAIL_DIR = join(DATA_DIR, "failed");
 const DB_PATH = join(DATA_DIR, "dict.db");
 const STATE_PATH = join(DATA_DIR, "state.json");
+const PROGRESS_PATH = join(DATA_DIR, "progress.json");
 
 // ---------- CLI / 环境配置 ----------
 function arg(name: string): string | undefined {
@@ -78,10 +79,26 @@ const db = createDb(new Database(DB_PATH));
 const buckets: Record<string, string[]> = Object.fromEntries(LEVEL_ORDER.map((l) => [l, []]));
 const visited = new Set<string>();
 let processed = 0;
+let failures = 0;
+
+// 进度心跳：每批输出一行进度并原子落盘 progress.json（外部监控 tail/jq 均可用）
+function heartbeat(level: string | null, t0: number) {
+  const elapsed = (Date.now() - t0) / 1000;
+  const speed = processed / Math.max(elapsed, 1);
+  const eta = maxWords > processed ? (maxWords - processed) / speed : 0;
+  const queueStats = LEVEL_ORDER.filter((l) => buckets[l].length > 0).map((l) => `${l}:${buckets[l].length}`).join(" ");
+  console.log(`[进度] ${processed}/${maxWords} 词 失败=${failures} ${speed.toFixed(2)}词/s ETA=${(eta / 60).toFixed(1)}min 等级=${level ?? "-"} 队列[${queueStats || "空"}]`);
+  writeFileSync(PROGRESS_PATH, JSON.stringify({
+    processed, maxWords, failures, level,
+    elapsedSec: Math.round(elapsed), etaSec: Math.round(eta),
+    buckets, at: new Date().toISOString(),
+  }, null, 2));
+}
 
 function enqueue(word: string, level: string) {
   const w = word.toLowerCase();
-  if (visited.has(w) || w.length < 2) return;
+  if (visited.has(w)) return;
+  if (w.length < 2 && !["a", "i"].includes(w)) return;
   visited.add(w);
   buckets[LEVEL_RANK[level] === undefined ? "unknown" : level].push(w);
 }
@@ -107,21 +124,21 @@ function loadState() {
   processed = s.processed ?? 0;
 }
 
-// ---------- BFS 扩展：从释义/例句/同反义/搭配提取新词（完整跑批时可清空停用词） ----------
-const STOPWORDS = new Set([
-  "the", "a", "an", "of", "to", "in", "on", "for", "and", "or", "but", "is", "are", "was", "were", "be", "been", "being",
-  "it", "its", "you", "your", "with", "from", "at", "by", "as", "that", "this", "these", "those", "have", "has", "had",
-  "do", "does", "did", "will", "would", "can", "could", "should", "may", "might", "must", "not", "no", "yes", "so", "if",
-  "then", "than", "when", "while", "who", "whom", "whose", "which", "what", "where", "why", "how", "all", "any", "both",
-  "each", "few", "more", "most", "other", "some", "such", "only", "own", "same", "very", "just", "about", "into", "over",
-  "under", "through", "between", "after", "before", "above", "below", "again", "further", "once", "there", "here", "also",
-  "too", "off", "up", "down", "out", "away", "back", "sb", "sth", "sb.", "sth.", "e.g.", "etc.",
-]);
+// ---------- BFS 扩展：从释义/例句/同反义/搭配提取新词 ----------
+// 自洽（closure）目标：词条里出现的每个词都应可查。因此不再过滤功能词
+// （the/of/to…）——它们本身是词典条目，缺少它们会破坏"遇到不懂的词就
+// 能点"的闭环。只剔除占位符类（sb./sth.）。完整缺口由 src/audit.ts 审计。
+const STOPWORDS = new Set(["sb", "sth", "sb.", "sth.", "e.g.", "etc."]);
 function extractWords(data: any): string[] {
   const out: string[] = [];
   const push = (t: string) => {
-    const w = t.toLowerCase().replace(/^['-]+|['-]+$/g, "");
-    if (w.length < 2 || STOPWORDS.has(w) || /^\d/.test(w)) return;
+    let w = t.toLowerCase().replace(/^['-]+|['-]+$/g, "");
+    // 所有格 "animal's" → "animal"；残余撇号的缩写（we've/don't）整体
+    // 剔除，其成分词（we/have/do/not）会作为独立 token 出现
+    if (w.endsWith("'s")) w = w.slice(0, -2);
+    if (w.includes("'")) return;
+    if (STOPWORDS.has(w) || /^\d/.test(w)) return;
+    if (w.length < 2 && !["a", "i"].includes(w)) return;
     out.push(w);
   };
   const texts: string[] = [];
@@ -228,7 +245,7 @@ async function callModel(word: string, feedback: { role: string; content: string
         // 设大（200k）防义项多/用法说明长的词条被截断；若网关对超长上限
         // 报错，回落为 8192 即可
         body: JSON.stringify({ model: MODEL, messages, max_tokens: 200000, temperature: 0.3, stream: true }),
-        signal: AbortSignal.timeout(300000),
+        signal: AbortSignal.timeout(120000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const content = await readSse(res);
@@ -236,6 +253,7 @@ async function callModel(word: string, feedback: { role: string; content: string
       return content;
     } catch (e) {
       if (++attempt >= 3) throw e;
+      console.log(`  ⚠ ${word} 传输重试 ${attempt}/3: ${e}`);
       await Bun.sleep(3000 * attempt);
     }
   }
@@ -250,6 +268,7 @@ async function processWord(word: string, parentLevel: string) {
     try {
       lastRaw = await callModel(word, feedback);
     } catch (e) {
+      failures++;
       console.log(`  ✗ ${word} API 错误: ${e}`);
       return;
     }
@@ -278,6 +297,7 @@ async function processWord(word: string, parentLevel: string) {
       { role: "user", content: `校验失败：\n${r.errors.join("\n")}\n请修正后重新输出完整 YAML。` },
     ];
   }
+  failures++;
   writeFileSync(join(FAIL_DIR, word + ".yaml"), lastRaw + "\n");
   console.log(`  ✗ ${word}: 2 次重试后仍失败（原始输出已存 failed/${word}.yaml）`);
 }
@@ -291,6 +311,7 @@ if (fresh || !existsSync(STATE_PATH)) {
 
 console.log(`模型=${MODEL} 并发=${concurrency} 处理上限=${maxWords} CEFR关卡=${argMaxCefr ?? "∞"}`);
 const t0 = Date.now();
+heartbeat(null, t0);
 
 while (processed < maxWords) {
   const level = nextLevel();
@@ -299,9 +320,10 @@ while (processed < maxWords) {
   const batch = buckets[level].splice(0, Math.min(concurrency, maxWords - processed));
   await Promise.all(batch.map((w) => processWord(w, level)));
   saveState();
+  heartbeat(level, t0);
 }
 
 db.close();
-console.log(`完成：处理 ${processed} 词，耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+console.log(`完成：处理 ${processed} 词（失败 ${failures}），耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 const remain = LEVEL_ORDER.filter((l) => buckets[l].length > 0).map((l) => `${l}:${buckets[l].length}`).join("  ");
-console.log(`剩余队列：${remain || "空"}（断点状态在 ${STATE_PATH}，--fresh 重新开始）`);
+console.log(`剩余队列：${remain || "空"}（断点 ${STATE_PATH}；自洽缺口审计：bun run src/audit.ts）`);
