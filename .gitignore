@@ -4,6 +4,8 @@ venv/
 ssdb_server_x86/var
 .DS_Store
 .env
+.env.dev
+.env.*
 node_modules/
 tmp/
 .wrangler

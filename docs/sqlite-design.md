@@ -1,6 +1,6 @@
 # AI 英语词典 SQLite 设计
 
-对应词条 YAML schema（`docs/ai-dictionary-schema.md`）的存储层设计。核心需求：**支持按词汇变形检索**（查 `ran` 能命中 `run`），以及同义词反查、短语检索。
+对应词条 YAML schema（`docs/ai-dictionary-schema.md`）的存储层设计。核心需求：**支持按词汇变形检索**（查 `ran` 命中 `run`）、同义词反查、短语检索（`ran into` → `run into sb.`）。
 
 ## 设计原则：查词表，不是搜索引擎
 
@@ -20,6 +20,7 @@ senses 1 ── N terms    （义项级词条：同义词/反义词/搭配）
 
 - 变形是词级（同一词性的所有义项共用一套变形），`terms.sense_id = NULL`。
 - 同义词/反义词/搭配是义项级，`terms.sense_id` 指向义项。
+- 同形词（tear 眼泪 / tear 撕）用 `(lemma, variant)` 区分，variant 从文件名数字后缀解析：`tear.yaml` → 0，`tear-2.yaml` → 2。
 
 ## 建表 SQL
 
@@ -28,7 +29,8 @@ PRAGMA journal_mode = WAL;
 
 CREATE TABLE words (
   id          INTEGER PRIMARY KEY,
-  lemma       TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  lemma       TEXT NOT NULL COLLATE NOCASE,
+  variant     INTEGER NOT NULL DEFAULT 0,   -- 同形词序号，见文件组织约定
   phonetic_uk TEXT,
   phonetic_us TEXT,
   status      TEXT NOT NULL DEFAULT 'draft'
@@ -36,7 +38,8 @@ CREATE TABLE words (
   model       TEXT,          -- 生成该词条的模型标识
   raw_yaml    TEXT,          -- 原始 YAML 全文，审计/再生成用
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (lemma, variant)
 );
 
 CREATE TABLE senses (
@@ -44,7 +47,8 @@ CREATE TABLE senses (
   word_id     INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
   sense_no    INTEGER NOT NULL,        -- 义项序号，保持 YAML 输出顺序
   pos         TEXT NOT NULL CHECK (pos IN
-              ('n','v','adj','adv','prep','conj','pron','interj','article','phrase','idiom')),
+              ('noun','verb','adjective','adverb','preposition','conjunction',
+               'pronoun','interjection','article','phrase','idiom')),
   pattern     TEXT,                    -- 仅 idiom/phrase：run into sb.（base form + sb./sth. 占位）
   def_en      TEXT NOT NULL,
   def_zh      TEXT NOT NULL,
@@ -76,12 +80,19 @@ CREATE INDEX idx_terms_surface ON terms (surface COLLATE NOCASE);
 
 ## 检索设计
 
+### 三步检索算法（端到端）
+
+1. **精确命中**：`terms.surface` 等值匹配（大小写不敏感），有结果即返回（含同形词多行）。
+2. **短语还原**：未命中时，分词取首词查 terms 得候选词，再对候选词的 idiom / phrase 义项做 pattern 匹配（`ran into` → `ran`→`run` → `%run into%`）。
+3. **前缀联想**：仍无结果时 `LIKE '前缀%'` 返回建议词。
+
 ### 1. 统一查词入口：`ran`、`sprint`、`run a marathon` → `run`
 
 ```sql
-SELECT DISTINCT t.word_id, w.lemma
+SELECT DISTINCT t.word_id, w.lemma, w.variant
 FROM terms t JOIN words w ON w.id = t.word_id
-WHERE t.surface = 'ran';
+WHERE t.surface = 'ran'
+ORDER BY w.lemma, w.variant;
 ```
 
 一条 SQL 覆盖原形/变形/同义/反义/搭配全部类型，走 `idx_terms_surface` 索引。
@@ -92,12 +103,13 @@ WHERE t.surface = 'ran';
 SELECT DISTINCT t.surface
 FROM terms t
 WHERE t.surface LIKE 'run%'
+ORDER BY t.surface
 LIMIT 20;
 ```
 
 `LIKE '前缀%'` 可用索引（SQLite 默认 case_sensitive_like=off 时前缀 LIKE 优化为范围扫描）。同义/反义混入联想结果可能怪异，排序策略见待定问题。
 
-### 3. 短语检索：`ran into` → `run into sb.`
+### 3. 短语检索（三步算法第 2 步）：`ran into` → `run into sb.`
 
 短语是 multi-word 且首词可变形，不适合塞进 terms 做精确匹配。应用层两步：
 
@@ -112,7 +124,7 @@ WHERE s.word_id = ? AND s.pos IN ('idiom','phrase')
   AND s.pattern LIKE '%run into%';
 ```
 
-pattern 必须用 base form（`run into sb.` 而非 `ran into sb.`），这一步才成立。
+pattern 必须用 base form（`run into sb.` 而非 `ran into sb.`），这一步才成立。短语必须挂在核心词（通常是首词）的 idiom / phrase 义项下，不单独成词——此约定由 AI 输出规则保证。
 
 ### 4. 查看词条（命中的词 → 义项）
 
@@ -126,6 +138,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 | YAML | 表 |
 |---|---|
 | `word` / `phonetic_uk` / `phonetic_us` | words（lemma 同时写入 terms，kind='lemma'） |
+| 文件名 `word-N.yaml` 的 `-N` 后缀 | words.variant（无后缀为 0） |
 | `inflections[]` | terms（kind='inflection', label=form） |
 | `entries[]`（pos/pattern/def_en/def_zh/example_en/example_zh/register/usage_notes） | senses（sense_no = 输出顺序） |
 | `entries[].synonyms` | terms（kind='synonym', sense_id 指向义项） |
@@ -136,7 +149,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 
 1. 按 schema 文档的校验规则解析、校验 YAML，失败重试。
 2. 单事务内**整词替换**（幂等，重生成友好）：
-   - UPSERT `words`（lemma 冲突则 UPDATE，保留 id）
+   - UPSERT `words`（(lemma, variant) 冲突则 UPDATE，保留 id）
    - DELETE 该词的 senses / terms
    - INSERT 全部新行（senses + terms 均由 YAML 派生）
 3. 校对通过后 `status`：draft → reviewed（published 可选）。
@@ -147,6 +160,11 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 - **lemma 双写**（words + terms）：换统一查询路径，词典规模下冗余可忽略。
 - **大小写**：lemma / surface 统一 `COLLATE NOCASE`，`UNIQUE` 约束亦不区分大小写。
 - **词级 vs 义项级**：变形存词级（避免逐义项重复），同义/反义/搭配存义项级（绑定义项语义），靠 `sense_id` 区分。
+- **同形词 variant**：文件后缀 `-N` 即 variant 序号（N 从 1 起），首个文件不加后缀视为 0。多音词（read /tear 等）靠此区分读音与词条。
+
+## 验证
+
+设计已由 `tmp/dict-validate/validate.ts` 端到端验证（30 断言全部通过），覆盖：词形检索（含大小写）、同义词/反义词/搭配命中、前缀联想、短语两步链（`ran into` → `run into sb.`）、同形词双行共存、三条失败路径（bad pos / 例句不成对 / word 与文件名不一致）、围栏剥离、flow 风格检测。
 
 ## 待定问题
 

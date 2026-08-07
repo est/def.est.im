@@ -80,7 +80,7 @@ entries:
 | `phonetic_uk` / `phonetic_us` | string | 否 | IPA 音标，无把握可省略 |
 | `inflections` | list（block 序列） | 否 | **词级**变形表，每条 `form + value` 一行式记录 |
 | `entries` | list | 是 | 铺平的一行式记录，**一条 = 一个词性 + 一个义项 + 至多一个例句** |
-| `pos` | string | 是 | 白名单：n, v, adj, adv, prep, conj, pron, interj, article, phrase, idiom |
+| `pos` | string | 是 | 白名单（**全称，勿用缩写**）：noun, verb, adjective, adverb, preposition, conjunction, pronoun, interjection, article, phrase, idiom |
 | `pattern` | string | 否 | 仅 idiom/phrase 义项：槽位化模式（`run into sb.`），用 base form + sb./sth. 占位，供检索命中 |
 | `def_en` | string | 是 | 英文释义，简洁单句 |
 | `def_zh` | string | 是 | 中文释义 |
@@ -111,6 +111,7 @@ usage_notes: |
 5. **没有就省略键**：不输出 `key: null`、不输出空字符串。
 6. **义项按常用度降序排列**，口语义项放最后。
 7. **不确定的音标/变形/词频宁缺勿编**，尤其不许编造词源。
+8. **短语归属**：短语/习语作为其核心词（通常是首词）词条内的 idiom / phrase 义项输出，不单独成词——词形还原检索依赖此约定。
 
 ## 校验与重试管线
 
@@ -120,17 +121,20 @@ usage_notes: |
 
 校验规则（机器可执行）：
 
-1. `word` 与查询词完全一致，否则重试。
-2. `entries` 非空，每条含非空 `pos` / `def_en` / `def_zh`。
-3. `pos` 在枚举白名单内。
+1. `word` 与查询词完全一致，且与文件名一致（文件名 = `word` 或 `word-N`），否则重试。
+2. `entries` 非空且 ≤ 16，每条含非空 `pos` / `def_en` / `def_zh`。
+3. `pos` 在枚举白名单内（全称）。
 4. `example_en` 与 `example_zh` 成对（同有同无）。
 5. `synonyms` / `antonyms` / `collocations` 若存在，必须是字符串列表且非空。
 6. `inflections` 若存在，每条必须含 `form`（白名单内）和 `value`（非空）。
-7. 解析失败或任一规则不过 → 附带解析器报错原文重试。
+7. `pattern` 仅允许出现在 idiom / phrase 义项；idiom / phrase 义项建议带 `pattern`。
+8. flow 风格（`[a, b]` / `{a: b}`）可检出——仅警告不拒绝，解析成功即可入库。
+9. 解析失败或任一规则不过 → 附带解析器报错原文重试。
 
 ## 文件组织
 
 - 一个词一个文件：`words/run.yaml`、`words/the.yaml`，git diff 友好、便于人工校对。
+- 同形词（同拼写不同读音/语义，如 tear 眼泪 / tear 撕）：第二份文件加数字后缀 `words/tear-2.yaml`，`word` 字段不变，入库时按后缀解析为 variant 区分。
 - 校对是必须环节：AI 生成的词典不可直接用，逐词人工过一遍再入库。
 
 ## 已知取舍（v1 接受）
