@@ -21,13 +21,20 @@
 //
 // 用法：
 //   bun run src/collect.ts                          # 默认 10 词
+//   bun run src/collect.ts --max 100000 --limit 10 --auto-audit
 //   bun run src/collect.ts --max 5000 --limit 5 --max-cefr B2
 //   bun run src/collect.ts --fresh                  # 清空数据重新开始
+//
+// 无人值守：
+//   --auto-audit：队列耗尽时自动审计自洽缺口（findUncovered）并写回队列，
+//                 直到真正闭环（缺口全部可查）才停止。
+//   429 用 5/10/20/40s 退避；worker 池各词独立，单词重试不阻塞其他词。
 // ============================================================
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { createDb, ingest, parseYaml, validate } from "./schema.ts";
+import { findUncovered } from "./closure.ts";
 import { loadEnv } from "./env.ts";
 
 const env = loadEnv();
@@ -59,6 +66,7 @@ const maxWords = parseInt(arg("max") ?? env.COLLECT_MAX_WORDS ?? "10", 10);
 const concurrency = parseInt(arg("limit") ?? env.COLLECT_CONCURRENCY ?? "5", 10);
 const seeds = (arg("seed") ?? DEFAULT_SEEDS.join(" ")).split(/\s+/).filter(Boolean).map((s) => s.toLowerCase());
 const fresh = process.argv.includes("--fresh");
+const autoAudit = process.argv.includes("--auto-audit");
 
 // CEFR 等级顺序与关卡：A1(0) … C2(5)，unknown(6) 放最后
 const LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2", "unknown"] as const;
@@ -80,17 +88,18 @@ const buckets: Record<string, string[]> = Object.fromEntries(LEVEL_ORDER.map((l)
 const visited = new Set<string>();
 let processed = 0;
 let failures = 0;
+let rateLimit429 = 0;
 
-// 进度心跳：每批输出一行进度并原子落盘 progress.json（外部监控 tail/jq 均可用）
+// 进度心跳：输出一行进度并原子落盘 progress.json（外部监控 tail/jq 均可用）
 function heartbeat(level: string | null, t0: number) {
   const elapsed = (Date.now() - t0) / 1000;
   const speed = processed / Math.max(elapsed, 1);
-  const eta = maxWords > processed ? (maxWords - processed) / speed : 0;
   const queueStats = LEVEL_ORDER.filter((l) => buckets[l].length > 0).map((l) => `${l}:${buckets[l].length}`).join(" ");
-  console.log(`[进度] ${processed}/${maxWords} 词 失败=${failures} ${speed.toFixed(2)}词/s ETA=${(eta / 60).toFixed(1)}min 等级=${level ?? "-"} 队列[${queueStats || "空"}]`);
+  const queueTotal = LEVEL_ORDER.reduce((n, l) => n + buckets[l].length, 0);
+  console.log(`[进度] ${processed}/${maxWords} 词 并发=${concurrency} 429=${rateLimit429} 失败=${failures} ${speed.toFixed(2)}词/s 等级=${level ?? "-"} 队列${queueTotal}[${queueStats || "空"}]`);
   writeFileSync(PROGRESS_PATH, JSON.stringify({
-    processed, maxWords, failures, level,
-    elapsedSec: Math.round(elapsed), etaSec: Math.round(eta),
+    processed, maxWords, failures, rateLimit429, level,
+    elapsedSec: Math.round(elapsed),
     buckets, at: new Date().toISOString(),
   }, null, 2));
 }
@@ -230,7 +239,8 @@ async function callModel(word: string, feedback: { role: string; content: string
     { role: "user", content: `目标单词：${word}` },
     ...feedback,
   ];
-  // 网络抖动/HTTP 错误退避重试（≤3 次）；校验类失败由 processWord 处理
+  // 网络错误退避重试：429 用 5/10/20/40s 长退避（最多 4 次重试），
+  // 普通传输错误（超时/空响应/Malformed）用 3/6/9s；校验类失败由 processWord 处理
   let attempt = 0;
   for (;;) {
     try {
@@ -247,14 +257,21 @@ async function callModel(word: string, feedback: { role: string; content: string
         body: JSON.stringify({ model: MODEL, messages, max_tokens: 200000, temperature: 0.3, stream: true }),
         signal: AbortSignal.timeout(120000),
       });
+      if (res.status === 429) {
+        rateLimit429++;
+        throw new Error("HTTP 429 限流");
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const content = await readSse(res);
       if (content.trim() === "") throw new Error("空响应");
       return content;
     } catch (e) {
-      if (++attempt >= 3) throw e;
-      console.log(`  ⚠ ${word} 传输重试 ${attempt}/3: ${e}`);
-      await Bun.sleep(3000 * attempt);
+      if (++attempt >= 5) throw e;
+      const is429 = String(e).includes("429");
+      // 普通错误退避加随机抖动，避免 10 个 worker 同步重试造成二次风暴
+      const wait = is429 ? [5000, 10000, 20000, 40000][attempt - 1] : 3000 * attempt + Math.floor(Math.random() * 2000);
+      console.log(`  ⚠ ${word} 重试 ${attempt}/4${is429 ? " (429限流)" : ""}: ${e}`);
+      await Bun.sleep(wait);
     }
   }
 }
@@ -309,21 +326,77 @@ if (fresh || !existsSync(STATE_PATH)) {
   loadState();
 }
 
-console.log(`模型=${MODEL} 并发=${concurrency} 处理上限=${maxWords} CEFR关卡=${argMaxCefr ?? "∞"}`);
+console.log(`模型=${MODEL} 并发=${concurrency} 处理上限=${maxWords} CEFR关卡=${argMaxCefr ?? "∞"} 自洽补采=${autoAudit ? "开" : "关"}`);
 const t0 = Date.now();
+let inFlight = 0;
+let done = false;
+let lastHeartbeatAt = 0;
 heartbeat(null, t0);
 
-while (processed < maxWords) {
-  const level = nextLevel();
-  if (level === null) break; // 队列耗尽或达到 CEFR 关卡
-  // 批次大小受剩余预算约束，否则 --max 会被一批打穿
-  const batch = buckets[level].splice(0, Math.min(concurrency, maxWords - processed));
-  await Promise.all(batch.map((w) => processWord(w, level)));
-  saveState();
-  heartbeat(level, t0);
+function totalQueued(): number {
+  return LEVEL_ORDER.reduce((n, l) => n + buckets[l].length, 0);
 }
 
+// worker 池：每词独立拉取处理，单词重试（429/空响应）只拖累自己，
+// 不阻塞其他词——避免 batch 等待最慢词导致的高并发下吞吐反而下降
+async function worker() {
+  for (;;) {
+    if (done || processed >= maxWords) return;
+    const level = nextLevel();
+    const word = level === null ? undefined : buckets[level].shift();
+    if (word === undefined) {
+      await Bun.sleep(500); // 队列瞬时为空：等 BFS 子词或监督循环补采
+      continue;
+    }
+    inFlight++;
+    try {
+      await processWord(word, level);
+    } finally {
+      inFlight--;
+      saveState(); // 每词落盘，防中途被杀丢进度
+      if (Date.now() - lastHeartbeatAt > 10000) {
+        lastHeartbeatAt = Date.now();
+        heartbeat(level, t0);
+      }
+    }
+  }
+}
+
+const workers = Array.from({ length: concurrency }, () => worker());
+
+// 监督循环：队列耗尽且无在途时触发自洽补采；闭环后收尾；无进度超时告警
+let lastSeenProcessed = processed;
+let lastProgressAt = Date.now();
+for (;;) {
+  await Bun.sleep(2000);
+  if (processed >= maxWords) break;
+  if (totalQueued() === 0 && inFlight === 0) {
+    if (argMaxCefr !== undefined || !autoAudit) break;
+    const gaps = findUncovered(db, WORDS_DIR);
+    let added = 0;
+    for (const w of gaps) {
+      if (visited.has(w)) continue;
+      enqueue(w, "unknown");
+      added++;
+    }
+    console.log(`[自洽补采] 缺口 ${gaps.length} 词，入队 ${added} 词`);
+    if (added === 0) break; // 真正闭环：缺口全部可查
+    saveState();
+  }
+  // 无进度告警：5 分钟零进展多半是网关全在重试，输出给监控看（不干预）
+  if (processed !== lastSeenProcessed) {
+    lastSeenProcessed = processed;
+    lastProgressAt = Date.now();
+  } else if (Date.now() - lastProgressAt > 300000) {
+    console.log(`[警告] ${((Date.now() - lastProgressAt) / 60000).toFixed(1)} 分钟无进度，仍在等待重试`);
+    lastProgressAt = Date.now(); // 每 5 分钟只报一次
+  }
+}
+done = true;
+while (inFlight > 0) await Bun.sleep(1000);
+await Promise.all(workers);
+
 db.close();
-console.log(`完成：处理 ${processed} 词（失败 ${failures}），耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+console.log(`完成：处理 ${processed} 词（失败 ${failures}，429 共 ${rateLimit429}），耗时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 const remain = LEVEL_ORDER.filter((l) => buckets[l].length > 0).map((l) => `${l}:${buckets[l].length}`).join("  ");
 console.log(`剩余队列：${remain || "空"}（断点 ${STATE_PATH}；自洽缺口审计：bun run src/audit.ts）`);
