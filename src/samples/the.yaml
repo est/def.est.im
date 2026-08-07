@@ -1,0 +1,10 @@
+word: the
+phonetic_uk: /ðə/
+phonetic_us: /ðə/
+entries:
+  - pos: article
+    def_en: used before a noun to refer to a specific thing already mentioned or known
+    def_zh: 这，那（特指）
+    example_en: The book on the table is mine.
+    example_zh: 桌上的那本书是我的。
+    usage_notes: 名词前已有 this/that/my 等限定词时，不再用 the。

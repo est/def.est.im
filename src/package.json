@@ -1,0 +1,9 @@
+{
+  "name": "dict-pipeline",
+  "private": true,
+  "type": "module",
+  "description": "AI 英语词典采集管线：BFS 遍历 + CEFR 优先级 + 校验入库",
+  "dependencies": {
+    "yaml": "^2.8.0"
+  }
+}

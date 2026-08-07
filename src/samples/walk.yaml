@@ -1,0 +1,8 @@
+word: walk
+entries:
+  - pos: verb
+    def_en: to move forward by putting one foot in front of the other
+    def_zh: 走，步行
+    example_en: I walk to work every day.
+    example_zh: 我每天走路去上班。
+    collocations: [walk fast, walk to school]
