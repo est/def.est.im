@@ -224,7 +224,10 @@ async function callModel(word: string, feedback: { role: string; content: string
           authorization: `Bearer ${API_TOKEN}`,
           accept: "text/event-stream",
         },
-        body: JSON.stringify({ model: MODEL, messages, max_tokens: 4000, temperature: 0.3, stream: true }),
+        // max_tokens 只是输出上限：词条 YAML 实际只消耗几百到一两千 token，
+        // 设大（200k）防义项多/用法说明长的词条被截断；若网关对超长上限
+        // 报错，回落为 8192 即可
+        body: JSON.stringify({ model: MODEL, messages, max_tokens: 200000, temperature: 0.3, stream: true }),
         signal: AbortSignal.timeout(300000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
