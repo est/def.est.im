@@ -31,6 +31,7 @@ CREATE TABLE words (
   id          INTEGER PRIMARY KEY,
   lemma       TEXT NOT NULL COLLATE NOCASE,
   variant     INTEGER NOT NULL DEFAULT 0,   -- 同形词序号，见文件组织约定
+  cefr        TEXT,           -- A1/A2/B1/B2/C1/C2，大概估计，作遍历优先级
   phonetic_uk TEXT,
   phonetic_us TEXT,
   status      TEXT NOT NULL DEFAULT 'draft'
@@ -138,6 +139,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 | YAML | 表 |
 |---|---|
 | `word` / `phonetic_uk` / `phonetic_us` | words（lemma 同时写入 terms，kind='lemma'） |
+| `cefr` | words.cefr |
 | 文件名 `word-N.yaml` 的 `-N` 后缀 | words.variant（无后缀为 0） |
 | `inflections[]` | terms（kind='inflection', label=form） |
 | `entries[]`（pos/pattern/def_en/def_zh/example_en/example_zh/register/usage_notes） | senses（sense_no = 输出顺序） |
@@ -156,6 +158,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 
 ## 已知取舍
 
+- **SQLite UNIQUE 对 NULL 不生效**：`terms.sense_id` 为 NULL 的词级行（lemma / inflection）重复插入时 `INSERT OR IGNORE` 拦不住。ingest 必须保证词级数据只插一次（词级循环不能放在 entry 循环内）——曾因此产生重复数据，验证脚本需用**裸计数**断言（`COUNT(*)`，勿只信 `SELECT DISTINCT`）防回归。
 - **放弃 FTS**：无子串匹配（`runn`）、无跨释义全文搜索——查词场景不需要；前缀联想由 `LIKE '前缀%'` 覆盖。未来若做"中文释义搜索"，加 FTS5 只索引 def_zh，成本可控。
 - **lemma 双写**（words + terms）：换统一查询路径，词典规模下冗余可忽略。
 - **大小写**：lemma / surface 统一 `COLLATE NOCASE`，`UNIQUE` 约束亦不区分大小写。
@@ -164,7 +167,9 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 
 ## 验证
 
-设计已由 `tmp/dict-validate/validate.ts` 端到端验证（30 断言全部通过），覆盖：词形检索（含大小写）、同义词/反义词/搭配命中、前缀联想、短语两步链（`ran into` → `run into sb.`）、同形词双行共存、三条失败路径（bad pos / 例句不成对 / word 与文件名不一致）、围栏剥离、flow 风格检测。
+设计已由 `src/validate.ts` 端到端验证（32 断言全部通过），覆盖：词形检索（含大小写）、同义词/反义词/搭配命中、前缀联想、短语两步链（`ran into` → `run into sb.`）、同形词双行共存、四条失败路径（bad pos / 例句不成对 / word 与文件名不一致 / cefr 非法）、围栏剥离、flow 风格检测、词级数据无重复（裸计数）。
+
+采集器 `src/collect.ts` 已用真实模型跑通：BFS 按 **CEFR 分桶遍历**（子词继承父词 CEFR 作临时等级，`--max-cefr` 关卡防生僻词打转）、并发可调（`--limit` / `COLLECT_CONCURRENCY`）、校验失败重试（≤2 次）、断点续跑（data/state.json）、词条落盘 data/words/*.yaml。API 契约要点：必须 `stream: true` + `Accept: text/event-stream`，SSE 中只累加非空 `delta.content`（推理文本在 `reasoning_content`，需忽略）。
 
 ## 待定问题
 

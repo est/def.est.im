@@ -78,6 +78,7 @@ entries:
 |---|---|---|---|
 | `word` | string | 是 | 查询词原样回显，用于校验 AI 未改词条 |
 | `phonetic_uk` / `phonetic_us` | string | 否 | IPA 音标，无把握可省略 |
+| `cefr` | string | 否 | A1/A2/B1/B2/C1/C2，大概估计即可，作遍历优先级 |
 | `inflections` | list（block 序列） | 否 | **词级**变形表，每条 `form + value` 一行式记录 |
 | `entries` | list | 是 | 铺平的一行式记录，**一条 = 一个词性 + 一个义项 + 至多一个例句** |
 | `pos` | string | 是 | 白名单（**全称，勿用缩写**）：noun, verb, adjective, adverb, preposition, conjunction, pronoun, interjection, article, phrase, idiom |
@@ -112,6 +113,7 @@ usage_notes: |
 6. **义项按常用度降序排列**，口语义项放最后。
 7. **不确定的音标/变形/词频宁缺勿编**，尤其不许编造词源。
 8. **短语归属**：短语/习语作为其核心词（通常是首词）词条内的 idiom / phrase 义项输出，不单独成词——词形还原检索依赖此约定。
+9. **顶层 `cefr` 字段**：A1/A2/B1/B2/C1/C2，大概估计即可（作遍历优先级），不确定可省略。
 
 ## 校验与重试管线
 
@@ -127,9 +129,10 @@ usage_notes: |
 4. `example_en` 与 `example_zh` 成对（同有同无）。
 5. `synonyms` / `antonyms` / `collocations` 若存在，必须是字符串列表且非空。
 6. `inflections` 若存在，每条必须含 `form`（白名单内）和 `value`（非空）。
-7. `pattern` 仅允许出现在 idiom / phrase 义项；idiom / phrase 义项建议带 `pattern`。
-8. flow 风格（`[a, b]` / `{a: b}`）可检出——仅警告不拒绝，解析成功即可入库。
-9. 解析失败或任一规则不过 → 附带解析器报错原文重试。
+7. `pattern` 仅允许出现在 idiom / phrase 义项，且 idiom / phrase 义项**必须**带 `pattern`（短语检索的唯一入口）。
+8. `cefr` 若存在须在 A1/A2/B1/B2/C1/C2 白名单内。
+9. flow 风格（`[a, b]` / `{a: b}`）可检出——仅警告不拒绝，解析成功即可入库。
+10. 解析失败或任一规则不过 → 附带解析器报错原文重试。
 
 ## 文件组织
 
