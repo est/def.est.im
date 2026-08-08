@@ -152,6 +152,12 @@ function enqueue(word: string, fallbackLevel: string) {
   }
   visited.add(w);
   const entry = cefrMap.get(w);
+  // 频率门槛：词表内但低频的词统一跳过（种子/BFS/治愈共用），
+  // 不可查的词由 lookup 层（terms inflection/synonym）间接覆盖；closure 缺口由 audit 兜底
+  if (entry && entry.freq < SEED_FREQ_MIN) {
+    visited.add(w);
+    return;
+  }
   if (!entry) {
     // 规则层②：词表未收录 → 挂起，攒够一批交给 AI 过滤（不直接入桶）
     if (!suspectSet.has(w)) {
@@ -299,6 +305,14 @@ function loadState() {
   // 存量队列：按权威词表重新分桶（升级优先级）；词表外的屈折形式由原形覆盖，剔除
   for (const l of LEVEL_ORDER) {
     for (const w of s.buckets?.[l] ?? []) {
+      if (l === "unknown") {
+        // unknown 桶的词重新过 AI 过滤（曾放行过外语/连字符垃圾，如 justificante/piombare）
+        if (!rejects.has(w)) {
+          suspects.push({ w, lvl: "unknown", score: Infinity });
+          suspectSet.add(w);
+        }
+        continue;
+      }
       const e = cefrMap.get(w);
       if (e) {
         scoresOf.set(w, e.score);
