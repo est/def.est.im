@@ -17,10 +17,12 @@ function tokensOf(text: string): string[] {
     .filter((w) => !w.includes("'") && w.length > 0 && !STOPWORDS.has(w) && !/^\d/.test(w));
 }
 
-// 扫描库内全部词条，返回未被 terms 覆盖的英文词（已排序）
+// 扫描库内全部词条，返回未被 terms 覆盖的英文词（已排序）；已进黑名单（rejects）的排除
 export function findUncovered(db: Database): string[] {
   const covered = new Set<string>();
   for (const r of db.query("SELECT DISTINCT lower(surface) s FROM terms").all() as any[]) covered.add(r.s);
+  const rejected = new Set<string>();
+  for (const r of db.query("SELECT lower(surface) s FROM rejects").all() as any[]) rejected.add(r.s);
   const used = new Set<string>();
   const addText = (t: string | null | undefined) => {
     if (t) for (const w of tokensOf(t)) used.add(w);
@@ -32,6 +34,6 @@ export function findUncovered(db: Database): string[] {
   }
   for (const r of db.query("SELECT surface FROM terms WHERE kind IN ('synonym','antonym','collocation')").all() as any[]) addText(r.surface);
   const uncovered = new Set<string>();
-  for (const w of used) if (!covered.has(w)) uncovered.add(w);
+  for (const w of used) if (!covered.has(w) && !rejected.has(w)) uncovered.add(w);
   return [...uncovered].sort();
 }

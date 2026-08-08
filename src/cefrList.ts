@@ -34,3 +34,38 @@ export function loadCefr(dbPath: string): Map<string, CefrEntry> {
   }
   return map;
 }
+
+// 词表 lemma 链接（规则层过滤用）：
+//   lemmaOf  surface → 原形（meaner→mean、yanked→yank）：屈折形式归原
+//   formsOf  lemma → 变形清单：入库时补全缺失变形，保证"形式→原形"检索闭环
+export function loadLemmaLinks(dbPath: string): {
+  lemmaOf: Map<string, string>;
+  formsOf: Map<string, { surface: string; label: string }[]>;
+} {
+  const db = new Database(dbPath, { readonly: true });
+  const TAG_TO_LABEL: Record<string, string> = {
+    NNS: "plural", VBD: "past", VBG: "present_participle", VBZ: "third_person_singular",
+    VBN: "past_participle", JJR: "comparative", JJS: "superlative", RBR: "comparative", RBS: "superlative",
+  };
+  const lemmaOf = new Map<string, string>();
+  const formsOf = new Map<string, { surface: string; label: string }[]>();
+  for (const r of db.query(`
+    SELECT l.word AS lemma, w.word AS surface, t.tag AS tag
+    FROM word_pos p
+    JOIN words w ON w.word_id = p.word_id
+    JOIN words l ON l.word_id = p.lemma_word_id
+    JOIN pos_tags t ON t.tag_id = p.pos_tag_id
+    WHERE p.lemma_word_id IS NOT NULL`).all() as any[]) {
+    const lemma = String(r.lemma).toLowerCase();
+    const surface = String(r.surface).toLowerCase();
+    if (surface === lemma) continue;
+    lemmaOf.set(surface, lemma);
+    const label = TAG_TO_LABEL[r.tag];
+    if (!label) continue;
+    if (!formsOf.has(lemma)) formsOf.set(lemma, []);
+    const arr = formsOf.get(lemma)!;
+    if (!arr.some((f) => f.surface === surface && f.label === label)) arr.push({ surface, label });
+  }
+  db.close();
+  return { lemmaOf, formsOf };
+}

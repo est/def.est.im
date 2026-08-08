@@ -31,13 +31,19 @@
 //   --auto-audit：队列耗尽时自动审计自洽缺口（findUncovered）并写回队列，
 //                 直到真正闭环（缺口全部可查）才停止。
 //   429 用 5/10/20/40s 退避；worker 池各词独立，单词重试不阻塞其他词。
+//
+// 过滤层（防止长尾垃圾词膨胀队列）：
+//   规则层：词表 lemma 链接把屈折形式归原（meaner→mean，形式由原形覆盖）；
+//           词表未收录的词挂起（suspects），攒够一批交给 AI 批量过滤，
+//           拒绝词入 rejects 黑名单（持久化），幸存入 unknown 桶。
+//           词表内的词信任词表（含少量有界噪声，如专名/缩写）。
 // ============================================================
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { createDb, ingest, parseYaml, validate } from "./schema.ts";
 import { findUncovered } from "./closure.ts";
-import { loadCefr } from "./cefrList.ts";
+import { loadCefr, loadLemmaLinks } from "./cefrList.ts";
 import { loadEnv } from "./env.ts";
 
 const env = loadEnv();
@@ -63,6 +69,10 @@ const PROGRESS_PATH = join(DATA_DIR, "progress.json");
 // 权威 CEFR 词表：入队优先级与最终标注的来源；未覆盖词回退到继承/AI 估计
 const CEFR_DB = env.COLLECT_CEFR_DB ?? join(DATA_DIR, "word_cefr_minified.db");
 const cefrMap = existsSync(CEFR_DB) ? loadCefr(CEFR_DB) : new Map();
+// 词表 lemma 链接：屈折形式归原（规则层）+ 入库补全变形
+const { lemmaOf, formsOf } = existsSync(CEFR_DB)
+  ? loadLemmaLinks(CEFR_DB)
+  : { lemmaOf: new Map<string, string>(), formsOf: new Map<string, { surface: string; label: string }[]>() };
 
 // ---------- CLI / 环境配置 ----------
 function arg(name: string): string | undefined {
@@ -92,6 +102,13 @@ mkdirSync(FAIL_DIR, { recursive: true });
 
 const db = createDb(new Database(DB_PATH));
 
+// 黑名单（AI 批量过滤拒绝的词）与挂起候选（词表外，等批量过滤）
+const rejects = new Set<string>();
+for (const r of db.query("SELECT surface FROM rejects").all() as any[]) rejects.add(String(r.surface).toLowerCase());
+const suspects: string[] = [];
+const suspectSet = new Set<string>();
+const FILTER_BATCH = 100; // 每批交给 AI 过滤的词数
+
 // ---------- BFS 状态：按 CEFR 分桶的队列 ----------
 // visited 防重复入队；processed 计已处理词数（失败也计，防死循环）
 const buckets: Record<string, string[]> = Object.fromEntries(LEVEL_ORDER.map((l) => [l, []]));
@@ -118,14 +135,30 @@ function heartbeat(level: string | null, t0: number) {
 
 function enqueue(word: string, fallbackLevel: string) {
   const w = word.toLowerCase();
-  if (visited.has(w)) return;
+  if (visited.has(w) || rejects.has(w)) return;
   if (w.length < 2 && !["a", "i"].includes(w)) return;
+  // 规则层①：屈折形式归原（词表 lemma 链接）。形式由原形词条的变形补全覆盖
+  // （completeInflections），故可安全跳过并标记 visited，不再单独收录
+  const lemma = lemmaOf.get(w);
+  if (lemma && lemma !== w) {
+    visited.add(w);
+    enqueue(lemma, fallbackLevel);
+    return;
+  }
   visited.add(w);
-  // 优先权威词表等级，未覆盖则回退（父词继承/AI 估计）
   const entry = cefrMap.get(w);
-  const lvl = entry?.level ?? fallbackLevel;
+  if (!entry) {
+    // 规则层②：词表未收录 → 挂起，攒够一批交给 AI 过滤（不直接入桶）
+    if (!suspectSet.has(w)) {
+      suspectSet.add(w);
+      suspects.push(w);
+    }
+    return;
+  }
+  // 优先权威词表等级，未覆盖则回退（父词继承/AI 估计）
+  const lvl = entry.level ?? fallbackLevel;
   const bucket = buckets[LEVEL_RANK[lvl] === undefined ? "unknown" : lvl];
-  const score = entry?.score ?? Infinity;
+  const score = entry.score ?? Infinity;
   scoresOf.set(w, score);
   // 二分插入，保持桶内按分数升序（分数低 = 更简单，优先处理）
   let lo = 0;
@@ -138,6 +171,93 @@ function enqueue(word: string, fallbackLevel: string) {
   bucket.splice(lo, 0, w);
 }
 
+// 通过 AI 批量过滤的词表外词：入 unknown 桶（等级未知，最后处理）
+function enqueueApproved(w: string) {
+  const bucket = buckets.unknown;
+  scoresOf.set(w, Infinity);
+  let lo = 0;
+  let hi = bucket.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((scoresOf.get(bucket[mid]) ?? Infinity) <= Infinity) lo = mid + 1;
+    else hi = mid;
+  }
+  bucket.splice(lo, 0, w);
+}
+
+// AI 批量过滤：一批候选词 → 返回应拒绝（skip）的词集合
+// 排除式问法（"挑出不该收录的"）比正向问"哪些是真词"更能让模型下判断
+const FILTER_PROMPT = `你是英语词典编纂助手。下面是候选词列表，请判断其中哪些**不应该**作为英语词典词条收录，逐行给出结论。
+
+应该收录：正常的英语单词、已被英语吸收的借词（cafe、sushi）、常用缩略词（ok、tv）。
+不应该收录：缩写/首字母词（fbi、adhd、atm）、人名地名品牌（mozart、saratoga、iphone）、拼写错误、非英语借词的纯外语词（bonjour、der）、意义不明的衍生组合（a-levels、about-faced）。
+
+输出格式：每行一个词，\`词|keep\` 或 \`词|skip|简短理由\`。只输出这些行，不要任何其它内容。`;
+
+async function filterWords(words: string[]): Promise<Set<string>> {
+  const messages = [
+    { role: "system", content: FILTER_PROMPT },
+    { role: "user", content: words.join("\n") },
+  ];
+  const res = await fetch(API_ENTRY, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${API_TOKEN}`,
+      accept: "text/event-stream",
+    },
+    body: JSON.stringify({ model: MODEL, messages, max_tokens: 8000, temperature: 0, stream: true }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const content = await readSse(res);
+  const skip = new Set<string>();
+  for (const line of content.split("\n")) {
+    const m = line.trim().match(/^([a-z'-]+)\|skip(?:\|(.*))?$/i);
+    if (m) skip.add(m[1].toLowerCase());
+  }
+  return skip;
+}
+
+// 跑一批过滤：拒绝词入黑名单（持久化），幸存词入 unknown 桶
+async function runFilterBatch() {
+  const batch = suspects.splice(0);
+  suspectSet.clear();
+  try {
+    const skip = await filterWords(batch);
+    for (const s of skip) {
+      rejects.add(s);
+      db.query("INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?,?)").run(s, "AI 批量过滤");
+    }
+    for (const w of batch) if (!skip.has(w)) enqueueApproved(w);
+    console.log(`[过滤] ${batch.length} 词，拒绝 ${skip.size}（如 ${[...skip].slice(0, 5).join(", ") || "无"}）`);
+  } catch (e) {
+    // 过滤失败：词放回挂起列表，下轮再试（不丢词）
+    for (const w of batch) {
+      if (!suspectSet.has(w)) {
+        suspectSet.add(w);
+        suspects.push(w);
+      }
+    }
+    console.log(`  ⚠ 批量过滤失败: ${e}，${batch.length} 词下轮重试`);
+  }
+}
+
+// 规则层配套：用词表 lemma 链接补全该词缺失的变形（零 API 成本）。
+// enqueue 已把屈折形式归到原形，这里保证"形式 → 原形"的检索闭环
+function completeInflections(lemma: string) {
+  const forms = formsOf.get(lemma);
+  if (!forms) return;
+  const wordId = (db.query("SELECT id FROM words WHERE lemma=? AND variant=0").get(lemma) as any)?.id;
+  if (!wordId) return;
+  for (const f of forms) {
+    db.query(`INSERT OR IGNORE INTO terms (word_id, sense_id, surface, kind, label)
+      SELECT ?, NULL, ?, 'inflection', ? WHERE NOT EXISTS (
+        SELECT 1 FROM terms WHERE word_id=? AND sense_id IS NULL AND surface=? AND kind='inflection')`)
+      .run(wordId, f.surface, f.label, wordId, f.surface);
+  }
+}
+
 // 取当前应处理的等级桶：低于等于关卡的最低非空桶
 function nextLevel(): string | null {
   for (const l of LEVEL_ORDER) {
@@ -148,20 +268,22 @@ function nextLevel(): string | null {
 }
 
 function saveState() {
-  writeFileSync(STATE_PATH, JSON.stringify({ buckets, visited: [...visited], processed }, null, 2));
+  writeFileSync(STATE_PATH, JSON.stringify({ buckets, visited: [...visited], suspects, processed }, null, 2));
 }
 function loadState() {
   // 注意：断点恢复时桶里的词直接取回即可，visited 只是去重集合，
   // 不能再用 visited 过滤（否则队列会被整个滤空）。
   const s = JSON.parse(readFileSync(STATE_PATH, "utf8"));
   for (const w of s.visited) visited.add(w);
-  // 存量队列按权威词表重新分桶（升级到新优先级）；词表未覆盖的词留在原桶
+  // 存量队列：按权威词表重新分桶（升级优先级）；词表外的屈折形式由原形覆盖，剔除
   for (const l of LEVEL_ORDER) {
     for (const w of s.buckets?.[l] ?? []) {
       const e = cefrMap.get(w);
       if (e) {
         scoresOf.set(w, e.score);
         buckets[e.level].push(w);
+      } else if (lemmaOf.get(w) && lemmaOf.get(w) !== w) {
+        visited.add(w); // 存量队列里的屈折形式：归原后由原形词条覆盖
       } else {
         buckets[l].push(w);
       }
@@ -169,6 +291,8 @@ function loadState() {
   }
   // 桶内按分数升序（简单词优先）
   for (const l of LEVEL_ORDER) buckets[l].sort((a, b) => (scoresOf.get(a) ?? Infinity) - (scoresOf.get(b) ?? Infinity));
+  suspects.push(...(s.suspects ?? []));
+  for (const w of suspects) suspectSet.add(w);
   processed = s.processed ?? 0;
 }
 
@@ -356,6 +480,8 @@ async function processWord(word: string, parentLevel: string) {
       // 子词回退等级：父词生成值 → 桶等级；权威词表命中时 enqueue 内自动纠正
       const childLevel = r.data.cefr ?? parentLevel ?? "unknown";
       for (const w of extractWords(r.data)) enqueue(w, childLevel);
+      // 规则层配套：补全该词缺失的词表变形（零 API 成本）
+      completeInflections(r.word.toLowerCase());
       // 每词成功日志在万级规模下过吵，已注释；进度看心跳即可
       // console.log(`  ✓ ${word} (cefr=${r.data.cefr ?? "?"}) ${r.data.entries.length} senses`);
       return;
@@ -435,6 +561,8 @@ let lastProgressAt = Date.now();
 for (;;) {
   await Bun.sleep(2000);
   if (processed >= maxWords) break;
+  // AI 批量过滤：挂起词攒够一批就过滤（拒绝入黑名单，幸存入 unknown 桶）
+  if (suspects.length >= FILTER_BATCH) await runFilterBatch();
   if (totalQueued() === 0 && inFlight === 0) {
     if (argMaxCefr !== undefined || !autoAudit) break;
     const gaps = findUncovered(db);
@@ -458,6 +586,8 @@ for (;;) {
   }
 }
 done = true;
+if (suspects.length > 0) await runFilterBatch(); // 收尾：清空挂起词，不丢词
+saveState();
 while (inFlight > 0) await Bun.sleep(1000);
 await Promise.all(workers);
 

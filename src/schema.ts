@@ -118,6 +118,11 @@ CREATE TABLE IF NOT EXISTS terms (
 );
 CREATE INDEX IF NOT EXISTS idx_terms_surface ON terms (surface COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_terms_word ON terms (word_id);
+CREATE TABLE IF NOT EXISTS rejects (
+  surface TEXT PRIMARY KEY COLLATE NOCASE,
+  reason TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
   // 兼容旧库：words 增量列（cefr_score / freq）
   const cols = new Set(db.query("PRAGMA table_info(words)").all().map((c: any) => c.name));
