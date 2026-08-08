@@ -12,17 +12,6 @@
 word: run
 phonetic_uk: /rʌn/
 phonetic_us: /rʌn/
-inflections:
-  - form: third_person_singular
-    value: runs
-  - form: present_participle
-    value: running
-  - form: past
-    value: ran
-  - form: past_participle
-    value: run
-  - form: plural
-    value: runs
 entries:
   - pos: verb
     def_en: to move quickly using your legs
@@ -55,6 +44,18 @@ entries:
     def_zh: 偶然遇到
     example_en: I ran into an old friend at the mall.
     example_zh: 我在商场偶然遇到一个老朋友。
+inflections:
+  - form: third_person_singular
+    value: runs
+  - form: present_participle
+    value: running
+  - form: past
+    value: ran
+    sense: 1
+  - form: past_participle
+    value: run
+  - form: plural
+    value: runs
 ```
 
 虚词示例（验证"没有就省略"规则）：
@@ -80,7 +81,7 @@ entries:
 | `phonetic_uk` / `phonetic_us` | string | 否 | 主音标（最常见读音），尽量必填 |
 | `cefr` | string | 否 | A1/A2/B1/B2/C1/C2，大概估计即可，作遍历优先级 |
 | `other_notes` | string | 否 | 词级零碎说明：特殊/次要发音、同形词多读音、一词两套变形等（block scalar） |
-| `inflections` | list（block 序列） | 否 | **词级**变形表，每条 `form + value` 一行式记录 |
+| `inflections` | list（block 序列） | 否 | 变形表，每条 `form + value`（可选 `sense` 归属义项序号）；省略 sense = 词级通用 |
 | `entries` | list | 是 | 铺平的一行式记录，**一条 = 一个词性 + 一个义项 + 至多一个例句** |
 | `pos` | string | 是 | 白名单（**全称，勿用缩写**）：noun, verb, adjective, adverb, preposition, conjunction, pronoun, interjection, article, phrase, idiom |
 | `pattern` | string | 否 | 仅 idiom/phrase 义项：槽位化模式（`run into sb.`），用 base form + sb./sth. 占位，供检索命中 |
@@ -94,7 +95,7 @@ entries:
 | `register` | string | 否 | formal / informal / slang / literary 等 |
 | `usage_notes` | string | 否 | 语法模式、易错点、中式英语提醒，可多行（block scalar） |
 
-变形 `form` 白名单：`plural`、`third_person_singular`、`present_participle`、`past`、`past_participle`、`comparative`、`superlative`，按词性取用（名词取 `plural`，动词取时态四项，形容词/副词取比较级）。变形对同一词性的所有义项一致，故放词级而非 entry 级，避免逐条重复。
+变形 `form` 白名单：`plural`、`third_person_singular`、`present_participle`、`past`、`past_participle`、`comparative`、`superlative`，按词性取用（名词取 `plural`，动词取时态四项，形容词/副词取比较级）。同一词性的变形通常对所有义项一致，此时省略 `sense`（词级）；若不同义项的变形不同（lie 躺→lay / 说谎→lied），每项用 `sense` 标明归属义项序号。`inflections` 放在 `entries` 之后输出，便于引用刚写过的义项序号。
 
 注意：`usage_notes` 里如果出现冒号、引号等，用 YAML 块标量：
 
@@ -112,7 +113,7 @@ usage_notes: |
 4. **一条 entry 至多一个例句**：例句必须 en/zh 成对，要么都有、要么都省略。
 5. **没有就省略键**：不输出 `key: null`、不输出空字符串。
 6. **义项按常用度降序排列**，口语义项放最后。
-7. **主音标只填最常见读音**（尽量必填）；变形尽量列全（尤其不规则动词/复数）。特殊/次要读音、同形词多读音、两套变形（lie 躺→lay / 说谎→lied）等零碎说明写进顶层 `other_notes`，不编造词源。
+7. **主音标只填最常见读音**（尽量必填）；变形尽量列全（尤其不规则动词/复数），若不同义项的变形不同（lie 躺→lay / 说谎→lied），`inflections` 每项用 `sense` 标明归属义项序号。特殊/次要读音、同形词多读音等零碎说明写进顶层 `other_notes`，不编造词源。
 8. **短语归属**：短语/习语作为其核心词（通常是首词）词条内的 idiom / phrase 义项输出，不单独成词——词形还原检索依赖此约定。
 9. **顶层 `cefr` 字段**：A1/A2/B1/B2/C1/C2，大概估计即可（作遍历优先级），不确定可省略。
 
@@ -129,7 +130,7 @@ usage_notes: |
 3. `pos` 在枚举白名单内（全称）。
 4. `example_en` 与 `example_zh` 成对（同有同无）。
 5. `synonyms` / `antonyms` / `collocations` 若存在，必须是字符串列表且非空。
-6. `inflections` 若存在，每条必须含 `form`（白名单内）和 `value`（非空）。
+6. `inflections` 若存在，每条必须含 `form`（白名单内）和 `value`（非空）；`sense` 若存在须为整数且在义项范围内。
 7. `pattern` 仅允许出现在 idiom / phrase 义项，且 idiom / phrase 义项**必须**带 `pattern`（短语检索的唯一入口）。
 8. `cefr` 若存在须在 A1/A2/B1/B2/C1/C2 白名单内。
 9. flow 风格（`[a, b]` / `{a: b}`）可检出——仅警告不拒绝，解析成功即可入库。
