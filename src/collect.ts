@@ -110,6 +110,9 @@ type Suspect = { w: string; lvl: string; score: number };
 const suspects: Suspect[] = [];
 const suspectSet = new Set<string>();
 const FILTER_BATCH = 100; // 每批交给 AI 过滤的词数
+// --seed-cefr 词频下限：词表 A1 混有预测噪声（boaters/transmissivity 等低频假 A1），
+// 真 A1 常用词词频均在百万级（apple=28M），低于此线的词不按 A1 种子采集
+const SEED_FREQ_MIN = parseInt(env.COLLECT_SEED_FREQ ?? "1000000", 10);
 
 // ---------- BFS 状态：按 CEFR 分桶的队列 ----------
 // visited 防重复入队；processed 计已处理词数（失败也计，防死循环）
@@ -190,9 +193,10 @@ function enqueueApproved(sus: Suspect) {
 
 // --seed-cefr：把词表某等级的词全量挂起等过滤（防词表内垃圾词入桶），
 // 过滤通过后按权威等级入桶
-function seedSuspect(w: string, entry: { level: string; score: number }) {
+function seedSuspect(w: string, entry: { level: string; score: number; freq: number }) {
   if (visited.has(w) || rejects.has(w)) return;
   if (w.length < 2 && !["a", "i"].includes(w)) return; // 词表里有 s/p/b 等单字母噪声
+  if (entry.freq < SEED_FREQ_MIN) return; // 频率门槛：低于 100 万不按种子采（BFS 引用到仍会正常采）
   visited.add(w);
   if (!suspectSet.has(w)) {
     suspectSet.add(w);
@@ -205,7 +209,7 @@ function seedSuspect(w: string, entry: { level: string; score: number }) {
 const FILTER_PROMPT = `你是英语词典编纂助手。下面是候选词列表，请判断其中哪些**不应该**作为英语词典词条收录，逐行给出结论。
 
 应该收录：正常的英语单词、已被英语吸收的借词（cafe、sushi）、常用缩略词（ok、tv）。
-不应该收录：缩写/首字母词（fbi、adhd、atm）、人名地名品牌（mozart、saratoga、iphone）、拼写错误、非英语借词的纯外语词（bonjour、der）、意义不明的衍生组合（a-levels、about-faced）。
+不应该收录：缩写/首字母词（fbi、adhd、atm）、人名地名品牌（mozart、saratoga、iphone）、拼写错误、非英语借词的纯外语词（bonjour、der）、意义不明的衍生组合（a-levels、about-faced）、罗马数字与字母串（iii、xxi、als、ess、fs）、词根残片（cient、ficos）、单字母与字母名称（s、p、ess）。
 
 输出格式：每行一个词，\`词|keep\` 或 \`词|skip|简短理由\`。只输出这些行，不要任何其它内容。`;
 
@@ -316,9 +320,10 @@ function loadState() {
     suspects.push(sus);
     suspectSet.add(sus.w);
   }
-  // 修复历史丢词：visited 但无桶、无词条、无黑名单、无挂起的 → 重新走规则层入队。
+  // 治愈历史丢词：visited 但无桶、无词条、无黑名单、无挂起的 → 按政策重新入队。
   // 注意：不能边遍历 visited 边增删（enqueue 会 re-add，Set 迭代器会重新访问 → 死循环），
-  // 先收集到数组再统一处理
+  // 先收集到数组再统一处理。且必须与 seed 频率政策一致——词表内低频词进黑名单，
+  // 屈折形式跳过（由原形词条覆盖），否则治愈会不断复活垃圾词
   const bucketed = new Set<string>();
   for (const l of LEVEL_ORDER) for (const w of buckets[l]) bucketed.add(w);
   const inWords = new Set<string>();
@@ -326,6 +331,14 @@ function loadState() {
   const toHeal: string[] = [];
   for (const w of visited) {
     if (bucketed.has(w) || inWords.has(w) || rejects.has(w) || suspectSet.has(w)) continue;
+    if (lemmaOf.has(w) && lemmaOf.get(w) !== w) continue; // 屈折形式：归原后由原形覆盖，不治愈
+    const e = cefrMap.get(w);
+    if (e && e.freq < SEED_FREQ_MIN) {
+      // 词表内但低频：与 seed 门槛同政策 → 进黑名单而非重新入队
+      rejects.add(w);
+      db.query("INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?,?)").run(w, "治愈:词表内低频");
+      continue;
+    }
     toHeal.push(w);
   }
   for (const w of toHeal) {
