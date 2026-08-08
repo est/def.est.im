@@ -342,7 +342,14 @@ async function processWord(word: string, parentLevel: string) {
       // YAML 落盘默认关（万级词条 IO 浪费），调试时 --yaml 打开；
       // 原始输出改存 words.raw_yaml（DB 内），审计/回放不丢数据
       if (saveYaml) writeFileSync(join(WORDS_DIR, word + ".yaml"), lastRaw.trimEnd() + "\n");
-      ingest(db, r.data, r.word, r.variant, MODEL, cefrMap.get(r.word.toLowerCase()), lastRaw);
+      // ingest 包 try/catch：SQLite 并发写锁竞争时 SQLITE_BUSY 不能崩 worker
+      try {
+        ingest(db, r.data, r.word, r.variant, MODEL, cefrMap.get(r.word.toLowerCase()), lastRaw);
+      } catch (e) {
+        failures++;
+        console.log(`  ✗ ${word} DB 写入失败: ${e}`);
+        return;
+      }
       // 子词回退等级：父词生成值 → 桶等级；权威词表命中时 enqueue 内自动纠正
       const childLevel = r.data.cefr ?? parentLevel ?? "unknown";
       for (const w of extractWords(r.data)) enqueue(w, childLevel);

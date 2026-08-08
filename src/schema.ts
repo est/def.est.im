@@ -78,6 +78,7 @@ export function validate(file: string, doc: any) {
 // ---------- 建库（sqlite-design.md 的 schema） ----------
 export function createDb(db: Database): Database {
   db.run("PRAGMA foreign_keys = ON");
+  db.run("PRAGMA busy_timeout = 5000"); // 15 并发写锁竞争时等锁而非 SQLITE_BUSY 直接崩
   db.run(`
 CREATE TABLE IF NOT EXISTS words (
   id INTEGER PRIMARY KEY,
@@ -113,6 +114,7 @@ CREATE TABLE IF NOT EXISTS terms (
   UNIQUE (surface, word_id, sense_id, kind)
 );
 CREATE INDEX IF NOT EXISTS idx_terms_surface ON terms (surface COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_terms_word ON terms (word_id);
 `);
   // 兼容旧库：words 增量列（cefr_score / freq）
   const cols = new Set(db.query("PRAGMA table_info(words)").all().map((c: any) => c.name));
