@@ -510,8 +510,13 @@ async function callModel(word: string, feedback: { role: string; content: string
 }
 
 // 单个词的处理：生成 → 校验 → 失败回喂重试（≤2 次）→ 入库 + 落盘 + BFS 扩展
+// 频率门槛（enqueue 有，这里是对已入队存量词的兜底）：
+// 词表内但 <100万 的词不浪费 API 调用（它们要么是预测噪声，
+// 要么是低频派生词；lookup 层通过 inflection/synonym 间接覆盖）
 async function processWord(word: string, parentLevel: string) {
   processed++;
+  const entry = cefrMap.get(word);
+  if (entry && entry.freq < SEED_FREQ_MIN) return;
   let feedback: { role: string; content: string }[] = [];
   let lastRaw = "";
   for (let retry = 0; retry <= 2; retry++) {
