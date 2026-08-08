@@ -56,6 +56,8 @@ inflections:
     value: run
   - form: plural
     value: runs
+other_notes: |     # 可选，放在最后；仅补充其它字段无法表达的内容
+  特殊说明
 ```
 
 虚词示例（验证"没有就省略"规则）：
@@ -80,7 +82,7 @@ entries:
 | `word` | string | 是 | 查询词原样回显，用于校验 AI 未改词条 |
 | `phonetic_uk` / `phonetic_us` | string | 否 | 主音标（最常见读音），尽量必填 |
 | `cefr` | string | 否 | A1/A2/B1/B2/C1/C2，大概估计即可，作遍历优先级 |
-| `other_notes` | string | 否 | 词级零碎说明：特殊/次要发音、同形词多读音、一词两套变形等（block scalar） |
+| `other_notes` | string | 否 | 放在 YAML 最后；仅补充其它专用字段无法表达的内容（次要读音、同形词两套变形原因等），不重复 phonetic/inflections/entries 里已有的信息 |
 | `inflections` | list（block 序列） | 否 | 变形表，每条 `form + value`（可选 `sense` 归属义项序号）；省略 sense = 词级通用 |
 | `entries` | list | 是 | 铺平的一行式记录，**一条 = 一个词性 + 一个义项 + 至多一个例句** |
 | `pos` | string | 是 | 白名单（**全称，勿用缩写**）：noun, verb, adjective, adverb, preposition, conjunction, pronoun, interjection, article, phrase, idiom |
@@ -113,7 +115,7 @@ usage_notes: |
 4. **一条 entry 至多一个例句**：例句必须 en/zh 成对，要么都有、要么都省略。
 5. **没有就省略键**：不输出 `key: null`、不输出空字符串。
 6. **义项按常用度降序排列**，口语义项放最后。
-7. **主音标只填最常见读音**（尽量必填）；变形尽量列全（尤其不规则动词/复数），若不同义项的变形不同（lie 躺→lay / 说谎→lied），`inflections` 每项用 `sense` 标明归属义项序号。特殊/次要读音、同形词多读音等零碎说明写进顶层 `other_notes`，不编造词源。
+7. **主音标只填最常见读音**（尽量必填）；变形尽量列全（尤其不规则动词/复数），若不同义项的变形不同（lie 躺→lay / 说谎→lied），`inflections` 每项用 `sense` 标明归属义项序号。已在 phonetic/inflections/entries 里体现的信息不重复；`other_notes` 放在最后，仅补充专用字段无法表达的内容。
 8. **短语归属**：短语/习语作为其核心词（通常是首词）词条内的 idiom / phrase 义项输出，不单独成词——词形还原检索依赖此约定。
 9. **顶层 `cefr` 字段**：A1/A2/B1/B2/C1/C2，大概估计即可（作遍历优先级），不确定可省略。
 
