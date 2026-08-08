@@ -2,17 +2,6 @@ word: run
 cefr: A1
 phonetic_uk: /rʌn/
 phonetic_us: /rʌn/
-inflections:
-  - form: third_person_singular
-    value: runs
-  - form: present_participle
-    value: running
-  - form: past
-    value: ran
-  - form: past_participle
-    value: run
-  - form: plural
-    value: runs
 entries:
   - pos: verb
     def_en: to move quickly using your legs
@@ -45,3 +34,15 @@ entries:
     def_zh: 偶然遇到
     example_en: I ran into an old friend at the mall.
     example_zh: 我在商场偶然遇到一个老朋友。
+inflections:
+  - form: third_person_singular
+    value: runs
+  - form: present_participle
+    value: running
+  - form: past
+    value: ran
+    sense: 1
+  - form: past_participle
+    value: run
+  - form: plural
+    value: runs

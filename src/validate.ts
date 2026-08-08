@@ -27,8 +27,8 @@ console.log("== 1. schema 文档自带的 YAML 示例可解析性 ==");
 console.log("\n== 2. 样本校验（含失败路径与 flow 检测）==");
 const expects: Record<string, "valid" | "invalid"> = {
   "run.yaml": "valid", "the.yaml": "valid", "tear.yaml": "valid", "tear-2.yaml": "valid",
-  "walk.yaml": "valid", "talk.yaml": "valid",
-  "sleep.yaml": "invalid", "fly.yaml": "invalid", "hop.yaml": "invalid", "quick.yaml": "invalid",
+  "walk.yaml": "valid", "talk.yaml": "valid", "lie.yaml": "valid",
+  "sleep.yaml": "invalid", "fly.yaml": "invalid", "hop.yaml": "invalid", "quick.yaml": "invalid", "guess.yaml": "invalid",
 };
 const parsed: any[] = [];
 for (const file of Object.keys(expects).sort()) {
@@ -62,7 +62,7 @@ const db = createDb(new Database(":memory:"));
 
 for (const p of parsed) ingest(db, p.data, p.word, p.variant, "validate");
 const wordCount = (db.query("SELECT COUNT(*) c FROM words").get() as any).c;
-report(wordCount === 6, `words ${wordCount} 行（run/the/tear×2/walk/talk）——同形词 tear 双行共存`);
+report(wordCount === 7, `words ${wordCount} 行（run/the/tear×2/walk/talk/lie）——同形词 tear 双行共存`);
 
 console.log("\n== 5. 检索查询 ==");
 function lookup(term: string): any[] {

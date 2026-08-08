@@ -70,6 +70,8 @@ export function validate(file: string, doc: any) {
     const tag = `inflections[${i}]`;
     if (!INFLECT_LABELS.includes(f.form)) errors.push(`${tag}: form(${f.form}) 不在白名单`);
     if (typeof f.value !== "string" || f.value.trim() === "") errors.push(`${tag}: value 缺失`);
+    if (f.sense !== undefined && (!Number.isInteger(f.sense) || f.sense < 1 || f.sense > (data?.entries?.length ?? 0)))
+      errors.push(`${tag}: sense(${f.sense}) 超出义项范围`);
   });
   const variant = parseInt(file.match(/-(\d+)\.yaml$/)?.[1] ?? "0", 10);
   return { errors, warns, data, word, variant };
@@ -139,17 +141,14 @@ export function ingest(db: Database, data: any, word: string, variant: number, m
   db.query("DELETE FROM senses WHERE word_id=?").run(wordId);
   db.query("DELETE FROM terms WHERE word_id=?").run(wordId);
   db.query("INSERT OR IGNORE INTO terms (word_id, sense_id, surface, kind, label) VALUES (?,?,?,?,?)").run(wordId, null, word, "lemma", null);
-  // 词级变形只插一次（不能放在 entry 循环内，否则每个 entry 重插一遍；
-  // 且 SQLite UNIQUE 对 NULL 不生效，sense_id 为 NULL 时 INSERT OR IGNORE 拦不住重复）
-  for (const f of data.inflections ?? []) {
-    db.query("INSERT OR IGNORE INTO terms (word_id, sense_id, surface, kind, label) VALUES (?,?,?,?,?)")
-      .run(wordId, null, f.value, "inflection", f.form);
-  }
+  // 先建 senses 并记录 sense_no → id：inflections 的 sense 引用依赖此映射
+  const senseIds = new Map<number, number>();
   data.entries.forEach((e: any, i: number) => {
     const res = db.query(`INSERT INTO senses (word_id, sense_no, pos, pattern, def_en, def_zh, example_en, example_zh, register, usage_notes)
       VALUES (?,?,?,?,?,?,?,?,?,?)`).run(wordId, i + 1, e.pos, e.pattern ?? null, e.def_en, e.def_zh,
       e.example_en ?? null, e.example_zh ?? null, e.register ?? null, e.usage_notes ?? null);
     const senseId = Number(res.lastInsertRowid);
+    senseIds.set(i + 1, senseId);
     for (const [k, kind] of [["synonyms", "synonym"], ["antonyms", "antonym"], ["collocations", "collocation"]] as const) {
       for (const s of e[k] ?? []) {
         db.query("INSERT OR IGNORE INTO terms (word_id, sense_id, surface, kind, label) VALUES (?,?,?,?,?)")
@@ -157,4 +156,12 @@ export function ingest(db: Database, data: any, word: string, variant: number, m
       }
     }
   });
+  // 变形插在 senses 之后：带 sense 引用 → 义项级（sense_id 非 NULL，UNIQUE 生效）；
+  // 省略 sense → 词级（sense_id NULL）。词级行只插一次，不能放进 entries 循环，
+  // 否则每个 entry 重插一遍，且 SQLite UNIQUE 对 NULL 不生效拦不住重复
+  for (const f of data.inflections ?? []) {
+    const senseId = Number.isInteger(f.sense) ? (senseIds.get(f.sense) ?? null) : null;
+    db.query("INSERT OR IGNORE INTO terms (word_id, sense_id, surface, kind, label) VALUES (?,?,?,?,?)")
+      .run(wordId, senseId, f.value, "inflection", f.form);
+  }
 }
