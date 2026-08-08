@@ -31,7 +31,9 @@ CREATE TABLE words (
   id          INTEGER PRIMARY KEY,
   lemma       TEXT NOT NULL COLLATE NOCASE,
   variant     INTEGER NOT NULL DEFAULT 0,   -- 同形词序号，见文件组织约定
-  cefr        TEXT,           -- A1/A2/B1/B2/C1/C2，大概估计，作遍历优先级
+  cefr        TEXT,           -- A1/A2/B1/B2/C1/C2，权威词表优先，AI 估计回退
+  cefr_score  REAL,           -- 权威词表连续分数（1=A1…6=C2），遍历排序用
+  freq        INTEGER,        -- 权威词表语料词频（稀有词 10000 兜底），展示/二次排序用
   phonetic_uk TEXT,
   phonetic_us TEXT,
   status      TEXT NOT NULL DEFAULT 'draft'
@@ -140,6 +142,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 |---|---|
 | `word` / `phonetic_uk` / `phonetic_us` | words（lemma 同时写入 terms，kind='lemma'） |
 | `cefr` | words.cefr |
+| 权威词表 `cefr_score` / `freq` | words.cefr_score / words.freq |
 | 文件名 `word-N.yaml` 的 `-N` 后缀 | words.variant（无后缀为 0） |
 | `inflections[]` | terms（kind='inflection', label=form） |
 | `entries[]`（pos/pattern/def_en/def_zh/example_en/example_zh/register/usage_notes） | senses（sense_no = 输出顺序） |
@@ -169,7 +172,11 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 
 设计已由 `src/validate.ts` 端到端验证（32 断言全部通过），覆盖：词形检索（含大小写）、同义词/反义词/搭配命中、前缀联想、短语两步链（`ran into` → `run into sb.`）、同形词双行共存、四条失败路径（bad pos / 例句不成对 / word 与文件名不一致 / cefr 非法）、围栏剥离、flow 风格检测、词级数据无重复（裸计数）。
 
-采集器 `src/collect.ts` 已用真实模型跑通：BFS 按 **CEFR 分桶遍历**（子词继承父词 CEFR 作临时等级，`--max-cefr` 关卡防生僻词打转）、并发可调（`--limit` / `COLLECT_CONCURRENCY`）、校验失败重试（≤2 次）、断点续跑（data/state.json）、词条落盘 data/words/*.yaml。API 契约要点：必须 `stream: true` + `Accept: text/event-stream`，SSE 中只累加非空 `delta.content`（推理文本在 `reasoning_content`，需忽略）。
+采集器 `src/collect.ts` 已用真实模型跑通：BFS 按 **CEFR 分桶遍历**，桶内按权威词表（`data/word_cefr_minified.db`，17.2 万词）的连续分数升序（二分插入，简单词优先）；`--seed-cefr A1` 可按等级全量入队，`--max-cefr` 关卡防生僻词打转；词表另含真实语料词频（`freq`），留作展示/二次排序。并发可调（`--limit` / `COLLECT_CONCURRENCY`）、校验失败回喂重试（≤2 次）、断点续跑（data/state.json）、进度心跳（data/progress.json）。API 契约要点：必须 `stream: true` + `Accept: text/event-stream`，SSE 中只累加非空 `delta.content`（推理文本在 `reasoning_content`，需忽略）。
+
+**采集策略**：线下预采 A1→B2（约 4.3 万词，常用词全覆盖）；C1/C2 长尾与词表未收录词按需在线生成（on-demand，管线核心 callModel/validate/ingest 可复用）。
+
+**自洽（closure）**：词条中出现的每个英文词都应可查。采集不设停用词过滤（功能词本身是条目），`src/audit.ts` 审计未覆盖词并可 `--enqueue` 写回队列，形成"跑一批 → 审计 → 补采"闭环直到缺口为零。
 
 ## 待定问题
 

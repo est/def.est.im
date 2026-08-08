@@ -2,7 +2,8 @@
 // 自洽审计（audit.ts）
 //
 // 目标：词典 closure —— 词条（释义/例句/同反义/搭配/pattern）里出现的
-//       每个英文词都应当可查。缺口列表来自 src/closure.ts 的 findUncovered。
+//       每个英文词都应当可查。缺口列表来自 src/closure.ts 的 findUncovered
+//       （直接扫数据库，不依赖 YAML 文件）。
 //
 // 用法：
 //   bun run src/audit.ts             # 只报告缺口
@@ -19,11 +20,10 @@ import { findUncovered } from "./closure.ts";
 
 const DIR = import.meta.dir;
 const DATA_DIR = process.env.COLLECT_DATA_DIR ?? join(DIR, "..", "data");
-const WORDS_DIR = join(DATA_DIR, "words");
 const STATE_PATH = join(DATA_DIR, "state.json");
 const db = createDb(new Database(join(DATA_DIR, "dict.db")));
 
-const gaps = findUncovered(db, WORDS_DIR);
+const gaps = findUncovered(db);
 const coveredCount = (db.query("SELECT COUNT(DISTINCT lower(surface)) c FROM terms").get() as any).c;
 console.log(`已可查词数：${coveredCount}，自洽缺口：${gaps.length}`);
 console.log(`缺口示例（前 80）：${gaps.slice(0, 80).join(", ")}`);

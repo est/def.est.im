@@ -83,7 +83,9 @@ CREATE TABLE IF NOT EXISTS words (
   id INTEGER PRIMARY KEY,
   lemma TEXT NOT NULL COLLATE NOCASE,
   variant INTEGER NOT NULL DEFAULT 0,
-  cefr TEXT,                       -- A1/A2/B1/B2/C1/C2，大概估计，作遍历优先级
+  cefr TEXT,                       -- A1/A2/B1/B2/C1/C2，权威词表优先，AI 估计回退
+  cefr_score REAL,                 -- 权威词表连续分数（1=A1…6=C2），排序用
+  freq INTEGER,                    -- 权威词表语料词频（稀有词 10000 兜底）
   phonetic_uk TEXT, phonetic_us TEXT,
   status TEXT NOT NULL DEFAULT 'draft',
   model TEXT, raw_yaml TEXT,
@@ -112,14 +114,23 @@ CREATE TABLE IF NOT EXISTS terms (
 );
 CREATE INDEX IF NOT EXISTS idx_terms_surface ON terms (surface COLLATE NOCASE);
 `);
+  // 兼容旧库：words 增量列（cefr_score / freq）
+  const cols = new Set(db.query("PRAGMA table_info(words)").all().map((c: any) => c.name));
+  if (!cols.has("cefr_score")) db.run("ALTER TABLE words ADD COLUMN cefr_score REAL");
+  if (!cols.has("freq")) db.run("ALTER TABLE words ADD COLUMN freq INTEGER");
   return db;
 }
 
 // ---------- 入库：单词整词替换，幂等 ----------
-export function ingest(db: Database, data: any, word: string, variant: number, model = "unknown") {
-  db.query(`INSERT INTO words (lemma, variant, cefr, phonetic_uk, phonetic_us, model) VALUES (?,?,?,?,?,?)
-    ON CONFLICT(lemma, variant) DO UPDATE SET cefr=excluded.cefr, phonetic_uk=excluded.phonetic_uk, phonetic_us=excluded.phonetic_us, model=excluded.model, updated_at=datetime('now')`)
-    .run(word, variant, data.cefr ?? null, data.phonetic_uk ?? null, data.phonetic_us ?? null, model);
+// meta：权威词表条目（level/score/freq），优先于 AI 估计，词表未覆盖时省略
+// rawYaml：模型原始输出全文（落盘为 words.raw_yaml，替代 YAML 文件做审计/回放）
+export function ingest(db: Database, data: any, word: string, variant: number, model = "unknown", meta?: { level?: string; score?: number; freq?: number }, rawYaml?: string) {
+  db.query(`INSERT INTO words (lemma, variant, cefr, cefr_score, freq, raw_yaml, phonetic_uk, phonetic_us, model) VALUES (?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(lemma, variant) DO UPDATE SET cefr=excluded.cefr, cefr_score=excluded.cefr_score, freq=excluded.freq,
+      raw_yaml=excluded.raw_yaml, phonetic_uk=excluded.phonetic_uk, phonetic_us=excluded.phonetic_us,
+      model=excluded.model, updated_at=datetime('now')`)
+    .run(word, variant, meta?.level ?? data.cefr ?? null, meta?.score ?? null, meta?.freq ?? null, rawYaml ?? null,
+      data.phonetic_uk ?? null, data.phonetic_us ?? null, model);
   const wordId = (db.query("SELECT id FROM words WHERE lemma=? AND variant=?").get(word, variant) as any).id;
   db.query("DELETE FROM senses WHERE word_id=?").run(wordId);
   db.query("DELETE FROM terms WHERE word_id=?").run(wordId);

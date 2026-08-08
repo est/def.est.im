@@ -6,13 +6,13 @@
 //       data/dict.db 并落盘 YAML（data/words/）。
 //
 // 遍历策略（CEFR 优先级）：
-//   队列按等级分桶 A1 < A2 < B1 < B2 < C1 < C2 < unknown，
-//   每次取最低非空桶的一批词并发处理。
-//   新词在生成前等级未知（生成后才输出 CEFR），因此入队时继承
-//   父词生成的 CEFR 作为临时等级——A1 词的近邻词大多也常用，
-//   粗略但满足"常用词优先"的目标。
-//   --max-cefr 关卡：超过目标等级即停止（CEFR 缺失的 unknown 桶
-//   同样被挡住），避免遍历陷入生僻冷门词打转。
+//   队列按等级分桶 A1 < A2 < B1 < B2 < C1 < C2 < unknown；
+//   桶内按权威词表连续分数升序（二分插入，简单词优先）。
+//   入队时优先查权威词表（data/word_cefr_minified.db，含真实词频 freq）；
+//   词表未覆盖的新词回退到继承父词/AI 估计。--seed-cefr 可按等级全量入队。
+//   --max-cefr 关卡：超过目标等级即停止（unknown 桶同样被挡住）。
+//   建议线下预采 A1→B2（常用词全覆盖）；C1/C2 与未收录词适合 on-demand
+//   （在线查阅时实时生成，管线核心 callModel/validate/ingest 可复用）。
 //
 // 可靠性：
 //   - 校验失败把报错回喂模型重试（≤2 次），最终失败输出存 data/failed/
@@ -21,7 +21,9 @@
 //
 // 用法：
 //   bun run src/collect.ts                          # 默认 10 词
-//   bun run src/collect.ts --max 100000 --limit 10 --auto-audit
+//   bun run src/collect.ts --max 100000 --limit 15 --auto-audit
+//   bun run src/collect.ts --seed-cefr A1 --max 8000   # 按权威词表全量入队 A1
+//   bun run src/collect.ts --yaml                   # 额外落盘 YAML（默认关，省 IO）
 //   bun run src/collect.ts --max 5000 --limit 5 --max-cefr B2
 //   bun run src/collect.ts --fresh                  # 清空数据重新开始
 //
@@ -35,6 +37,7 @@ import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { createDb, ingest, parseYaml, validate } from "./schema.ts";
 import { findUncovered } from "./closure.ts";
+import { loadCefr } from "./cefrList.ts";
 import { loadEnv } from "./env.ts";
 
 const env = loadEnv();
@@ -57,6 +60,10 @@ const DB_PATH = join(DATA_DIR, "dict.db");
 const STATE_PATH = join(DATA_DIR, "state.json");
 const PROGRESS_PATH = join(DATA_DIR, "progress.json");
 
+// 权威 CEFR 词表：入队优先级与最终标注的来源；未覆盖词回退到继承/AI 估计
+const CEFR_DB = env.COLLECT_CEFR_DB ?? join(DATA_DIR, "word_cefr_minified.db");
+const cefrMap = existsSync(CEFR_DB) ? loadCefr(CEFR_DB) : new Map();
+
 // ---------- CLI / 环境配置 ----------
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -67,6 +74,9 @@ const concurrency = parseInt(arg("limit") ?? env.COLLECT_CONCURRENCY ?? "5", 10)
 const seeds = (arg("seed") ?? DEFAULT_SEEDS.join(" ")).split(/\s+/).filter(Boolean).map((s) => s.toLowerCase());
 const fresh = process.argv.includes("--fresh");
 const autoAudit = process.argv.includes("--auto-audit");
+const seedCefr = arg("seed-cefr")?.toUpperCase();
+// 默认不落盘 YAML（万级词条 IO 浪费），调试/人工校对时 --yaml 打开
+const saveYaml = process.argv.includes("--yaml");
 
 // CEFR 等级顺序与关卡：A1(0) … C2(5)，unknown(6) 放最后
 const LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2", "unknown"] as const;
@@ -86,6 +96,8 @@ const db = createDb(new Database(DB_PATH));
 // visited 防重复入队；processed 计已处理词数（失败也计，防死循环）
 const buckets: Record<string, string[]> = Object.fromEntries(LEVEL_ORDER.map((l) => [l, []]));
 const visited = new Set<string>();
+// 桶内排序依据：权威词表连续分数（无分数词按 Infinity 排末尾）
+const scoresOf = new Map<string, number>();
 let processed = 0;
 let failures = 0;
 let rateLimit429 = 0;
@@ -104,12 +116,26 @@ function heartbeat(level: string | null, t0: number) {
   }, null, 2));
 }
 
-function enqueue(word: string, level: string) {
+function enqueue(word: string, fallbackLevel: string) {
   const w = word.toLowerCase();
   if (visited.has(w)) return;
   if (w.length < 2 && !["a", "i"].includes(w)) return;
   visited.add(w);
-  buckets[LEVEL_RANK[level] === undefined ? "unknown" : level].push(w);
+  // 优先权威词表等级，未覆盖则回退（父词继承/AI 估计）
+  const entry = cefrMap.get(w);
+  const lvl = entry?.level ?? fallbackLevel;
+  const bucket = buckets[LEVEL_RANK[lvl] === undefined ? "unknown" : lvl];
+  const score = entry?.score ?? Infinity;
+  scoresOf.set(w, score);
+  // 二分插入，保持桶内按分数升序（分数低 = 更简单，优先处理）
+  let lo = 0;
+  let hi = bucket.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((scoresOf.get(bucket[mid]) ?? Infinity) <= score) lo = mid + 1;
+    else hi = mid;
+  }
+  bucket.splice(lo, 0, w);
 }
 
 // 取当前应处理的等级桶：低于等于关卡的最低非空桶
@@ -129,7 +155,20 @@ function loadState() {
   // 不能再用 visited 过滤（否则队列会被整个滤空）。
   const s = JSON.parse(readFileSync(STATE_PATH, "utf8"));
   for (const w of s.visited) visited.add(w);
-  for (const l of LEVEL_ORDER) buckets[l].push(...(s.buckets?.[l] ?? []));
+  // 存量队列按权威词表重新分桶（升级到新优先级）；词表未覆盖的词留在原桶
+  for (const l of LEVEL_ORDER) {
+    for (const w of s.buckets?.[l] ?? []) {
+      const e = cefrMap.get(w);
+      if (e) {
+        scoresOf.set(w, e.score);
+        buckets[e.level].push(w);
+      } else {
+        buckets[l].push(w);
+      }
+    }
+  }
+  // 桶内按分数升序（简单词优先）
+  for (const l of LEVEL_ORDER) buckets[l].sort((a, b) => (scoresOf.get(a) ?? Infinity) - (scoresOf.get(b) ?? Infinity));
   processed = s.processed ?? 0;
 }
 
@@ -300,13 +339,15 @@ async function processWord(word: string, parentLevel: string) {
     }
     const r = validate(word + ".yaml", p.doc);
     if (r.errors.length === 0) {
-      writeFileSync(join(WORDS_DIR, word + ".yaml"), lastRaw.trimEnd() + "\n");
-      ingest(db, r.data, r.word, r.variant, MODEL);
-      // 子词继承父词的 CEFR 作为临时等级（父词没给则继承桶等级）
+      // YAML 落盘默认关（万级词条 IO 浪费），调试时 --yaml 打开；
+      // 原始输出改存 words.raw_yaml（DB 内），审计/回放不丢数据
+      if (saveYaml) writeFileSync(join(WORDS_DIR, word + ".yaml"), lastRaw.trimEnd() + "\n");
+      ingest(db, r.data, r.word, r.variant, MODEL, cefrMap.get(r.word.toLowerCase()), lastRaw);
+      // 子词回退等级：父词生成值 → 桶等级；权威词表命中时 enqueue 内自动纠正
       const childLevel = r.data.cefr ?? parentLevel ?? "unknown";
       for (const w of extractWords(r.data)) enqueue(w, childLevel);
-      const terms = db.query("SELECT COUNT(*) c FROM terms t JOIN words w ON w.id=t.word_id WHERE w.lemma=?").get(r.word) as any;
-      console.log(`  ✓ ${word} (cefr=${r.data.cefr ?? "?"}) ${r.data.entries.length} senses, ${terms.c} terms`);
+      // 每词成功日志在万级规模下过吵，已注释；进度看心跳即可
+      // console.log(`  ✓ ${word} (cefr=${r.data.cefr ?? "?"}) ${r.data.entries.length} senses`);
       return;
     }
     feedback = [...feedback,
@@ -321,12 +362,26 @@ async function processWord(word: string, parentLevel: string) {
 
 // ---------- 主循环 ----------
 if (fresh || !existsSync(STATE_PATH)) {
-  for (const s of seeds) enqueue(s, "A1"); // 种子词按 A1 处理（都是简单常用词）
+  if (seedCefr) {
+    // 按权威词表全量入队指定等级（仅收纯字母词）；无词表时无效
+    if (cefrMap.size === 0) {
+      console.error(`--seed-cefr 需要权威词表（未找到 ${CEFR_DB}）`);
+    } else {
+      let n = 0;
+      for (const [w, entry] of cefrMap) {
+        if (entry.level !== seedCefr || !/^[a-z'-]+$/.test(w)) continue;
+        enqueue(w, entry.level);
+        n++;
+      }
+      console.log(`按权威词表入队 ${seedCefr}：${n} 词`);
+    }
+  }
+  for (const s of seeds) enqueue(s, "A1"); // 种子词回退 A1，词表命中时自动纠正
 } else {
   loadState();
 }
 
-console.log(`模型=${MODEL} 并发=${concurrency} 处理上限=${maxWords} CEFR关卡=${argMaxCefr ?? "∞"} 自洽补采=${autoAudit ? "开" : "关"}`);
+console.log(`模型=${MODEL} 并发=${concurrency} 处理上限=${maxWords} CEFR关卡=${argMaxCefr ?? "∞"} 自洽补采=${autoAudit ? "开" : "关"} 权威词表=${cefrMap.size ? cefrMap.size + " 词" : "未加载"}`);
 const t0 = Date.now();
 let inFlight = 0;
 let done = false;
@@ -372,7 +427,7 @@ for (;;) {
   if (processed >= maxWords) break;
   if (totalQueued() === 0 && inFlight === 0) {
     if (argMaxCefr !== undefined || !autoAudit) break;
-    const gaps = findUncovered(db, WORDS_DIR);
+    const gaps = findUncovered(db);
     let added = 0;
     for (const w of gaps) {
       if (visited.has(w)) continue;
