@@ -34,6 +34,7 @@ CREATE TABLE words (
   cefr        TEXT,           -- A1/A2/B1/B2/C1/C2，权威词表优先，AI 估计回退
   cefr_score  REAL,           -- 权威词表连续分数（1=A1…6=C2），遍历排序用
   freq        INTEGER,        -- 权威词表语料词频（稀有词 10000 兜底），展示/二次排序用
+  other_notes TEXT,           -- 词级零碎说明：特殊发音/多读音/两套变形等
   phonetic_uk TEXT,
   phonetic_us TEXT,
   status      TEXT NOT NULL DEFAULT 'draft'
@@ -142,6 +143,7 @@ FROM senses s WHERE s.word_id = ? ORDER BY s.sense_no;
 |---|---|
 | `word` / `phonetic_uk` / `phonetic_us` | words（lemma 同时写入 terms，kind='lemma'） |
 | `cefr` | words.cefr |
+| `other_notes` | words.other_notes |
 | 权威词表 `cefr_score` / `freq` | words.cefr_score / words.freq |
 | 文件名 `word-N.yaml` 的 `-N` 后缀 | words.variant（无后缀为 0） |
 | `inflections[]` | terms（kind='inflection', label=form） |
