@@ -11,3 +11,4 @@ tmp/
 data/
 .wrangler
 .dev.vars
+.mimocode
