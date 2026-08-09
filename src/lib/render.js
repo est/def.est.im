@@ -27,7 +27,7 @@ function tokensOf(text) {
   return out;
 }
 
-// def_en/example_en/pattern 文本 → 可查词包 <a class="term">，其余原样
+// def_en/example_en/pattern 文本 → 可查词 <span class="term">（按 Cmd/Ctrl 才变链接）
 function linkText(text, discoverable) {
   let html = '';
   let last = 0;
@@ -37,7 +37,7 @@ function linkText(text, discoverable) {
     if (w.endsWith("'s")) w = w.slice(0, -2);
     if (!discoverable.has(w)) continue;
     html += esc(t.slice(last, m.index));
-    html += `<a class="term" href="${href(w)}">${esc(m[0])}</a>`;
+    html += `<span class="term" data-word="${href(w)}">${esc(m[0])}</span>`;
     last = m.index + m[0].length;
   }
   return html + esc(t.slice(last));
@@ -47,20 +47,20 @@ function linkText(text, discoverable) {
 function renderForms(forms) {
   if (!forms.length) return '';
   const LABEL_CN = { plural: '复数', past: '过去式', past_participle: '过去分词', present_participle: '现在分词', third_person_singular: '第三人称单数', comparative: '比较级', superlative: '最高级' };
-  const rows = forms.map((f) => `<tr><td>${esc(LABEL_CN[f.label] ?? f.label)}</td><td><a class="term" href="${href(f.surface)}">${esc(f.surface)}</a></td></tr>`).join('');
+  const rows = forms.map((f) => `<tr><td>${esc(LABEL_CN[f.label] ?? f.label)}</td><td><a href="${href(f.surface)}">${esc(f.surface)}</a></td></tr>`).join('');
   return `<div class="section"><h2>词形</h2><table class="forms-table"><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderRel(list, title, cls) {
   if (!list.length) return '';
-  const items = list.map((r) => `<div class="${cls}"><span class="e"><a class="term" href="${href(r.surface)}">${esc(r.surface)}</a></span></div>`).join('');
+  const items = list.map((r) => `<div class="${cls}"><span class="e"><a href="${href(r.surface)}">${esc(r.surface)}</a></span></div>`).join('');
   return `<div class="section"><h2>${title}</h2>${items}</div>`;
 }
 
 function renderPhrases(senses) {
   const ph = senses.filter((s) => (s.pos === 'phrase' || s.pos === 'idiom'));
   if (!ph.length) return '';
-  const items = ph.map((s) => `<div class="phr"><div class="w"><a class="term" href="${href(s.pattern || '')}">${esc(s.pattern || '')}</a></div><div class="d">${esc(s.def_zh)}${s.def_en ? ' · ' + esc(s.def_en) : ''}</div></div>`).join('');
+  const items = ph.map((s) => `<div class="phr"><div class="w"><a href="${href(s.pattern || '')}">${esc(s.pattern || '')}</a></div><div class="d">${esc(s.def_zh)}${s.def_en ? ' · ' + esc(s.def_en) : ''}</div></div>`).join('');
   return `<div class="section"><h2>相关短语</h2><div class="phr-list">${items}</div></div>`;
 }
 
@@ -165,7 +165,41 @@ ${inner}
   q && q.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && this.value.trim()) location.href = '/' + encodeURIComponent(this.value.trim());
   });
-  // 词条内可点词：POST fragment 局部替换 + history
+
+  // Cmd/Ctrl 按下 → 释义内 span.term 变成可点击 a，松开变回来
+  var mod = false;
+  function setMod(on) {
+    if (on === mod) return;
+    mod = on;
+    document.querySelectorAll('span.term[data-word]').forEach(function (el) {
+      if (on) {
+        var a = document.createElement('a');
+        a.className = 'term';
+        a.href = el.getAttribute('data-word');
+        a.textContent = el.textContent;
+        el.replaceWith(a);
+      } else {
+        var s = document.createElement('span');
+        s.className = 'term';
+        s.setAttribute('data-word', el.getAttribute('href'));
+        s.textContent = el.textContent;
+        el.replaceWith(s);
+      }
+    });
+  }
+  document.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey)) setMod(true); });
+  document.addEventListener('keyup', function (e) { if (!e.metaKey && !e.ctrlKey) setMod(false); });
+  window.addEventListener('blur', function () { setMod(false); });
+
+  // Cmd/Ctrl 点击任何 <a> → 正常跳转（不被 SPA 拦截）
+  document.addEventListener('click', function (e) {
+    if (!mod) return;
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a) return;
+    e.stopPropagation();
+  }, true);
+
+  // SPA：普通点击 a.term → fetch fragment 局部替换
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a.term') : null;
     if (!a) return;
@@ -179,6 +213,7 @@ ${inner}
       })
       .catch(function () { location.href = '/' + encodeURIComponent(w); });
   });
+
   window.addEventListener('popstate', function (e) {
     var w = (e.state && e.state.w) || decodeURIComponent(location.pathname.slice(1));
     if (!w) return;
@@ -186,6 +221,7 @@ ${inner}
       .then(function (r) { return r.text(); })
       .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; document.title = w + ' · def.est.im'; } });
   });
+
   // 占位页：自动触发生成
   var gen = document.body.getAttribute('data-gen');
   if (gen) {
