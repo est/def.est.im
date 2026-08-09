@@ -1,0 +1,110 @@
+/* def.est.im v3.1 — 极简词典 + 双栏 + 紧凑词形表 */
+:root {
+  --fg: #111; --muted: #666; --rule: #ddd; --bg: #fff;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width: 1200px; margin: 0 auto; }
+
+/* ====== 顶栏搜索 ====== */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 32px; height: 44px;
+  background: var(--bg); border-bottom: 1px solid var(--rule);
+}
+.brand { font-size: 14px; font-weight: 500; color: var(--fg); text-decoration: none; white-space: nowrap; }
+.brand:hover { color: var(--muted); }
+.search-bar {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+}
+.search-bar input {
+  width: 200px; font: inherit; font-size: 13px; padding: 5px 10px;
+  border: 1px solid #ccc; border-radius: 3px; outline: none;
+  background: #f8f8f8;
+}
+.search-bar input:focus { border-color: #999; background: #fff; width: 280px; transition: width .15s; }
+.search-bar kbd {
+  font: 11px/1 system-ui; color: #999; border: 1px solid #ddd;
+  border-radius: 3px; padding: 1px 5px; background: #f5f5f5;
+}
+
+/* ====== 首页 ====== */
+.hero { margin-top: 60px; padding: 0 32px; }
+.hero h1 { font-size: 20px; font-weight: 700; }
+.hero .sub { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.7; }
+.hero a { color: var(--muted); }
+.hero a:hover { color: var(--fg); }
+
+/* ====== 词条页 ====== */
+.entry-wrap { padding: 0 32px; }
+
+/* 词头：全宽 */
+.word-head { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+.word-head .word { font-size: 32px; font-weight: 700; letter-spacing: -.01em; }
+.word-head .phonetic { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.word-head .pos { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* 双栏网格 */
+.entry-grid {
+  display: grid; gap: 36px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .entry-grid { grid-template-columns: 55fr 45fr; }
+}
+
+/* ====== 通用 section ====== */
+.section { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.section:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.section h2 { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.section h2 + .list { margin-top: 8px; }
+
+/* 释义列表 */
+.list { margin-top: 10px; }
+.list li { list-style: none; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 15px; line-height: 1.5; }
+.list li:last-child { border-bottom: 0; }
+.list li .zh { color: var(--muted); font-size: 13.5px; }
+.list li .ex { font-size: 13.5px; color: #333; margin-top: 2px; }
+.list li .ex em { font-style: italic; }
+
+/* 核心概念 */
+.concept { font-size: 14px; color: #333; line-height: 1.7; }
+.concept b { font-weight: 600; }
+
+/* ====== 词形紧凑表格 ====== */
+.forms-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.forms-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 0; font-size: 11px; letter-spacing: .03em; border-bottom: 2px solid var(--rule); }
+.forms-table td { padding: 1px 8px 1px 0; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.forms-table tbody tr:last-child td { border-bottom: 2px solid var(--rule); }
+.forms-table td:first-child { color: var(--muted); white-space: nowrap; }
+.forms-inline { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+.forms-inline b { color: var(--fg); font-weight: 500; }
+
+/* 短语 */
+.phr-list { margin-top: 10px; }
+.phr { display: grid; grid-template-columns: 8em 1fr; gap: 12px; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+.phr:last-child { border-bottom: 0; }
+.phr .w { font-weight: 600; }
+.phr .d { color: #333; }
+
+/* 搭配 */
+.coll { display: grid; grid-template-columns: auto 1fr; gap: 12px; padding: 4px 0; font-size: 14px; border-bottom: 1px solid #eee; }
+.coll:last-child { border-bottom: 0; }
+.coll .e { font-weight: 600; white-space: nowrap; }
+.coll .w { color: var(--muted); font-size: 13px; }
+
+/* 词源 */
+.etym { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+
+/* ====== 移动端 ====== */
+@media (max-width: 767px) {
+  body { padding: 52px 0 32px; }
+  .topbar { padding: 0 16px; }
+  .hero, .entry-wrap { padding: 0 16px; }
+  .search-bar input { width: 140px; }
+  .search-bar input:focus { width: 180px; }
+  .search-bar kbd { display: none; }
+  .phr { grid-template-columns: 7em 1fr; }
+}
