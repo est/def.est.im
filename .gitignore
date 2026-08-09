@@ -12,3 +12,4 @@ data/
 .wrangler
 .dev.vars
 .mimocode
+.dict_json
