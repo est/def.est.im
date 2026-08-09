@@ -59,10 +59,18 @@ function renderRel(list, title, cls) {
   return `<div class="section"><h2>${title}</h2>${items}</div>`;
 }
 
-function renderPhrases(senses) {
+function renderPhrases(senses, phraseLinked) {
   const ph = senses.filter((s) => (s.pos === 'phrase' || s.pos === 'idiom'));
   if (!ph.length) return '';
-  const items = ph.map((s) => `<div class="phr"><div class="w"><a href="${href(s.pattern || '')}">${esc(s.pattern || '')}</a></div><div class="d">${esc(s.def_zh)}${s.def_en ? ' · ' + esc(s.def_en) : ''}</div></div>`).join('');
+  const items = ph.map((s) => {
+    const p = s.pattern || '';
+    const clean = p.toLowerCase()
+      .replace(/\s*\(?\s*(?:from\s+)?(?:sb|sth)\.?(?:\/(?:sb|sth)\.?)?\s*\)?\s*/gi, ' ')
+      .replace(/\s+/g, ' ').trim();
+    const linked = phraseLinked && phraseLinked.has(clean);
+    const w = linked ? `<a href="${href(p)}">${esc(p)}</a>` : esc(p);
+    return `<div class="phr"><div class="w">${w}</div><div class="d">${esc(s.def_zh)}${s.def_en ? ' · ' + esc(s.def_en) : ''}</div></div>`;
+  }).join('');
   return `<div class="section"><h2>相关短语</h2><div class="phr-list">${items}</div></div>`;
 }
 
@@ -110,7 +118,7 @@ function renderEntry(entry, queryWord) {
     ? `<div class="section"><h2>词源</h2><p class="etym">${esc(entry.etymology)}</p></div>`
     : (entry.other_notes && !isEntity ? '' : '');
 
-  const colSide = renderPhrases(entry.senses)
+  const colSide = renderPhrases(entry.senses, entry.phraseLinked)
     + renderForms(g.inflection)
     + etym;
 

@@ -54,7 +54,7 @@ export default {
 async function renderPage(env, word, reqUrl) {
   const r = await loadEntry(env, word);
   if (r.type === 'entry') {
-    const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable }, word);
+    const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked }, word);
     return new Response(shell(r.entry.lemma, html, word), {
       headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
     });
@@ -107,7 +107,7 @@ async function handlePost(request, env, w) {
     }
     let html, status = 200;
     if (r.type === 'entry') {
-      html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable }, w);
+      html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked }, w);
     } else if (r.type === 'rejected') {
       html = renderPlaceholder(w, true);
       status = 404;
