@@ -221,7 +221,7 @@ for (const [lemma, t] of Object.entries(tags)) {
 }
 
 // ---------- clean_log 全记录（重建，幂等） ----------
-dst.query("DELETE FROM clean_log");
+dst.query("DELETE FROM clean_log").run();
 const logWord = dst.prepare("INSERT INTO clean_log (word, decision, category, target) VALUES (?,?,?,?)");
 for (const [lemma, t] of Object.entries(tags)) {
   const aiLabel = aiDecision.get(lemma);
@@ -241,8 +241,8 @@ for (const [lemma, t] of Object.entries(tags)) {
   logWord.run(lemma, decision, t.tag, target);
 }
 
-dst.query("INSERT OR REPLACE INTO meta VALUES ('schema_version','2')");
-dst.query("INSERT OR REPLACE INTO meta VALUES ('cleaned_at', datetime('now'))");
+dst.query("INSERT OR REPLACE INTO meta VALUES ('schema_version','2')").run();
+dst.query("INSERT OR REPLACE INTO meta VALUES ('cleaned_at', datetime('now'))").run();
 dst.run("COMMIT");
 
 console.log(`迁移完成：words=${nWords}  senses=${nSenses}  surfaces=${nSurf}  merge=${nMerge}  junk=${nJunk}  ai_skip=${nSkip}`);
