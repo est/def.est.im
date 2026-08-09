@@ -43,7 +43,7 @@ export default {
       try { word = decodeURIComponent(path.slice(1)); } catch { return new Response('Bad Request', { status: 400 }); }
       word = word.trim();
       if (!word) return new Response('Not Found', { status: 404 });
-      return renderPage(env, word);
+      return renderPage(env, word, url);
     }
 
     return new Response('Not Found', { status: 404 });
@@ -51,13 +51,19 @@ export default {
 };
 
 // ---- 词条页渲染（命中 / 占位 / 404） ----
-async function renderPage(env, word) {
+async function renderPage(env, word, reqUrl) {
   const r = await loadEntry(env, word);
   if (r.type === 'entry') {
     const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable }, word);
     return new Response(shell(r.entry.lemma, html, word), {
       headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
     });
+  }
+  if (r.type === 'redirect') {
+    const frag = '#:~:text=' + encodeURIComponent(r.highlight);
+    const url = new URL('/' + encodeURIComponent(r.lemma), reqUrl);
+    url.hash = frag.slice(1);
+    return Response.redirect(url.toString(), 302);
   }
   if (r.type === 'rejected') {
     return new Response(shell(word, renderPlaceholder(word, true), word), {
@@ -95,6 +101,10 @@ async function handlePost(request, env, w) {
 
   if (isFragment) {
     const r = await loadEntry(env, w);
+    if (r.type === 'redirect') {
+      const frag = '#:~:text=' + encodeURIComponent(r.highlight);
+      return json({ redirect: '/' + encodeURIComponent(r.lemma) + frag });
+    }
     let html, status = 200;
     if (r.type === 'entry') {
       html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable }, w);

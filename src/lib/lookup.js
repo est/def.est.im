@@ -24,6 +24,13 @@ async function loadEntry(env, word) {
     const pat = await d1.prepare("SELECT word_id FROM senses WHERE pos IN ('phrase','idiom') AND pattern = ?").bind(low).all();
     const patIds = (pat.results || []).map((r) => r.word_id);
     ids = [...new Set(patIds.length ? patIds : rows.map((r) => r.word_id))];
+    // collocation（搭配词组）：无 lemma、无 phrase/idiom pattern 匹配 → 跳转到主词条并高亮
+    if (!patIds.length && rows.length) {
+      const target = await d1.prepare('SELECT lemma FROM words WHERE word_id = ?').bind(rows[0].word_id).first();
+      if (target && target.lemma.toLowerCase() !== low) {
+        return { type: 'redirect', lemma: target.lemma, highlight: word };
+      }
+    }
   }
 
   // 2. 主词排序：entity_type 0 优先 → freq 降序

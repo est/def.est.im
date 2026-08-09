@@ -28,7 +28,8 @@ function tokensOf(text) {
 }
 
 // def_en/example_en/pattern 文本 → 可查词 <span class="term">（按 Cmd/Ctrl 才变链接）
-function linkText(text, discoverable) {
+// lemma: 当前词条自身，跳过不渲染链接（避免 self-link）
+function linkText(text, discoverable, lemma) {
   let html = '';
   let last = 0;
   const t = String(text ?? '');
@@ -36,6 +37,7 @@ function linkText(text, discoverable) {
     let w = m[0].toLowerCase();
     if (w.endsWith("'s")) w = w.slice(0, -2);
     if (!discoverable.has(w)) continue;
+    if (lemma && w === lemma) { html += esc(t.slice(last, m.index + m[0].length)); last = m.index + m[0].length; continue; }
     html += esc(t.slice(last, m.index));
     html += `<span class="term" data-word="${href(w)}">${esc(m[0])}</span>`;
     last = m.index + m[0].length;
@@ -86,18 +88,20 @@ function renderEntry(entry, queryWord) {
   const senseLinks = (senseId) => {
     const syn = (g.synonym || []).filter((r) => r.sense_id === senseId);
     const ant = (g.antonym || []).filter((r) => r.sense_id === senseId);
-    if (!syn.length && !ant.length) return '';
+    const col = (g.collocation || []).filter((r) => r.sense_id === senseId);
+    if (!syn.length && !ant.length && !col.length) return '';
     const parts = [];
     if (syn.length) parts.push('≈ ' + syn.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
     if (ant.length) parts.push('☍ ' + ant.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (col.length) parts.push('⋈ ' + col.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
     return `<div class="sense-links">${parts.join('　')}</div>`;
   };
   const defList = senses.length
     ? `<div class="section"><h2>释义</h2><ol class="list">${senses.map((s) => `
-      <li><b>${linkText(s.def_en, entry.discoverable)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
+      <li><b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
         s.register ? `<span class="reg">${esc(s.register)}</span>` : ''}${
         s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
-        s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
+        s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable, entry.lemma)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
         senseLinks(s.id || s.sense_no)}</li>`).join('')}</ol></div>`
     : '';
 
@@ -107,7 +111,6 @@ function renderEntry(entry, queryWord) {
     : (entry.other_notes && !isEntity ? '' : '');
 
   const colSide = renderPhrases(entry.senses)
-    + renderRel(g.collocation, '常见搭配', 'coll')
     + renderForms(g.inflection)
     + etym;
 
@@ -179,7 +182,8 @@ ${inner}
   function setMod(on) {
     if (on === mod) return;
     mod = on;
-    document.querySelectorAll('span.term[data-word]').forEach(function (el) {
+    var sel = on ? 'span.term[data-word]' : 'a.term[data-word]';
+    document.querySelectorAll(sel).forEach(function (el) {
       if (on) {
         var a = document.createElement('a');
         a.className = 'term';
@@ -214,8 +218,10 @@ ${inner}
     e.preventDefault();
     var w = decodeURIComponent(a.pathname ? a.pathname.replace(/^\\//, '') : a.href.split('/').pop());
     fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
-      .then(function (r) { return r.text(); })
-      .then(function (html) {
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return j || r.text().then(function (t) { return { _html: t }; }); }); })
+      .then(function (data) {
+        if (data.redirect) { location.href = data.redirect; return; }
+        var html = data._html || data;
         var el = document.querySelector('.entry-wrap');
         if (el && html) { el.outerHTML = html; history.pushState({ w: w }, '', '/' + encodeURIComponent(w)); document.title = w + ' · def.est.im'; }
       })
