@@ -55,7 +55,7 @@ if (!API_ENTRY || !API_TOKEN) {
   process.exit(1);
 }
 
-const MODEL = env.COLLECT_MODEL ?? "deepseek-v4-flash";
+const MODEL = env.API_MODEL ?? "deepseek-v4-flash";
 const DEFAULT_SEEDS = ["run", "apple", "happy", "book", "water"];
 
 // 数据目录：默认项目根 data/，可用 COLLECT_DATA_DIR 覆盖
@@ -488,7 +488,7 @@ async function callModel(word: string, feedback: { role: string; content: string
         // max_tokens 只是输出上限：词条 YAML 实际只消耗几百到一两千 token，
         // 设大（200k）防义项多/用法说明长的词条被截断；若网关对超长上限
         // 报错，回落为 8192 即可
-        body: JSON.stringify({ model: MODEL, messages, max_tokens: 200000, temperature: 0.3, stream: true }),
+        body: JSON.stringify({ model: MODEL, messages, max_tokens: 20000, temperature: 0.3, stream: true }),
         signal: AbortSignal.timeout(120000),
       });
       if (res.status === 429) {
