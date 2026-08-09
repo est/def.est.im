@@ -1,5 +1,5 @@
-// 词条渲染模板（服务端唯一模板源；fragment 与整页共用）
-// 结构与 public/entry.html 手稿一致，类名沿用 public/style.css
+// 词条渲染模板（服务端唯一模板源）
+// 类名沿用 public/style.css
 'use strict';
 
 const POS_CN = {
@@ -70,7 +70,11 @@ function renderPhrases(senses) {
 function renderEntry(entry, queryWord) {
   const isEntity = entry.entity_type === 1;
   const phonetic = entry.phonetic_uk || entry.phonetic_us
-    ? [entry.phonetic_uk, entry.phonetic_us].filter(Boolean).join(' / ')
+    ? (() => {
+        const uk = entry.phonetic_uk ? `UK ${entry.phonetic_uk}` : '';
+        const us = entry.phonetic_us ? `US ${entry.phonetic_us}` : '';
+        return [uk, us].filter(Boolean).join('  ');
+      })()
     : '';
   const poss = [...new Set(entry.senses.map((s) => s.pos))].map((p) => POS_CN[p] ?? p).join(' · ');
   const cefrBadge = entry.cefr ? `<span class="cefr">${esc(entry.cefr)}</span>` : '';
@@ -104,7 +108,7 @@ function renderEntry(entry, queryWord) {
   return `<div class="entry-wrap">
   <div class="word-head">
     <div class="word">${esc(entry.lemma)}${entityTag}${cefrBadge}</div>
-    ${phonetic ? `<div class="phonetic">/${esc(phonetic)}/</div>` : ''}
+    ${phonetic ? `<div class="phonetic">${esc(phonetic)}</div>` : ''}
     ${poss ? `<div class="pos">${esc(poss)}</div>` : ''}
   </div>
   <div class="entry-grid">
