@@ -174,40 +174,76 @@ function migrateTag(t: { tag: string; target?: string; notes?: string[] }): stri
   }
 }
 
-// ---------- 主流程：确定性决策 ----------
-// Pass 1：先迁移 keep 类，保证 inflection 归并时 target 已在库
-for (const [lemma, t] of Object.entries(tags)) {
-  if (ai[lemma]) { nSkip++; continue; }
-  if (migrateTag(t) === "keep") copyWord(lemma);
+// AI 标签 → words.kind（收录类词条用）
+const AI_KIND: Record<string, string> = { keep: "common", foreign_common: "common", name: "name", abbr: "abbr" };
+
+// ---------- 主流程：规则层 + AI 层统一决策 ----------
+// 单事务包裹全部插入（数十万行，无事务逐条 fsync 会超时）
+dst.run("BEGIN");
+// Pass 1：先迁移 keep 类（规则层 keep + AI keep/name/abbr/foreign_common），
+//         保证 inflection 归并时 target 已在库
+const aiDecision = new Map<string, string>(); // lemma → ai 标签
+for (const [lemma, label] of Object.entries(ai)) aiDecision.set(lemma, label);
+
+for (const lemma of Object.keys(tags)) {
+  const t = tags[lemma];
+  const aiLabel = aiDecision.get(lemma);
+  const rule = migrateTag(t);
+  // AI 已判定（且规则层未归并）→ 直接执行 AI 分流
+  if (aiLabel && rule === "ai") {
+    const kind = AI_KIND[aiLabel];
+    if (kind) copyWord(lemma, kind);      // keep/foreign_common/name/abbr → 词条
+    continue;                              // 其余（foreign_rare/coined/misspelling）→ Pass 2 归档
+  }
+  if (rule === "keep") copyWord(lemma);
 }
-// Pass 2：屈折归并 + 归档
+// Pass 2：屈折归并 + AI 归档 + 规则归档
 for (const [lemma, t] of Object.entries(tags)) {
-  if (ai[lemma]) continue;
-  const phase = migrateTag(t);
-  if (phase === "junk") {
+  const aiLabel = aiDecision.get(lemma);
+  const rule = migrateTag(t);
+  if (aiLabel && rule === "ai" && !AI_KIND[aiLabel]) {
+    // AI 归档类
+    dst.query("INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?,?)").run(lemma, `ai:${aiLabel}`);
+    nJunk++;
+    continue;
+  }
+  if (rule === "junk") {
     dst.query("INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?,?)").run(lemma, `rules:${t.tag}`);
     nJunk++;
-  } else if (phase === "merge" && t.target) {
+  } else if (rule === "merge" && t.target) {
     if (mergeInflection(lemma, t.target)) nMerge++;
-    else copyWord(lemma); // 目标仍缺（AI 待处理/词表外缺失）→ 保留词条
-  } else if (phase === "orphan") {
+    else copyWord(lemma); // 目标仍缺 → 保留词条
+  } else if (rule === "orphan") {
     copyWord(lemma);
-  } // phase === "ai" 已在 pass1 计数，跳过
+  } else if (rule === "ai") {
+    nSkip++; // 仍无 AI 结果（unclassified / 未跑）→ 留待下一轮
+  }
 }
 
-// ---------- clean_log 全记录 ----------
+// ---------- clean_log 全记录（重建，幂等） ----------
+dst.query("DELETE FROM clean_log");
 const logWord = dst.prepare("INSERT INTO clean_log (word, decision, category, target) VALUES (?,?,?,?)");
 for (const [lemma, t] of Object.entries(tags)) {
-  let decision = "skip_ai", category = t.tag, target = null;
-  if (ai[lemma]) decision = "pending_ai";
-  else if (t.tag === "keep" || t.tag === "hyphen_in_list") decision = "keep";
-  else if (t.tag === "inflection") { decision = t.notes?.includes("inflection_orphan") ? "keep_orphan" : "merge"; target = t.target ?? null; }
-  else if (t.tag === "apostrophe" || t.tag === "single_letter") decision = "junk";
-  logWord.run(lemma, decision, category, target);
+  const aiLabel = aiDecision.get(lemma);
+  const rule = migrateTag(t);
+  let decision = "", target = null;
+  if (aiLabel && rule === "ai") {
+    decision = AI_KIND[aiLabel] ? aiLabel : "junk";   // keep/foreign_common/name/abbr 或 归档
+  } else {
+    switch (rule) {
+      case "keep": decision = "keep"; break;
+      case "merge": decision = "merge"; target = t.target ?? null; break;
+      case "orphan": decision = "keep_orphan"; break;
+      case "junk": decision = "junk"; break;
+      default: decision = "pending_ai"; break; // unclassified / 未跑
+    }
+  }
+  logWord.run(lemma, decision, t.tag, target);
 }
 
 dst.query("INSERT OR REPLACE INTO meta VALUES ('schema_version','2')");
 dst.query("INSERT OR REPLACE INTO meta VALUES ('cleaned_at', datetime('now'))");
+dst.run("COMMIT");
 
 console.log(`迁移完成：words=${nWords}  senses=${nSenses}  surfaces=${nSurf}  merge=${nMerge}  junk=${nJunk}  ai_skip=${nSkip}`);
 dst.close();
