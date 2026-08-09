@@ -76,6 +76,11 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 body.mod a.term { text-decoration: underline wavy; text-underline-offset: 3px; text-decoration-color: #999; }
 body.mod a.term:hover { text-decoration-color: var(--fg); }
 
+/* 义项内近反义词 */
+.sense-links { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.sense-links a { color: #333; text-decoration: none; border-bottom: 1px dotted #ccc; }
+.sense-links a:hover { color: var(--fg); border-bottom-color: var(--fg); }
+
 /* 近反义词/短语：正常链接样式 */
 .coll a { color: #333; text-decoration: none; border-bottom: 1px dotted #ccc; }
 .coll a:hover { color: var(--fg); border-bottom-color: var(--fg); }

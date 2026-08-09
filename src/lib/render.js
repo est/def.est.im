@@ -82,12 +82,23 @@ function renderEntry(entry, queryWord) {
 
   // 释义：非 phrase/idiom 义项按列表；phrase 义项单独进短语区（renderPhrases）
   const senses = entry.senses.filter((s) => s.pos !== 'phrase' && s.pos !== 'idiom');
+  const g = entry.groups;
+  const senseLinks = (senseId) => {
+    const syn = (g.synonym || []).filter((r) => r.sense_id === senseId);
+    const ant = (g.antonym || []).filter((r) => r.sense_id === senseId);
+    if (!syn.length && !ant.length) return '';
+    const parts = [];
+    if (syn.length) parts.push('≈ ' + syn.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (ant.length) parts.push('☍ ' + ant.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    return `<div class="sense-links">${parts.join('　')}</div>`;
+  };
   const defList = senses.length
     ? `<div class="section"><h2>释义</h2><ol class="list">${senses.map((s) => `
       <li><b>${linkText(s.def_en, entry.discoverable)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
         s.register ? `<span class="reg">${esc(s.register)}</span>` : ''}${
         s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
-        s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}</li>`).join('')}</ol></div>`
+        s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
+        senseLinks(s.id || s.sense_no)}</li>`).join('')}</ol></div>`
     : '';
 
   const concept = entry.other_notes ? `<div class="section"><div class="concept">${esc(entry.other_notes)}</div></div>` : '';
@@ -95,11 +106,8 @@ function renderEntry(entry, queryWord) {
     ? `<div class="section"><h2>词源</h2><p class="etym">${esc(entry.etymology)}</p></div>`
     : (entry.other_notes && !isEntity ? '' : '');
 
-  const g = entry.groups;
   const colSide = renderPhrases(entry.senses)
     + renderRel(g.collocation, '常见搭配', 'coll')
-    + renderRel(g.synonym, '近义词', 'coll')
-    + renderRel(g.antonym, '反义词', 'coll')
     + renderForms(g.inflection)
     + etym;
 
