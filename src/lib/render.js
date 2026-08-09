@@ -1,4 +1,4 @@
-// 词条渲染模板（服务端唯一模板源）
+// 词条渲染模板（服务端唯一模板源：整页壳 + 词条 + 首页）
 // 类名沿用 public/style.css
 'use strict';
 
@@ -118,6 +118,11 @@ function renderEntry(entry, queryWord) {
 </div>`;
 }
 
+// 首页内容
+function renderIndex() {
+  return indexInner;
+}
+
 // 占位页 / 404 页 内容（fragment 或整页共用）
 function renderPlaceholder(word, isRejected) {
   return `<div class="entry-wrap">
@@ -138,7 +143,7 @@ function shell(title, inner, word, bodyAttrs) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} · def.est.im</title>
+<title>${title ? esc(title) + ' · ' : ''}def.est.im</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body${bodyAttrs ? ' ' + bodyAttrs : ''}>
@@ -204,4 +209,17 @@ ${inner}
 </html>`;
 }
 
-export { renderEntry, renderPlaceholder, shell, tokensOf, linkText, esc, href, POS_CN };
+const indexInner = `
+<div class="hero">
+  <h1>def.est.im</h1>
+  <p class="sub">
+    不限格式：变形词、词组、搭配、人名地名都可以。
+    输入 <a href="/run">run</a>、
+    <a href="/went">went</a>、
+    <a href="/run%20into">run into</a>、
+    <a href="/heavy%20rain">heavy rain</a>、
+    <a href="/karen">Karen</a> 试试。
+  </p>
+</div>`;
+
+export { renderEntry, renderPlaceholder, renderIndex, shell, tokensOf, linkText, esc, href, POS_CN };

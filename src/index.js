@@ -2,7 +2,7 @@
 // 静态（/ 首页、/style.css）由 [assets]（public/）提供；
 // 其余 GET /<word> → SSR 词条页；POST / → fragment / gen 数据接口。
 'use strict';
-import { renderEntry, renderPlaceholder, shell } from './lib/render.js';
+import { renderEntry, renderPlaceholder, renderIndex, shell } from './lib/render.js';
 import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
 
@@ -14,14 +14,20 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // 静态资源全权分发（run_worker_first=true）：
-    // 首页/资源文件（浏览器带 Sec-Fetch-Dest，curl 靠后缀兜底）→ assets
+    // 静态资源（CSS/JS/图片）→ assets；首页由 worker 渲染
     const dest = (request.headers.get('Sec-Fetch-Dest') || '').toLowerCase();
     const isAsset = /^(style|script|image|font|audio|video|xslt|track|manifest)$/.test(dest)
       || /\.(css|js|mjs|json|png|svg|ico|jpg|jpeg|gif|webp|woff2?|txt|xml)$/.test(path);
-    if (request.method === 'GET' && (path === '/' || path === '/index.html' || isAsset)) {
+    if (request.method === 'GET' && isAsset) {
       const r = await env.ASSETS.fetch(request);
       if (r.status !== 404) return r;
+    }
+
+    // GET /：首页
+    if (request.method === 'GET' && path === '/') {
+      return new Response(shell('', renderIndex(), null), {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
     }
 
     // POST / ：fragment / gen
