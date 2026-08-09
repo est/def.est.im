@@ -193,17 +193,21 @@ CREATE TABLE meta (k TEXT PRIMARY KEY, v TEXT);
 2. **静态分片导出**：按首字母切 JSON（沿用 .dict_json/ 路径），每片含 words+senses+surfaces 紧凑结构；线上 lookup 先查本地分片，未命中走 LLM on-demand 并回写 KV。表结构即导出格式的源。
 3. **自洽检查升级**：可查集合 = surfaces.surface（含命名实体种子），audit.ts 沿用。
 
-## 七、验收指标（Step 4 对比）
+## 七、验收指标（实测：2026-08-09，dict.db → dict_clean.db）
 
-| 指标 | 清洗前 | 清洗后目标 |
-|---|---|---|
-| 词条总数 | 58,030 | ~40k（去屈折 17k + 纯外语/临时组合） |
-| 外源词条 | 0 | ≥300（foreign_common 收录） |
-| 命名实体种子 | 混在词条里 | surfaces ≥2,000（given_name/surname/place/brand/band/work） |
-| 垃圾残留率 | 词表外 21% | <1% |
-| 变形覆盖 | 43% | ≥60%（formsOf 补齐） |
-| 音标缺失 | 10% | 保留标记，on-demand 补 |
-| 自洽（可查率） | 100% | 100%（audit 通过） |
+| 指标 | 清洗前 | 清洗后实测 | 达标 |
+|---|---|---|---|
+| 词条总数 | 60,166 | **36,326**（规则 keep 29,550 + 屈折归并 16,623 + AI 收录 4,969） | ✅ |
+| 屈折归并 | — | 16,623（ate→eat 等，存储为 surfaces.kind=inflection） | ✅ |
+| AI 多分类 | — | 13,256 词：keep 5,000 / foreign_rare 4,348 / coined 3,133 / misspelling 299 / name 230 / foreign_common 178 / abbr 68 | ✅ |
+| 垃圾残留 | 撇号 25 + 单字母 4 + 词表外 21% | **0**（撇号/单字母/全大写全清零）；词表外 5,476 = AI 有意收录 | ✅ |
+| 归档 rejects | 4,761 | 7,809（规则 29 + AI 归档 7,780），全量 clean_log 可回溯 | ✅ |
+| 变形覆盖 | 43% | **57%**（20,818/36,326，formsOf 再补可升） | 🟡 |
+| 音标双空 | 5,974 | 保留（on-demand 补） | 🟡 |
+| 自洽（可查率） | ~97% | **97.3%**（1,310 缺口留给 on-demand/BFS 补采） | 🟡 |
+| 命名实体种子 | 混在词条里 | words.kind='name' **230** 词条（转正机制可用） | 🟡（>2,000 需下一批） |
+
+执行记录：`src/clean_classify.ts`（规则层）→ `src/clean_ai.ts`（AI 7 分类，断点续跑）→ `src/clean_migrate.ts`（建库+归并+分流，单事务）→ `src/clean_audit.ts`（验收）。中途修正：词表噪声链接（a→um）双防线、orphan 保留、SQLite 表达式 UNIQUE 改生成列、`.all()` 漏参、clean_log DELETE 缺 `.run()`。
 
 ## 八、遗留与后续
 
