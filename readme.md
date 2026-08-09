@@ -2,25 +2,33 @@
 
 ## About
 
-一开始想搞 Google Dictionary 离线版；后来觉得 Webster's 1913 好厉害，做在线版。
-ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英汉学习者词典，核心追求是 **自洽（closure）**：词条里出现的每个英文词都能点击查到，词典是闭合的迷宫。
+一开始想搞 Google Dictionary 离线版；
 
-- [写了个 blog](https://blog.est.im/2025/stdout-12)
-- 设计文档：`docs/ai-dictionary-schema.md` · `docs/sqlite-design.md` · `docs/data-cleaning-plan.md` · `docs/next-phase.md`
+后来觉得 Webster's 1913 好厉害，做在线版。
 
-## 架构（2026-08 重写，Cloudflare Workers）
+ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英汉学习者词典
+
+[写了个 blog](https://blog.est.im/2025/stdout-12)
+
+
+
+## 架构
+
+2026-08 基于Cloudflare Workers重写
 
 - **URL 即词条**：`def.est.im/<word>` 直接 SSR 词条页（`/run`、`/went`、`/run%20into`）；`/` 和 `/style.css` 走 assets 静态（`Sec-Fetch-Dest` + 后缀双分流）
 - **数据在 D1**（SQLite）：精简三表 `words / senses / surfaces` + `rejects` 黑名单；surfaces 组合主键一次表读命中（D1 按 rows_read 计费，单次查词 ~30 行）
-- **自洽随点击闭合**：未收录词 → 占位页 → `POST /?gen=1` on-demand 生成 → 入库回填（rejects 命中直接 404，不烧 API）
-- **客户端渐进增强**：词条内可点词 → `POST /?fragment=1` 返回服务端 HTML 片段局部替换（无 Shadow DOM，模板只在服务端一份）
+- **自洽随点击闭合**：未收录词 → 占位页 → `POST` on-demand 生成 → 入库回填（rejects 命中直接 404，不烧 API）
+- **客户端渐进增强**：词条内可点词 → `POST` 返回服务端 HTML 片段局部替换（无 Shadow DOM，模板只在服务端一份）
 - 命名实体词条（人名/地名/品牌）走 entity 模板，词源/趣闻在 `words.etymology` 展示
 
 ## 数据
 
-- 采集：BFS 遍历 + AI 批量生成，62,000 预算完成 → `data/dict.db`（60,166 词，raw_yaml 100% 存档）
-- 清洗：规则层（屈折归并 17k、垃圾归档）+ AI 多分类（13,256 词 × 7 标签）→ `data/dict_clean.db`
-- 上线：`dict_clean.db` → D1，**36,326 词条 / 60,280 义项 / 267,834 surfaces**；词源 `etymology` 557 词
+目前约：
+
+- 36,326 词条
+- 60,280 义项
+- 267,834 surfaces
 
 ## ToDo
 
