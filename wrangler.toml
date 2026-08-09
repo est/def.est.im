@@ -5,3 +5,8 @@ compatibility_date = "2025-10-18"
 binding = "kv_def"
 id = "kv_def"
 preview_id = "kv_def"
+
+[[d1_databases]]
+binding = "def_dict"
+database_name = "def-dict"
+database_id = "b00dc587-1c70-48ff-9976-3c9895d86830"
