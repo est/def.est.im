@@ -125,19 +125,23 @@ function renderEntry(entry, queryWord) {
     return `<div class="sense-links">${parts.join('　')}</div>`;
   };
   const defList = senses.length
-    ? `<div class="section"><h2>释义</h2><ol class="list">${senses.map((s) => {
-        const head = isPhr(s) && s.pattern
+    ? `<ol class="list">${senses.map((s, i) => {
+        const isPhrNow = isPhr(s);
+        const isPhrPrev = i > 0 && isPhr(senses[i - 1]);
+        // 普通义 → 短语 交界处分隔
+        const sep = isPhrNow && !isPhrPrev ? '<hr class="sense-sep">' : '';
+        const posBadge = `<span class="pos-badge">${esc(POS_CN[s.pos] ?? s.pos)}</span>`;
+        const head = isPhrNow && s.pattern
           ? (entry.phraseLinked && entry.phraseLinked.has(cleanPattern(s.pattern))
               ? `<span class="pattern"><a href="${href(s.pattern)}">${esc(s.pattern)}</a></span>`
               : `<span class="pattern">${esc(s.pattern)}</span>`)
           : '';
-        const posBadge = `<span class="pos-badge">${esc(POS_CN[s.pos] ?? s.pos)}</span>`;
-        return `<li>${head}${posBadge}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
+        return `${sep}<li>${posBadge}${head}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
           s.register ? `<span class="reg">${esc(REGISTER_CN[s.register.toLowerCase()] ?? s.register)}</span>` : ''}${
           s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
           s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable, entry.lemma)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
           senseLinks(s.id || s.sense_no)}</li>`;
-      }).join('')}</ol></div>`
+      }).join('')}</ol>`
     : '';
 
   const concept = entry.other_notes ? `<div class="section"><h2>备注</h2><div class="concept">${esc(entry.other_notes)}</div></div>` : '';

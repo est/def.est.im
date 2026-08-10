@@ -104,10 +104,10 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
   border-left: 2px solid #e5e5e5; padding-left: 8px;
 }
 
-/* 短语/习语词头 pattern */
+/* 短语/习语词头 pattern（与词性徽章同行） */
 .list li .pattern {
-  display: block; font-size: 13px; font-weight: 600; color: var(--seal-ink);
-  margin-bottom: 2px;
+  display: inline; font-size: 13px; font-weight: 600; color: var(--seal-ink);
+  margin-right: 6px;
 }
 .list li .pattern a { color: inherit; border-bottom: 1px dotted #999; }
 .list li .pattern a:hover { color: var(--fg); }
@@ -116,6 +116,12 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 .list li .pos-badge {
   font-size: 11px; font-weight: 500; color: #888;
   margin-right: 8px; letter-spacing: .02em;
+}
+
+/* 普通义 → 短语 交界分隔线 */
+.sense-sep {
+  border: 0; border-top: 1px solid var(--rule);
+  margin: 10px 0;
 }
 
 /* 释义内链接：默认无样式，Cmd/Ctrl 按下时显示波浪下划线 */
