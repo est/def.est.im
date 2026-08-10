@@ -62,9 +62,10 @@ CREATE TABLE surfaces (
   kind TEXT NOT NULL,                       -- lemma|inflection|synonym|antonym|collocation
   label TEXT,
   notes TEXT,
-  PRIMARY KEY (surface, word_id, sense_id, kind)
+  PRIMARY KEY (word_id, surface, kind, sense_id)
 ) WITHOUT ROWID;
-CREATE INDEX idx_surfaces_word ON surfaces (word_id);
+CREATE INDEX idx_surfaces_surface_kind ON surfaces (surface, kind);
+CREATE INDEX idx_senses_pattern ON senses (pattern, pos);
 
 CREATE TABLE rejects (
   surface TEXT PRIMARY KEY COLLATE NOCASE,

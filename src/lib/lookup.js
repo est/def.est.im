@@ -36,11 +36,12 @@ async function loadEntry(env, word) {
     }
   }
 
-  // 2. 主词排序：entity_type 0 优先 → freq 降序
-  const metas = [];
-  for (const id of ids) {
-    const w = await d1.prepare('SELECT * FROM words WHERE word_id = ?').bind(id).first();
-    if (w) metas.push(w);
+  // 2. 主词排序：entity_type 0 优先 → freq 降序（批量 IN 查询，避免 N+1）
+  let metas = [];
+  if (ids.length) {
+    const marks = ids.map(() => '?').join(',');
+    const allWords = await d1.prepare(`SELECT * FROM words WHERE word_id IN (${marks})`).bind(...ids).all();
+    metas = (allWords.results || []).filter(Boolean);
   }
   metas.sort((a, b) => (a.entity_type === 0 ? 0 : 1) - (b.entity_type === 0 ? 0 : 1)
     || (b.freq ?? -1) - (a.freq ?? -1));

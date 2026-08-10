@@ -131,7 +131,7 @@ async function ingest(env, data) {
     const sres = await d1.prepare(`INSERT INTO senses (word_id, sense_no, pos, pattern, def_en, def_zh, example_en, example_zh, register, usage_notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
       wordId, senseNo, e.pos, e.pattern ?? null, e.def_en, e.def_zh,
-      e.example_en ?? null, e.example_zh ?? null, e.register ?? null, null,
+      e.example_en ?? null, e.example_zh ?? null, e.register ?? null, e.usage_notes ?? null,
     ).run();
     const senseId = sres.meta.last_row_id;
     // surfaces：synonyms/antonyms/collocations（sense_id 关联义项）

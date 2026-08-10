@@ -8,6 +8,29 @@ const POS_CN = {
   interjection: '感叹词', article: '冠词', phrase: '短语', idiom: '习语',
 };
 
+const REGISTER_CN = {
+  formal: '正式', informal: '口语', neutral: '中性', technical: '专业',
+  slang: '俚语', literary: '书面', archaic: '古旧', vulgar: '粗俗',
+  offensive: '冒犯', disapproving: '贬义', dialect: '方言', medical: '医学',
+  'old-fashioned': '过时', humorous: '幽默', rare: '罕用', academic: '学术',
+  colloquial: '口语', poetic: '诗意', historical: '历史',
+};
+
+// 常用度星级：对数分桶 + tooltip 文本
+function freqTier(freq) {
+  if (freq >= 1e8) return 5;
+  if (freq >= 1e7) return 4;
+  if (freq >= 1e6) return 3;
+  if (freq >= 1e5) return 2;
+  return 1;
+}
+function freqBadge(freq) {
+  if (!freq || freq <= 0) return '';
+  const tier = freqTier(freq);
+  const stars = '★'.repeat(tier) + '☆'.repeat(5 - tier);
+  return `<span class="freq" tabindex="0" data-tip="语料词频 ${freq.toLocaleString()}">常用度 ${stars}</span>`;
+}
+
 const esc = (s) =>
   String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -88,6 +111,7 @@ function renderEntry(entry, queryWord) {
     : '';
   const poss = [...new Set(entry.senses.map((s) => s.pos))].map((p) => POS_CN[p] ?? p).join(' · ');
   const cefrBadge = entry.cefr ? `<span class="cefr">${esc(entry.cefr)}</span>` : '';
+  const freqBadgeOut = freqBadge(entry.freq);
   const entityTag = isEntity ? '<span class="etag">名字/实体</span>' : '';
 
   // 释义：非 phrase/idiom 义项按列表；phrase 义项单独进短语区（renderPhrases）
@@ -107,7 +131,7 @@ function renderEntry(entry, queryWord) {
   const defList = senses.length
     ? `<div class="section"><h2>释义</h2><ol class="list">${senses.map((s) => `
       <li><b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
-        s.register ? `<span class="reg">${esc(s.register)}</span>` : ''}${
+        s.register ? `<span class="reg">${esc(REGISTER_CN[s.register.toLowerCase()] ?? s.register)}</span>` : ''}${
         s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
         s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable, entry.lemma)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
         senseLinks(s.id || s.sense_no)}</li>`).join('')}</ol></div>`
@@ -126,7 +150,7 @@ function renderEntry(entry, queryWord) {
 
   return `<div class="entry-wrap">
   <div class="word-head">
-    <div class="word">${esc(entry.lemma)}${entityTag}${cefrBadge}</div>
+    <div class="word">${esc(entry.lemma)}${entityTag}${cefrBadge}${freqBadgeOut}</div>
     ${phonetic ? `<div class="phonetic">${esc(phonetic)}</div>` : ''}
     ${poss ? `<div class="pos">${esc(poss)}</div>` : ''}
   </div>
