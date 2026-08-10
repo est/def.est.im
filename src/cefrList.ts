@@ -35,6 +35,24 @@ export function loadCefr(dbPath: string): Map<string, CefrEntry> {
   return map;
 }
 
+// 家族词频汇总：lemma → 全族（含屈折形式）最高词频。
+// 单个形式可能比原形更高频（encapsulated 1.9M > encapsulate 527k），
+// 门槛判定/入库 freq 都应以家族 max 为准，避免高频形式被低频原形拖累。
+export function loadFamilyFreq(dbPath: string): Map<string, number> {
+  const db = new Database(dbPath, { readonly: true });
+  const rows = db.query(`
+    SELECT COALESCE(l.word, w.word) AS lemma, MAX(p.frequency_count) AS famfreq
+    FROM word_pos p
+    JOIN words w ON w.word_id = p.word_id
+    LEFT JOIN words l ON l.word_id = p.lemma_word_id
+    GROUP BY lemma
+  `).all() as { lemma: string; famfreq: number }[];
+  db.close();
+  const map = new Map<string, number>();
+  for (const r of rows) map.set(String(r.lemma).toLowerCase(), r.famfreq);
+  return map;
+}
+
 // 词表 lemma 链接（规则层过滤用）：
 //   lemmaOf  surface → 原形（meaner→mean、yanked→yank）：屈折形式归原
 //   formsOf  lemma → 变形清单：入库时补全缺失变形，保证"形式→原形"检索闭环

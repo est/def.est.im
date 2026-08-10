@@ -44,7 +44,7 @@ import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { createDb, ingest, parseYaml, validate } from "./schema.ts";
 import { findUncovered } from "./closure.ts";
-import { loadCefr, loadLemmaLinks } from "./cefrList.ts";
+import { loadCefr, loadFamilyFreq, loadLemmaLinks } from "./cefrList.ts";
 import { loadEnv } from "./env.ts";
 
 const env = loadEnv();
@@ -70,6 +70,11 @@ const PROGRESS_PATH = join(DATA_DIR, "progress.json");
 // 权威 CEFR 词表：入队优先级与最终标注的来源；未覆盖词回退到继承/AI 估计
 const CEFR_DB = env.COLLECT_CEFR_DB ?? join(DATA_DIR, "word_cefr_minified.db");
 const cefrMap = existsSync(CEFR_DB) ? loadCefr(CEFR_DB) : new Map();
+// 家族词频：lemma → 全族（含屈折形式）最高词频。门槛判定用家族值，
+// 避免高频形式（encapsulated 1.9M）被低频原形（encapsulate 527k）拖累误杀整族
+const famFreqMap = existsSync(CEFR_DB) ? loadFamilyFreq(CEFR_DB) : new Map();
+const famFreqOf = (w: string): number | undefined =>
+  famFreqMap.get(w) ?? famFreqMap.get(lemmaOf.get(w) ?? "") ?? cefrMap.get(w)?.freq;
 // 词表 lemma 链接：屈折形式归原（规则层）+ 入库补全变形
 const { lemmaOf, formsOf } = existsSync(CEFR_DB)
   ? loadLemmaLinks(CEFR_DB)
@@ -152,9 +157,9 @@ function enqueue(word: string, fallbackLevel: string) {
   }
   visited.add(w);
   const entry = cefrMap.get(w);
-  // 频率门槛：词表内但低频的词统一跳过（种子/BFS/治愈共用），
-  // 不可查的词由 lookup 层（terms inflection/synonym）间接覆盖；closure 缺口由 audit 兜底
-  if (entry && entry.freq < SEED_FREQ_MIN) {
+  // 频率门槛：词表内但低频的词统一跳过（种子/BFS/治愈共用）。
+  // 用家族词频判定（含屈折形式 max），避免高频形式被低频原形拖累
+  if (entry && (famFreqOf(w) ?? entry.freq) < SEED_FREQ_MIN) {
     visited.add(w);
     return;
   }
@@ -202,7 +207,7 @@ function enqueueApproved(sus: Suspect) {
 function seedSuspect(w: string, entry: { level: string; score: number; freq: number }) {
   if (visited.has(w) || rejects.has(w)) return;
   if (w.length < 2 && !["a", "i"].includes(w)) return; // 词表里有 s/p/b 等单字母噪声
-  if (entry.freq < SEED_FREQ_MIN) return; // 频率门槛：低于 100 万不按种子采（BFS 引用到仍会正常采）
+  if ((famFreqOf(w) ?? entry.freq) < SEED_FREQ_MIN) return; // 家族词频门槛（含屈折形式 max）
   visited.add(w);
   if (!suspectSet.has(w)) {
     suspectSet.add(w);
@@ -347,7 +352,7 @@ function loadState() {
     if (bucketed.has(w) || inWords.has(w) || rejects.has(w) || suspectSet.has(w)) continue;
     if (lemmaOf.has(w) && lemmaOf.get(w) !== w) continue; // 屈折形式：归原后由原形覆盖，不治愈
     const e = cefrMap.get(w);
-    if (e && e.freq < SEED_FREQ_MIN) {
+    if (e && (famFreqOf(w) ?? e.freq) < SEED_FREQ_MIN) {
       // 词表内但低频：与 seed 门槛同政策 → 进黑名单而非重新入队
       rejects.add(w);
       db.query("INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?,?)").run(w, "治愈:词表内低频");
@@ -517,7 +522,7 @@ async function callModel(word: string, feedback: { role: string; content: string
 async function processWord(word: string, parentLevel: string) {
   processed++;
   const entry = cefrMap.get(word);
-  if (entry && entry.freq < SEED_FREQ_MIN) return;
+  if (entry && (famFreqOf(word) ?? entry.freq) < SEED_FREQ_MIN) return;
   let feedback: { role: string; content: string }[] = [];
   let lastRaw = "";
   for (let retry = 0; retry <= 2; retry++) {
@@ -544,7 +549,10 @@ async function processWord(word: string, parentLevel: string) {
       if (saveYaml) writeFileSync(join(WORDS_DIR, word + ".yaml"), lastRaw.trimEnd() + "\n");
       // ingest 包 try/catch：SQLite 并发写锁竞争时 SQLITE_BUSY 不能崩 worker
       try {
-        ingest(db, r.data, r.word, r.variant, MODEL, cefrMap.get(r.word.toLowerCase()), lastRaw);
+        const meta = cefrMap.get(r.word.toLowerCase());
+        const famFreq = famFreqOf(r.word.toLowerCase());
+        // meta.freq 用家族词频（含屈折形式 max），词头星级/排序反映真实常用度
+        ingest(db, r.data, r.word, r.variant, MODEL, meta ? { ...meta, freq: famFreq ?? meta.freq } : undefined, lastRaw);
       } catch (e) {
         failures++;
         console.log(`  ✗ ${word} DB 写入失败: ${e}`);
