@@ -1,7 +1,8 @@
 /* def.est.im v3.2 — 极简词典 + 双栏 + 词形表 + 交互链接 */
 :root {
   --fg: #111; --muted: #666; --rule: #ddd; --bg: #fff;
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+  /* Georgia：系统自带，l 带弯钩 / I 带横杠，初学者可区分；中文回落系统黑体 */
+  font: 15px/1.55 Georgia, "Times New Roman", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width: 1200px; margin: 0 auto; }
