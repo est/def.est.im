@@ -40,7 +40,8 @@ CREATE TABLE words (
   cefr TEXT,
   freq INTEGER,
   phonetic_uk TEXT, phonetic_us TEXT,
-  other_notes TEXT
+  other_notes TEXT,
+  etymology TEXT
 );
 CREATE INDEX idx_words_lemma ON words (lemma COLLATE NOCASE);
 
@@ -99,10 +100,10 @@ function emit(insertSql: string, n: number) {
 
 // ---------- 1. words ----------
 let n = 0;
-for (const w of src.query(`SELECT id, lemma, kind, cefr, freq, phonetic_uk, phonetic_us, other_notes FROM words`).all() as any[]) {
+for (const w of src.query(`SELECT id, lemma, kind, cefr, freq, phonetic_uk, phonetic_us, other_notes, etymology FROM words`).all() as any[]) {
   const et = w.kind === "name" ? 1 : 0; // abbr/common → 0
-  const row = [String(w.id), q(w.lemma), String(et), q(w.cefr), w.freq ?? "NULL", q(w.phonetic_uk), q(w.phonetic_us), q(w.other_notes)];
-  emit(`INSERT INTO words (word_id,lemma,entity_type,cefr,freq,phonetic_uk,phonetic_us,other_notes) VALUES (${row.join(",")});\n`, 1);
+  const row = [String(w.id), q(w.lemma), String(et), q(w.cefr), w.freq ?? "NULL", q(w.phonetic_uk), q(w.phonetic_us), q(w.other_notes), q(w.etymology)];
+  emit(`INSERT INTO words (word_id,lemma,entity_type,cefr,freq,phonetic_uk,phonetic_us,other_notes,etymology) VALUES (${row.join(",")});\n`, 1);
   n++;
 }
 console.log(`words: ${n}`);
