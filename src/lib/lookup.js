@@ -48,21 +48,21 @@ async function loadEntry(env, word) {
   const main = metas[0];
   if (!main) return { type: 'missing' };
 
-  // 3. senses + surfaces 反查
-  const sensesRes = await d1.prepare('SELECT * FROM senses WHERE word_id = ? ORDER BY sense_no').bind(main.word_id).all();
+  // 3. senses + surfaces + reverse 查询并行（三者均只依赖 main.word_id/main.lemma，无互相依赖）
+  const [sensesRes, surfRes, reverseRows] = await Promise.all([
+    d1.prepare('SELECT * FROM senses WHERE word_id = ? ORDER BY sense_no').bind(main.word_id).all(),
+    d1.prepare('SELECT surface, kind, sense_id, label FROM surfaces WHERE word_id = ?').bind(main.word_id).all(),
+    d1.prepare(
+      "SELECT word_id, kind, sense_id FROM surfaces WHERE surface = ? AND kind IN ('synonym','antonym')"
+    ).bind(main.lemma).all(),
+  ]);
   const senses = sensesRes.results || [];
-  const surfRes = await d1.prepare('SELECT surface, kind, sense_id, label FROM surfaces WHERE word_id = ?').bind(main.word_id).all();
   const groups = { inflection: [], synonym: [], antonym: [], collocation: [] };
   const allSurfaces = [];
   for (const s of surfRes.results || []) {
     if (groups[s.kind]) groups[s.kind].push({ surface: s.surface, sense_id: s.sense_id, label: s.label });
     if (s.kind !== 'lemma') allSurfaces.push(s.surface);
   }
-
-  // 3b. 双向链接：反查其他词条中以当前词为 synonym/antonym 的记录，翻转方向合并
-  const reverseRows = await d1.prepare(
-    "SELECT word_id, kind, sense_id FROM surfaces WHERE surface = ? AND kind IN ('synonym','antonym')"
-  ).bind(main.lemma).all();
   const flipped = { synonym: 'synonym', antonym: 'antonym' };
   const reverseIds = [...new Set((reverseRows.results || []).map((r) => r.word_id))];
   const reverseMap = new Map();
@@ -94,25 +94,43 @@ async function loadEntry(env, word) {
   for (const s of allSurfaces) for (const t of tokensOf(s)) tokens.add(t);
   const discoverable = new Set();
   const arr = [...tokens];
-  for (let i = 0; i < arr.length; i += 100) { // D1 SQL 变量上限：IN 分批 ≤100
+  const discBatches = [];
+  for (let i = 0; i < arr.length; i += 100) {
     const sliceArr = arr.slice(i, i + 100);
     const marks = sliceArr.map(() => '?').join(',');
-    const res = await d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all();
+    discBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
+  }
+  const discResults = await Promise.all(discBatches);
+  for (const res of discResults) {
     for (const r of res.results || []) discoverable.add(String(r.surface).toLowerCase());
   }
   // 多词 surface 也加入 discoverable（供短语链接判断）
   for (const s of allSurfaces) discoverable.add(s.toLowerCase());
 
-  // 短语收录检查：phrase/idiom 的 pattern 是否在 surfaces 表中
+  // 短语收录检查：phrase/idiom 的 pattern 是否在 surfaces 表中（批量 IN 查询，分批 ≤100）
   const phraseSenses = senses.filter((s) => s.pos === 'phrase' || s.pos === 'idiom');
   const phraseLinked = new Set();
+  const phrasePatterns = [];
   for (const s of phraseSenses) {
     const p = (s.pattern || '').toLowerCase()
       .replace(/\s*\(?\s*(?:from\s+)?(?:sb|sth)\.?(?:\/(?:sb|sth)\.?)?\s*\)?\s*/gi, ' ')
       .replace(/\s+/g, ' ').trim();
-    if (p && !phraseLinked.has(p)) {
-      const found = await d1.prepare('SELECT 1 FROM surfaces WHERE surface = ?').bind(p).first();
-      if (found) phraseLinked.add(p);
+    if (p && !phrasePatterns.includes(p)) phrasePatterns.push(p);
+  }
+  const plBatches = [];
+  for (let i = 0; i < phrasePatterns.length; i += 100) {
+    const sliceArr = phrasePatterns.slice(i, i + 100);
+    const marks = sliceArr.map(() => '?').join(',');
+    plBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
+  }
+  if (plBatches.length) {
+    const plResults = await Promise.all(plBatches);
+    const plSet = new Set();
+    for (const res of plResults) {
+      for (const r of res.results || []) plSet.add(String(r.surface).toLowerCase());
+    }
+    for (const p of phrasePatterns) {
+      if (plSet.has(p)) phraseLinked.add(p);
     }
   }
 

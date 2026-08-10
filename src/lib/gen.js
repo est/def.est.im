@@ -111,19 +111,30 @@ function validate(data, word) {
   return entries.length;
 }
 
-// D1 写入（幂等：word 已存在 → 不写，返回已有 word_id）
+// D1 写入（幂等：正式词条已存在 → 不写；占位行 entity_type=-1 → 更新为正式词条）
 async function ingest(env, data) {
   const d1 = env.def_dict;
   const word = data.word.trim().toLowerCase();
-  const exist = await d1.prepare('SELECT word_id FROM words WHERE lemma = ? LIMIT 1').bind(word).first();
-  if (exist) return exist.word_id;
-
-  const wres = await d1.prepare(`INSERT INTO words (lemma, entity_type, cefr, phonetic_uk, phonetic_us, other_notes, etymology)
+  const exist = await d1.prepare('SELECT word_id, entity_type FROM words WHERE lemma = ? LIMIT 1').bind(word).first();
+  let wordId;
+  if (exist && (exist.entity_type ?? 0) >= 0) {
+    return exist.word_id; // 已有正式词条，不覆盖
+  }
+  if (exist) {
+    // 占位行（entity_type=-1，可能是上次失败遗留或缺词占位）：升级为正式词条
+    wordId = exist.word_id;
+    await d1.prepare(`UPDATE words SET entity_type = 0, cefr = ?, phonetic_uk = ?, phonetic_us = ?, other_notes = ?, etymology = ? WHERE word_id = ?`)
+      .bind(data.cefr ?? null, data.phonetic_uk ?? null, data.phonetic_us ?? null, data.other_notes ?? null, data.etymology ?? null, wordId).run();
+    await d1.prepare('DELETE FROM senses WHERE word_id = ?').bind(wordId).run();
+    await d1.prepare('DELETE FROM surfaces WHERE word_id = ?').bind(wordId).run();
+  } else {
+    const wres = await d1.prepare(`INSERT INTO words (lemma, entity_type, cefr, phonetic_uk, phonetic_us, other_notes, etymology)
     VALUES (?, 0, ?, ?, ?, ?, ?)`).bind(
-    word, data.cefr ?? null, data.phonetic_uk ?? null, data.phonetic_us ?? null,
-    data.other_notes ?? null, data.etymology ?? null,
-  ).run();
-  const wordId = wres.meta.last_row_id;
+      word, data.cefr ?? null, data.phonetic_uk ?? null, data.phonetic_us ?? null,
+      data.other_notes ?? null, data.etymology ?? null,
+    ).run();
+    wordId = wres.meta.last_row_id;
+  }
 
   for (let i = 0; i < data.entries.length; i++) {
     const e = data.entries[i];

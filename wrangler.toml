@@ -1,6 +1,7 @@
 name = "def"
 main = "src/index.js"
-compatibility_date = "2025-10-18"
+compatibility_date = "2026-07-28"
+compatibility_flags = [ "nodejs_compat"]
 
 [assets]
 directory = "public"
@@ -11,3 +12,8 @@ run_worker_first = true
 binding = "def_dict"
 database_name = "def-dict"
 database_id = "b00dc587-1c70-48ff-9976-3c9895d86830"
+
+[[rules]]
+type = "Text"
+globs = ["./src/lib/shell.tpl.html"]
+fallthrough = true

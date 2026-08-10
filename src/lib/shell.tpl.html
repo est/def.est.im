@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${params.title}def.est.im</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body${params.bodyAttr}>
+<div class="topbar">
+  <a class="brand" href="/">def.est.im</a>
+  <div class="search-bar">
+    <input type="text" placeholder="搜索…" id="q">
+    <kbd>⌘K</kbd>
+  </div>
+</div>
+${params.inner}
+<script>
+(function () {
+  var q = document.getElementById('q');
+  if (q && ${params.wordJs}) q.value = ${params.wordJs};
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); q && q.focus(); q && q.select(); }
+  });
+  q && q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && this.value.trim()) location.href = '/' + encodeURIComponent(this.value.trim());
+  });
+
+  // Cmd/Ctrl 按下 → 释义内 span.term 变成可点击 a，松开变回来
+  var mod = false;
+  function setMod(on) {
+    if (on === mod) return;
+    mod = on;
+    var sel = on ? 'span.term[data-word]' : 'a.term[data-word]';
+    document.querySelectorAll(sel).forEach(function (el) {
+      if (on) {
+        var a = document.createElement('a');
+        a.className = 'term';
+        a.href = el.getAttribute('data-word');
+        a.textContent = el.textContent;
+        el.replaceWith(a);
+      } else {
+        var s = document.createElement('span');
+        s.className = 'term';
+        s.setAttribute('data-word', el.getAttribute('href'));
+        s.textContent = el.textContent;
+        el.replaceWith(s);
+      }
+    });
+  }
+  document.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey)) setMod(true); });
+  document.addEventListener('keyup', function (e) { if (!e.metaKey && !e.ctrlKey) setMod(false); });
+  window.addEventListener('blur', function () { setMod(false); });
+
+  // Cmd/Ctrl 点击任何 <a> → 正常跳转（不被 SPA 拦截）
+  document.addEventListener('click', function (e) {
+    if (!mod) return;
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a) return;
+    e.stopPropagation();
+  }, true);
+
+  // SPA：普通点击 a.term → fetch fragment 局部替换
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a.term') : null;
+    if (!a) return;
+    e.preventDefault();
+    var w = decodeURIComponent(a.pathname ? a.pathname.replace(/^\\//, '') : a.href.split('/').pop());
+    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return j || r.text().then(function (t) { return { _html: t }; }); }); })
+      .then(function (data) {
+        if (data.redirect) { location.href = data.redirect; return; }
+        var html = data._html || data;
+        var el = document.querySelector('.entry-wrap');
+        if (el && html) { el.outerHTML = html; history.pushState({ w: w }, '', '/' + encodeURIComponent(w)); document.title = w + ' · def.est.im'; }
+      })
+      .catch(function () { location.href = '/' + encodeURIComponent(w); });
+  });
+
+  window.addEventListener('popstate', function (e) {
+    var w = (e.state && e.state.w) || decodeURIComponent(location.pathname.slice(1));
+    if (!w) return;
+    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; document.title = w + ' · def.est.im'; } });
+  });
+
+  // 占位页：自动触发生成（generating:true 表示已有任务在跑，提示并稍后自动重试）
+  var gen = document.body.getAttribute('data-gen');
+  if (gen) {
+    fetch('/?w=' + encodeURIComponent(gen) + '&gen=1', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ok) {
+          return fetch('/?w=' + encodeURIComponent(gen) + '&fragment=1', { method: 'POST' }).then(function (r) { return r.text(); });
+        }
+        if (j && j.generating) {
+          var el = document.querySelector('.entry-wrap');
+          if (el) el.insertAdjacentHTML('beforeend', '<div class="section"><h2>生成中…</h2><p class="sub">这个词正在后台生成，页面将自动刷新。</p></div>');
+          setTimeout(function () { location.reload(); }, 8000);
+          return;
+        }
+        throw new Error('gen fail');
+      })
+      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; } })
+      .catch(function () {
+        var el = document.querySelector('.entry-wrap');
+        if (el) el.insertAdjacentHTML('beforeend', '<div class="section"><h2>生成失败</h2><p class="sub">这个词暂时无法生成，请稍后再试。</p></div>');
+      });
+  }
+})();
+</script>
+</body>
+</html>

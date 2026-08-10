@@ -2,7 +2,7 @@
 // 静态（/ 首页、/style.css）由 [assets]（public/）提供；
 // 其余 GET /<word> → SSR 词条页；POST / → fragment / gen 数据接口。
 'use strict';
-import { renderEntry, renderPlaceholder, renderIndex, shell } from './lib/render.js';
+import { renderEntry, renderPlaceholder, renderIndex, shell, esc } from './lib/render.js';
 import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
 
@@ -43,20 +43,43 @@ export default {
       try { word = decodeURIComponent(path.slice(1)); } catch { return new Response('Bad Request', { status: 400 }); }
       word = word.trim();
       if (!word) return new Response('Not Found', { status: 404 });
-      return renderPage(env, word, url);
+      return renderPage(env, word, url, request);
     }
 
     return new Response('Not Found', { status: 404 });
   },
 };
 
+// 词条页 ETag：基于 entry 关键字段内容哈希（lemma/cefr/freq/音标/notes/词源 + senses 摘要）
+function entryEtag(entry, senses) {
+  const core = [
+    entry.lemma, entry.entity_type, entry.cefr, entry.freq,
+    entry.phonetic_uk, entry.phonetic_us, entry.other_notes, entry.etymology,
+    senses.map((s) => [s.sense_no, s.pos, s.pattern, s.def_en, s.register, s.usage_notes, s.example_en]).join('|'),
+  ].join('§');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < core.length; i++) { h ^= core.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return '"' + (h >>> 0).toString(16) + '"';
+}
+
 // ---- 词条页渲染（命中 / 占位 / 404） ----
-async function renderPage(env, word, reqUrl) {
+async function renderPage(env, word, reqUrl, request) {
   const r = await loadEntry(env, word);
   if (r.type === 'entry') {
+    // entity_type===-1：正在生成中（占位行），渲染「生成中」而非词条
+    if (r.entry.entity_type === -1) {
+      return new Response(shell(word, renderPlaceholder(word, false), word, null), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      });
+    }
     const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked }, word);
+    // P5：ETag 条件请求
+    const etag = entryEtag(r.entry, r.senses);
+    if (request.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers: { etag, 'cache-control': 'public, max-age=3600' } });
+    }
     return new Response(shell(r.entry.lemma, html, word), {
-      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
+      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600', etag },
     });
   }
   if (r.type === 'redirect') {
@@ -71,9 +94,9 @@ async function renderPage(env, word, reqUrl) {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   }
-  // missing → 占位页，自动触发生成（body data-gen）
+  // missing → 占位页，自动触发生成（body data-gen；定界引号保留，值内字符 esc 转义）
   return new Response(
-    shell(word, renderPlaceholder(word, false), word, `data-gen="${word.replace(/"/g, '&quot;')}"`),
+    shell(word, renderPlaceholder(word, false), word, ` data-gen="${esc(word)}"`),
     { headers: { 'content-type': 'text/html; charset=utf-8' } },
   );
 }
@@ -86,8 +109,23 @@ async function handlePost(request, env, w) {
 
   if (isGen) {
     const low = w.toLowerCase();
-    const exist = await env.def_dict.prepare('SELECT 1 FROM words WHERE lemma = ?').bind(low).first();
-    if (exist) return json({ ok: true, word: low });
+    const now = Date.now();
+    // P2 锁：words 表占位行 entity_type=-1 + other_notes=开始时间戳
+    const row = await env.def_dict.prepare(
+      'SELECT word_id, entity_type, other_notes FROM words WHERE lemma = ? LIMIT 1'
+    ).bind(low).first();
+    if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low }); // 已有正式词条
+    if (row && row.entity_type === -1) {
+      const start = parseInt(row.other_notes || '', 10) || 0;
+      if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low }); // 生成中
+      // 锁过期（上次失败残留）：重置时间戳继续
+      await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(String(now), row.word_id).run();
+    } else {
+      // 无行：插入占位行（锁）
+      await env.def_dict.prepare(
+        'INSERT INTO words (lemma, entity_type, other_notes) VALUES (?, -1, ?)'
+      ).bind(low, String(now)).run();
+    }
     try {
       const data = await generateEntry(env, w);
       validate(data, w);
@@ -95,6 +133,7 @@ async function handlePost(request, env, w) {
       return json({ ok: true, word: low });
     } catch (e) {
       console.error('[gen]', w, String(e));
+      // 失败：占位行保留（-1），5 分钟后锁过期可重试
       return json({ ok: false, error: String(e).slice(0, 200) });
     }
   }

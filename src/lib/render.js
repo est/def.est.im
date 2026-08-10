@@ -1,6 +1,10 @@
 // 词条渲染模板（服务端唯一模板源：整页壳 + 词条 + 首页）
 // 类名沿用 public/style.css
 'use strict';
+// 整页壳模板：独立文件，导入打进 bundle（worker 无真实文件系统）
+import tpl from './shell.tpl.html';
+
+const shellFn = new Function('params', 'return `' + tpl + '`');
 
 const POS_CN = {
   noun: '名词', verb: '动词', adjective: '形容词', adverb: '副词',
@@ -180,115 +184,18 @@ function renderPlaceholder(word, isRejected) {
 }
 
 // 整页壳（topbar + 内层）；bodyAttrs 如 `data-gen="xyzzy"` 触发占位页自动生成
+// 所有填充值在此预转义，模板文件内不再做任何转义（避免二次转义/漏转义）
+// bodyAttrs 由调用方按属性上下文构造（定界引号保留，值内部字符已 esc）
 function shell(title, inner, word, bodyAttrs) {
-  return `<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title ? esc(title) + ' · ' : ''}def.est.im</title>
-<link rel="stylesheet" href="/style.css">
-</head>
-<body${bodyAttrs ? ' ' + bodyAttrs : ''}>
-<div class="topbar">
-  <a class="brand" href="/">def.est.im</a>
-  <div class="search-bar">
-    <input type="text" placeholder="搜索…" id="q">
-    <kbd>⌘K</kbd>
-  </div>
-</div>
-${inner}
-<script>
-(function () {
-  var q = document.getElementById('q');
-  if (q && ${JSON.stringify(word ?? null)}) q.value = ${JSON.stringify(word ?? null)};
-  document.addEventListener('keydown', function (e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); q && q.focus(); q && q.select(); }
-  });
-  q && q.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && this.value.trim()) location.href = '/' + encodeURIComponent(this.value.trim());
-  });
-
-  // Cmd/Ctrl 按下 → 释义内 span.term 变成可点击 a，松开变回来
-  var mod = false;
-  function setMod(on) {
-    if (on === mod) return;
-    mod = on;
-    var sel = on ? 'span.term[data-word]' : 'a.term[data-word]';
-    document.querySelectorAll(sel).forEach(function (el) {
-      if (on) {
-        var a = document.createElement('a');
-        a.className = 'term';
-        a.href = el.getAttribute('data-word');
-        a.textContent = el.textContent;
-        el.replaceWith(a);
-      } else {
-        var s = document.createElement('span');
-        s.className = 'term';
-        s.setAttribute('data-word', el.getAttribute('href'));
-        s.textContent = el.textContent;
-        el.replaceWith(s);
-      }
-    });
-  }
-  document.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey)) setMod(true); });
-  document.addEventListener('keyup', function (e) { if (!e.metaKey && !e.ctrlKey) setMod(false); });
-  window.addEventListener('blur', function () { setMod(false); });
-
-  // Cmd/Ctrl 点击任何 <a> → 正常跳转（不被 SPA 拦截）
-  document.addEventListener('click', function (e) {
-    if (!mod) return;
-    var a = e.target && e.target.closest ? e.target.closest('a') : null;
-    if (!a) return;
-    e.stopPropagation();
-  }, true);
-
-  // SPA：普通点击 a.term → fetch fragment 局部替换
-  document.addEventListener('click', function (e) {
-    var a = e.target && e.target.closest ? e.target.closest('a.term') : null;
-    if (!a) return;
-    e.preventDefault();
-    var w = decodeURIComponent(a.pathname ? a.pathname.replace(/^\\//, '') : a.href.split('/').pop());
-    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
-      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return j || r.text().then(function (t) { return { _html: t }; }); }); })
-      .then(function (data) {
-        if (data.redirect) { location.href = data.redirect; return; }
-        var html = data._html || data;
-        var el = document.querySelector('.entry-wrap');
-        if (el && html) { el.outerHTML = html; history.pushState({ w: w }, '', '/' + encodeURIComponent(w)); document.title = w + ' · def.est.im'; }
-      })
-      .catch(function () { location.href = '/' + encodeURIComponent(w); });
-  });
-
-  window.addEventListener('popstate', function (e) {
-    var w = (e.state && e.state.w) || decodeURIComponent(location.pathname.slice(1));
-    if (!w) return;
-    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
-      .then(function (r) { return r.text(); })
-      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; document.title = w + ' · def.est.im'; } });
-  });
-
-  // 占位页：自动触发生成
-  var gen = document.body.getAttribute('data-gen');
-  if (gen) {
-    fetch('/?w=' + encodeURIComponent(gen) + '&gen=1', { method: 'POST' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (j && j.ok) {
-          return fetch('/?w=' + encodeURIComponent(gen) + '&fragment=1', { method: 'POST' }).then(function (r) { return r.text(); });
-        }
-        throw new Error('gen fail');
-      })
-      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; } })
-      .catch(function () {
-        var el = document.querySelector('.entry-wrap');
-        if (el) el.insertAdjacentHTML('beforeend', '<div class="section"><h2>生成失败</h2><p class="sub">这个词暂时无法生成，请稍后再试。</p></div>');
-      });
-  }
-})();
-</script>
-</body>
-</html>`;
+  const params = {
+    title: title ? esc(title) + ' · ' : '',
+    inner,
+    // JS 字符串字面量上下文：JSON.stringify 后把 < > 转成 \u 序列，防 </script> 逃逸
+    wordJs: (word === null || word === undefined ? 'null'
+      : JSON.stringify(String(word)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')),
+    bodyAttr: bodyAttrs || '',
+  };
+  return shellFn(params);
 }
 
 const indexInner = `
