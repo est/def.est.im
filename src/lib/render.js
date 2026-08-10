@@ -105,7 +105,9 @@ function renderEntry(entry, queryWord) {
   const entityTag = isEntity ? '<span class="etag">名字/实体</span>' : '';
 
   // 释义：全部 senses 统一列表（含 phrase/idiom，其 pattern 作词头展示）
-  const senses = entry.senses;
+  // 排序：普通义在前，短语/习语在后，组内保持 sense_no 顺序
+  const isPhr = (s) => s.pos === 'phrase' || s.pos === 'idiom';
+  const senses = [...entry.senses.filter((s) => !isPhr(s)), ...entry.senses.filter(isPhr)];
   const g = entry.groups;
   const senseLinks = (senseId) => {
     const syn = (g.synonym || []).filter((r) => r.sense_id === senseId);
@@ -120,13 +122,13 @@ function renderEntry(entry, queryWord) {
   };
   const defList = senses.length
     ? `<div class="section"><h2>释义</h2><ol class="list">${senses.map((s) => {
-        const isPhrase = s.pos === 'phrase' || s.pos === 'idiom';
-        const head = isPhrase && s.pattern
+        const head = isPhr(s) && s.pattern
           ? (entry.phraseLinked && entry.phraseLinked.has(cleanPattern(s.pattern))
               ? `<span class="pattern"><a href="${href(s.pattern)}">${esc(s.pattern)}</a></span>`
               : `<span class="pattern">${esc(s.pattern)}</span>`)
           : '';
-        return `<li>${head}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
+        const posBadge = `<span class="pos-badge">${esc(POS_CN[s.pos] ?? s.pos)}</span>`;
+        return `<li>${head}${posBadge}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
           s.register ? `<span class="reg">${esc(REGISTER_CN[s.register.toLowerCase()] ?? s.register)}</span>` : ''}${
           s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
           s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable, entry.lemma)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
