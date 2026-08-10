@@ -48,6 +48,8 @@ ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英
 - [ ] 名字/地名/乐队查询：on-demand 名字专属 prompt（谐音坑/词源/性别倾向）
 - [ ] register 规范化（受控词表）与覆盖提升
 - [ ] 限流，防止 API 爆掉
+- [ ] **采集 bug：词频门槛误杀整族**。`enqueue()` 用原形自身 freq 判定 `SEED_FREQ_MIN=1e6`，但屈折形式词频可能更高（encapsulated 1.9M / encapsulate 527k → 整族不采）。已确认 919 个 lemma 因此缺失。修复：门槛改用家族 max freq（`formsOf` 全族扫描），或改排序不跳过。补采需评估 API 成本
+- [ ] 词形 label 数据缺口：1542 条 null 已修复 1021，剩 521 为词表噪声（人名/派生词误标 inflection），渲染兜底「词形」；情态动词过去式（would/could/should/might）词表无标注，渲染靠规则推断
 - [ ] OpenSearch / tab-to-search
 - [ ] 义项级 CEFR（词表每词性 level 预计算）
 - [ ] 复数独立义项（data/media 等）人工复核清单
