@@ -119,9 +119,9 @@ function renderEntry(entry, queryWord) {
     const col = (g.collocation || []).filter((r) => r.sense_id === senseId);
     if (!syn.length && !ant.length && !col.length) return '';
     const parts = [];
-    if (syn.length) parts.push('≈ ' + syn.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
-    if (ant.length) parts.push('☍ ' + ant.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
-    if (col.length) parts.push('⋈ ' + col.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (syn.length) parts.push(`<span class="sl-sym">≈</span> ` + syn.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (ant.length) parts.push(`<span class="sl-sym">☍</span> ` + ant.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (col.length) parts.push(`<span class="sl-sym">⋈</span> ` + col.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
     return `<div class="sense-links">${parts.join('　')}</div>`;
   };
   const defList = senses.length

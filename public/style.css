@@ -74,7 +74,7 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
   grid-template-columns: 1fr;
 }
 @media (min-width: 768px) {
-  .entry-grid { grid-template-columns: 55fr 45fr; }
+  .entry-grid { grid-template-columns: 60fr 40fr; }
 }
 
 /* ====== 通用 section ====== */
@@ -135,8 +135,9 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 body.mod a.term { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: #999; }
 body.mod a.term:hover { text-decoration-color: var(--fg); }
 
-/* 义项内近反义词 */
+/* 义项内近反义词（符号作天然分界线，调淡） */
 .sense-links { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.sense-links .sl-sym { color: #c8c4bc; font-weight: 400; }
 .sense-links a { color: #333; text-decoration: none; border-bottom: 1px dotted #ccc; }
 .sense-links a:hover { color: var(--fg); border-bottom-color: var(--fg); }
 
