@@ -112,6 +112,11 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 .list li .pattern a { color: inherit; border-bottom: 1px dotted #999; }
 .list li .pattern a:hover { color: var(--fg); }
 
+/* 短语项：徽章+pattern 一行，释义换行 */
+.list li .phr-line {
+  display: block; margin-bottom: 2px;
+}
+
 /* 义项词性 */
 .list li .pos-badge {
   font-size: 11px; font-weight: 500; color: #888;

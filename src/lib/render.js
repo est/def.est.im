@@ -136,7 +136,9 @@ function renderEntry(entry, queryWord) {
               ? `<span class="pattern"><a href="${href(s.pattern)}">${esc(s.pattern)}</a></span>`
               : `<span class="pattern">${esc(s.pattern)}</span>`)
           : '';
-        return `${sep}<li>${posBadge}${head}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
+        // 短语项：徽章+pattern 一行，释义换行；普通义徽章与释义同行
+        const line = isPhrNow && s.pattern ? `<div class="phr-line">${posBadge}${head}</div>` : posBadge;
+        return `${sep}<li>${line}<b>${linkText(s.def_en, entry.discoverable, entry.lemma)}</b><span class="zh"> ${esc(s.def_zh)}</span>${
           s.register ? `<span class="reg">${esc(REGISTER_CN[s.register.toLowerCase()] ?? s.register)}</span>` : ''}${
           s.usage_notes ? `<div class="usage">${esc(s.usage_notes)}</div>` : ''}${
           s.example_en ? `<div class="ex">${linkText(s.example_en, entry.discoverable, entry.lemma)}<em> ${esc(s.example_zh || '')}</em></div>` : ''}${
