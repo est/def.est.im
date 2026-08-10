@@ -88,7 +88,6 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 .section h2 + .list { margin-top: 8px; }
 
 /* 释义列表 */
-.list { margin-top: 10px; }
 .list li { list-style: none; padding: 7px 0; font-size: 15px; line-height: 1.5; }
 .list li .zh { color: var(--muted); font-size: 13.5px; }
 .list li .ex { font-size: 13.5px; color: #333; margin-top: 2px; }
