@@ -26,34 +26,48 @@ ${params.inner}
     if (e.key === 'Enter' && this.value.trim()) location.href = '/' + encodeURIComponent(this.value.trim());
   });
 
-  // Cmd/Ctrl 按下 → 释义内 span.term 变成可点击 a，松开变回来
+  // Cmd/Ctrl 按住 → 仅光标下单词变链接+虚线；光标移动切换；松开恢复
   var mod = false;
-  function setMod(on) {
-    if (on === mod) return;
-    mod = on;
-    document.body.classList.toggle('mod', on); // 控制 CSS：body.mod a.term 显虚线
-    var sel = on ? 'span.term[data-word]' : 'a.term[data-word]';
-    document.querySelectorAll(sel).forEach(function (el) {
-      if (on) {
-        var a = document.createElement('a');
-        a.className = 'term';
-        var w = el.getAttribute('data-word');
-        a.setAttribute('data-word', w); // 保留 data-word，松开时才能查回来
-        a.href = w;
-        a.textContent = el.textContent;
-        el.replaceWith(a);
-      } else {
-        var s = document.createElement('span');
-        s.className = 'term';
-        s.setAttribute('data-word', el.getAttribute('data-word'));
-        s.textContent = el.textContent;
-        el.replaceWith(s);
-      }
-    });
+  var activeA = null;
+  function clearActive() {
+    if (!activeA) return;
+    var s = document.createElement('span');
+    s.className = 'term';
+    s.setAttribute('data-word', activeA.getAttribute('data-word'));
+    s.textContent = activeA.textContent;
+    activeA.replaceWith(s);
+    activeA = null;
   }
-  document.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey)) setMod(true); });
-  document.addEventListener('keyup', function (e) { if (!e.metaKey && !e.ctrlKey) setMod(false); });
-  window.addEventListener('blur', function () { setMod(false); });
+  function setActive(el) {
+    if (!el || !el.hasAttribute('data-word')) { clearActive(); return; }
+    var a = el.tagName === 'A' ? el : null;
+    if (a === activeA) return;
+    clearActive();
+    if (a) { activeA = a; return; } // 已是链接
+    a = document.createElement('a');
+    a.className = 'term';
+    a.setAttribute('data-word', el.getAttribute('data-word'));
+    a.href = el.getAttribute('data-word');
+    a.textContent = el.textContent;
+    el.replaceWith(a);
+    activeA = a;
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey) {
+      if (!mod) { mod = true; document.body.classList.add('mod'); }
+    }
+  });
+  document.addEventListener('keyup', function (e) {
+    if (!e.metaKey && !e.ctrlKey && mod) { mod = false; document.body.classList.remove('mod'); clearActive(); }
+  });
+  window.addEventListener('blur', function () { if (mod) { mod = false; document.body.classList.remove('mod'); clearActive(); } });
+
+  // 按住时跟随光标：把鼠标下的 span.term[data-word] 换成链接
+  document.addEventListener('mousemove', function (e) {
+    if (!mod) return;
+    var el = e.target && e.target.closest ? e.target.closest('[data-word]') : null;
+    setActive(el);
+  }, { passive: true });
 
   // Cmd/Ctrl 点击任何 <a> → 正常跳转（不被 SPA 拦截）
   document.addEventListener('click', function (e) {
