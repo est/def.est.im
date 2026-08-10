@@ -104,6 +104,14 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
   border-left: 2px solid #e5e5e5; padding-left: 8px;
 }
 
+/* 短语/习语词头 pattern */
+.list li .pattern {
+  display: block; font-size: 13px; font-weight: 600; color: var(--seal-ink);
+  margin-bottom: 2px;
+}
+.list li .pattern a { color: inherit; border-bottom: 1px dotted #999; }
+.list li .pattern a:hover { color: var(--fg); }
+
 /* 释义内链接：默认无样式，Cmd/Ctrl 按下时显示波浪下划线 */
 .list a { color: inherit; text-decoration: none; }
 .term { color: inherit; text-decoration: none; }
