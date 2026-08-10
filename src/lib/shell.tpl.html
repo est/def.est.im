@@ -29,8 +29,10 @@ ${params.inner}
   // Cmd/Ctrl 按住 → 仅光标下单词变链接+虚线；光标移动切换；松开恢复
   var mod = false;
   var activeA = null;
+  function log() { console.log.apply(console, ['[term]'].concat([].slice.call(arguments))); }
   function clearActive() {
     if (!activeA) return;
+    log('clearActive:', activeA.getAttribute('data-word'));
     var s = document.createElement('span');
     s.className = 'term';
     s.setAttribute('data-word', activeA.getAttribute('data-word'));
@@ -39,9 +41,10 @@ ${params.inner}
     activeA = null;
   }
   function setActive(el) {
-    if (!el || !el.hasAttribute('data-word')) { clearActive(); return; }
+    if (!el || !el.hasAttribute('data-word')) { log('setActive: none (clear)'); clearActive(); return; }
+    log('setActive:', el.tagName, el.getAttribute('data-word'), 'activeA=', activeA && activeA.getAttribute('data-word'));
     var a = el.tagName === 'A' ? el : null;
-    if (a === activeA) return;
+    if (a && a === activeA) return; // 光标还在同一链接上，跳过
     clearActive();
     if (a) { activeA = a; return; } // 已是链接
     a = document.createElement('a');
@@ -53,19 +56,22 @@ ${params.inner}
     activeA = a;
   }
   document.addEventListener('keydown', function (e) {
+    log('keydown:', e.key, 'meta=', e.metaKey, 'ctrl=', e.ctrlKey);
     if (e.metaKey || e.ctrlKey) {
-      if (!mod) { mod = true; document.body.classList.add('mod'); }
+      if (!mod) { mod = true; document.body.classList.add('mod'); log('MOD ON'); }
     }
   });
   document.addEventListener('keyup', function (e) {
-    if (!e.metaKey && !e.ctrlKey && mod) { mod = false; document.body.classList.remove('mod'); clearActive(); }
+    log('keyup:', e.key, 'meta=', e.metaKey, 'ctrl=', e.ctrlKey);
+    if (!e.metaKey && !e.ctrlKey && mod) { mod = false; document.body.classList.remove('mod'); clearActive(); log('MOD OFF'); }
   });
-  window.addEventListener('blur', function () { if (mod) { mod = false; document.body.classList.remove('mod'); clearActive(); } });
+  window.addEventListener('blur', function () { if (mod) { mod = false; document.body.classList.remove('mod'); clearActive(); log('MOD OFF (blur)'); } });
 
   // 按住时跟随光标：把鼠标下的 span.term[data-word] 换成链接
   document.addEventListener('mousemove', function (e) {
     if (!mod) return;
     var el = e.target && e.target.closest ? e.target.closest('[data-word]') : null;
+    log('mousemove: target=', e.target && e.target.tagName, 'found=', el && (el.tagName + ':' + el.getAttribute('data-word')));
     setActive(el);
   }, { passive: true });
 
