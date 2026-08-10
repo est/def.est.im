@@ -73,13 +73,25 @@ function linkText(text, discoverable, lemma) {
 }
 
 // ---- 右栏分组 ----
+// 词形标签：label 为空时按词形启发式推断，推断不出显示「词形」
+function formLabel(f) {
+  if (f.label) return f.label;
+  const s = String(f.surface).toLowerCase();
+  if (/ing$/.test(s)) return '现在分词';
+  if (/ed$/.test(s)) return '过去式';
+  if (/s$/.test(s)) return '复数';
+  const irregular = { would: '过去式', could: '过去式', should: '过去式', might: '过去式', was: '过去式', were: '过去式', had: '过去式', did: '过去式', went: '过去式', saw: '过去式', made: '过去式' };
+  if (irregular[s]) return irregular[s];
+  return '词形';
+}
 function renderForms(forms, inflectLinked) {
   if (!forms.length) return '';
   const LABEL_CN = { plural: '复数', past: '过去式', past_participle: '过去分词', present_participle: '现在分词', third_person_singular: '第三人称单数', comparative: '比较级', superlative: '最高级' };
   const rows = forms.map((f) => {
     const linked = inflectLinked && inflectLinked.has(String(f.surface).toLowerCase());
     const v = linked ? `<a href="${href(f.surface)}">${esc(f.surface)}</a>` : esc(f.surface);
-    return `<tr><td>${esc(LABEL_CN[f.label] ?? f.label)}</td><td>${v}</td></tr>`;
+    const label = LABEL_CN[f.label] ?? formLabel(f);
+    return `<tr><td>${esc(label)}</td><td>${v}</td></tr>`;
   }).join('');
   return `<div class="section"><h2>词形</h2><table class="forms-table"><tbody>${rows}</tbody></table></div>`;
 }
