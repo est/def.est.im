@@ -134,6 +134,27 @@ async function loadEntry(env, word) {
     }
   }
 
+  // 词形收录检查：inflection surface 是否在 surfaces 表中有记录（无记录则不做链接）
+  const inflectLinked = new Set();
+  const infForms = (groups.inflection || []).map((f) => f.surface);
+  const infUnique = [...new Set(infForms.map((s) => s.toLowerCase()))];
+  const infBatches = [];
+  for (let i = 0; i < infUnique.length; i += 100) {
+    const sliceArr = infUnique.slice(i, i + 100);
+    const marks = sliceArr.map(() => '?').join(',');
+    infBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
+  }
+  if (infBatches.length) {
+    const infResults = await Promise.all(infBatches);
+    const infSet = new Set();
+    for (const res of infResults) {
+      for (const r of res.results || []) infSet.add(String(r.surface).toLowerCase());
+    }
+    for (const s of infUnique) {
+      if (infSet.has(s)) inflectLinked.add(s);
+    }
+  }
+
   return {
     type: 'entry',
     entry: {
@@ -156,6 +177,7 @@ async function loadEntry(env, word) {
     groups,
     discoverable,
     phraseLinked,
+    inflectLinked,
   };
 }
 

@@ -73,10 +73,14 @@ function linkText(text, discoverable, lemma) {
 }
 
 // ---- 右栏分组 ----
-function renderForms(forms) {
+function renderForms(forms, inflectLinked) {
   if (!forms.length) return '';
   const LABEL_CN = { plural: '复数', past: '过去式', past_participle: '过去分词', present_participle: '现在分词', third_person_singular: '第三人称单数', comparative: '比较级', superlative: '最高级' };
-  const rows = forms.map((f) => `<tr><td>${esc(LABEL_CN[f.label] ?? f.label)}</td><td><a href="${href(f.surface)}">${esc(f.surface)}</a></td></tr>`).join('');
+  const rows = forms.map((f) => {
+    const linked = inflectLinked && inflectLinked.has(String(f.surface).toLowerCase());
+    const v = linked ? `<a href="${href(f.surface)}">${esc(f.surface)}</a>` : esc(f.surface);
+    return `<tr><td>${esc(LABEL_CN[f.label] ?? f.label)}</td><td>${v}</td></tr>`;
+  }).join('');
   return `<div class="section"><h2>词形</h2><table class="forms-table"><tbody>${rows}</tbody></table></div>`;
 }
 
@@ -136,15 +140,16 @@ function renderEntry(entry, queryWord) {
       }).join('')}</ol></div>`
     : '';
 
-  const concept = entry.other_notes ? `<div class="section"><div class="concept">${esc(entry.other_notes)}</div></div>` : '';
+  const concept = entry.other_notes ? `<div class="section"><h2>备注</h2><div class="concept">${esc(entry.other_notes)}</div></div>` : '';
   const etym = entry.etymology
     ? `<div class="section"><h2>词源</h2><p class="etym">${esc(entry.etymology)}</p></div>`
-    : (entry.other_notes && !isEntity ? '' : '');
+    : '';
 
-  const colSide = renderForms(g.inflection)
+  const colSide = concept
+    + renderForms(g.inflection, entry.inflectLinked)
     + etym;
 
-  const main = concept + defList;
+  const main = defList;
 
   return `<div class="entry-wrap">
   <div class="word-head">

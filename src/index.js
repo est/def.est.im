@@ -72,7 +72,7 @@ async function renderPage(env, word, reqUrl, request) {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       });
     }
-    const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked }, word);
+    const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked, inflectLinked: r.inflectLinked }, word);
     // P5：ETag 条件请求
     const etag = entryEtag(r.entry, r.senses);
     if (request.headers.get('if-none-match') === etag) {
@@ -146,7 +146,7 @@ async function handlePost(request, env, w) {
     }
     let html, status = 200;
     if (r.type === 'entry') {
-      html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked }, w);
+      html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked, inflectLinked: r.inflectLinked }, w);
     } else if (r.type === 'rejected') {
       html = renderPlaceholder(w, true);
       status = 404;
