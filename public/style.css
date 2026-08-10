@@ -41,13 +41,16 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 /* ====== 词条页 ====== */
 .entry-wrap { padding: 0 32px; }
 
-/* 词头：全宽，三行分开 */
-.word-head { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
-.word-head .word { font-size: 32px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 4px; }
-.word-head .word .cefr { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 8px; vertical-align: baseline; }
-.word-head .word .etag { font-size: 12px; font-weight: 400; color: #888; background: #f2f2f2; border: 1px solid #e0e0e0; border-radius: 3px; padding: 2px 6px; margin-left: 8px; vertical-align: 2px; }
-.word-head .phonetic { font-size: 14px; color: var(--muted); margin-bottom: 2px; word-break: break-all; }
-.word-head .pos { font-size: 13px; color: var(--muted); }
+/* 词头：全宽，一行紧凑（word + IPA + 词性 + 徽章） */
+.word-head {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px;
+  margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+}
+.word-head .word { font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+.word-head .word .cefr { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 8px; vertical-align: baseline; }
+.word-head .word .etag { font-size: 11px; font-weight: 400; color: #888; background: #f2f2f2; border: 1px solid #e0e0e0; border-radius: 3px; padding: 1px 5px; margin-left: 8px; vertical-align: 2px; }
+.word-head .phonetic { font-size: 13px; color: var(--muted); }
+.word-head .pos { font-size: 12.5px; color: var(--muted); }
 
 /* 常用度星级 + tooltip（纯 CSS） */
 .freq {

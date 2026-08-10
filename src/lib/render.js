@@ -104,7 +104,7 @@ function renderEntry(entry, queryWord) {
       })()
     : '';
   const poss = [...new Set(entry.senses.map((s) => s.pos))].map((p) => POS_CN[p] ?? p).join(' · ');
-  const cefrBadge = entry.cefr ? `<span class="cefr">${esc(entry.cefr)}</span>` : '';
+  const cefrBadge = entry.cefr ? `<span class="cefr">分级 ${esc(entry.cefr)}</span>` : '';
   const freqBadgeOut = freqBadge(entry.freq);
   const entityTag = isEntity ? '<span class="etag">名字/实体</span>' : '';
 
