@@ -36,13 +36,15 @@ ${params.inner}
       if (on) {
         var a = document.createElement('a');
         a.className = 'term';
-        a.href = el.getAttribute('data-word');
+        var w = el.getAttribute('data-word');
+        a.setAttribute('data-word', w); // 保留 data-word，松开时才能查回来
+        a.href = w;
         a.textContent = el.textContent;
         el.replaceWith(a);
       } else {
         var s = document.createElement('span');
         s.className = 'term';
-        s.setAttribute('data-word', el.getAttribute('href'));
+        s.setAttribute('data-word', el.getAttribute('data-word'));
         s.textContent = el.textContent;
         el.replaceWith(s);
       }
