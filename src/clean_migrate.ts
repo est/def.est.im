@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS words (
   cefr TEXT, cefr_score REAL, freq INTEGER,
   phonetic_uk TEXT, phonetic_us TEXT,
   other_notes TEXT,
+  etymology TEXT,
   status TEXT NOT NULL DEFAULT 'draft',
   model TEXT, raw_yaml TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

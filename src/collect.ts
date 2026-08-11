@@ -47,11 +47,13 @@ import { findUncovered } from "./closure.ts";
 import { loadCefr, loadFamilyFreq, loadLemmaLinks } from "./cefrList.ts";
 import { loadEnv } from "./env.ts";
 
-const env = loadEnv();
+// 支持 --env 指定 env 文件（如 --env .env.dev2），默认 .env.dev
+const envFile = arg("env") ?? ".env.dev";
+const env = loadEnv(envFile);
 const API_ENTRY = env.API_ENTRY;
 const API_TOKEN = env.API_TOKEN;
 if (!API_ENTRY || !API_TOKEN) {
-  console.error("缺少 API_ENTRY / API_TOKEN（检查项目根 .env.dev）");
+  console.error(`缺少 API_ENTRY / API_TOKEN（检查项目根 ${envFile}）`);
   process.exit(1);
 }
 

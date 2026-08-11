@@ -38,17 +38,22 @@ if (!existsSync(CEFR_DB)) throw new Error(`找不到 ${CEFR_DB}`);
 const dict = new Database(DICT_DB, { readonly: true });
 const list = new Database(CEFR_DB, { readonly: true });
 
-// 词表 lemma 链接：表面 → 原形（屈折归原，backfill/collect 同款逻辑）
+// 词表 lemma 链接：表面 → 原形（屈折归原，backfill/collect 同款逻辑）。
+// 只采纳真屈折 tag 的链接（NNS/VBD/VBG/VBZ/VBN/JJR/JJS/RBR/RBS）；
+// 词表存在噪声链（interest→inter 为 JJ 形容词，实为 inter- 前缀分析），
+// 非屈折 tag 一律忽略，避免核心词被错误归并吞掉
+const INFLECT_TAGS = new Set(["NNS", "VBD", "VBG", "VBZ", "VBN", "JJR", "JJS", "RBR", "RBS"]);
 const lemmaOf = new Map<string, string>();
 for (const r of list.query(`
-  SELECT w.word AS surface, l.word AS lemma
+  SELECT w.word AS surface, l.word AS lemma, t.tag AS tag
   FROM word_pos p
   JOIN words w ON w.word_id = p.word_id
   JOIN words l ON l.word_id = p.lemma_word_id
+  JOIN pos_tags t ON t.tag_id = p.pos_tag_id
   WHERE p.lemma_word_id IS NOT NULL`).all() as any[]) {
   const surface = String(r.surface).toLowerCase();
   const lemma = String(r.lemma).toLowerCase();
-  if (surface !== lemma) lemmaOf.set(surface, lemma);
+  if (surface !== lemma && INFLECT_TAGS.has(r.tag)) lemmaOf.set(surface, lemma);
 }
 
 // 词表全量集合
@@ -57,6 +62,15 @@ for (const r of list.query("SELECT word FROM words").all() as any[]) inList.add(
 // 权威等级：仅 word_pos 有行的词才算「有权威证据」（防词表噪声链接，如 a→um）
 const hasLevel = new Set<string>();
 for (const r of list.query("SELECT DISTINCT w.word FROM word_pos p JOIN words w ON w.word_id=p.word_id").all() as any[]) hasLevel.add(String(r.word).toLowerCase());
+// 词频表：word → 家族最高词频（判定高频多义词性词是否保留独立词条）
+const cefrFreq = new Map<string, number>();
+for (const r of list.query(`
+  SELECT COALESCE(l.word, w.word) AS lemma, MAX(p.frequency_count) AS f
+  FROM word_pos p JOIN words w ON w.word_id = p.word_id
+  LEFT JOIN words l ON l.word_id = p.lemma_word_id
+  GROUP BY lemma`).all() as any[]) {
+  cefrFreq.set(String(r.lemma).toLowerCase(), r.f);
+}
 list.close();
 
 // 统计辅助
@@ -92,11 +106,16 @@ for (const r of dict.query("SELECT id, lemma FROM words WHERE variant=0").all() 
   if (lemma && lemma !== lower && lemma.length >= 3 && hasLevel.has(lemma)) {
     // 词表归原 ≠ 自身，且目标有权威证据 → 屈折形式，归并到原形。
     // 防线：目标长度≥3（滤 a→um 类单双字母噪声链）；目标有权威等级（滤无 level 的壳词）。
-    // 目标在原库无词条时保留本词（notes 标 inflection_orphan），Step 3 不归并，
-    // 等 on-demand 生成原形词条后再归并。
-    tag = "inflection";
-    target = lemma;
-    if (!inDict.has(lemma)) notes.push("inflection_orphan"); // 原形无词条：保留本词待 on-demand
+    // 高频多义词性词（meaning/building/learning 等分词兼名词，词频≥1e7）几乎都是独立常用词，
+    // 词表的 -ing 链接只是 POS 分析结果，归并会把核心词吞掉 → 无条件保留为独立词条
+    const freq = cefrFreq.get(lower) ?? 0;
+    if (freq >= 1e7) {
+      tag = "keep";
+    } else {
+      tag = "inflection";
+      target = lemma;
+      if (!inDict.has(lemma)) notes.push("inflection_orphan"); // 原形无词条：保留本词待 on-demand
+    }
   } else if (w.includes("'")) {
     tag = "apostrophe";
   } else if (w.length === 1 && !["a", "i"].includes(w)) {

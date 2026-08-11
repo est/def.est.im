@@ -77,9 +77,12 @@ export function loadLemmaLinks(dbPath: string): {
     const lemma = String(r.lemma).toLowerCase();
     const surface = String(r.surface).toLowerCase();
     if (surface === lemma) continue;
-    lemmaOf.set(surface, lemma);
+    // 只采纳真屈折 tag（NNS/VBD/VBG/VBZ/VBN/JJR/JJS/RBR/RBS）的链接。
+    // 词表存在噪声链（interest→inter 是 JJ 形容词，实为 inter- 前缀分析，
+    // 会吞掉核心词）；只有屈折 tag 才建立"形式→原形"映射
     const label = TAG_TO_LABEL[r.tag];
     if (!label) continue;
+    lemmaOf.set(surface, lemma);
     if (!formsOf.has(lemma)) formsOf.set(lemma, []);
     const arr = formsOf.get(lemma)!;
     if (!arr.some((f) => f.surface === surface && f.label === label)) arr.push({ surface, label });
