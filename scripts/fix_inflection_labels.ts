@@ -1,5 +1,5 @@
 // 修复 inflection 空 label：规则+反查推断后写回数据库
-// 用法: bun run src/fix_inflection_labels.ts [db路径]
+// 用法: bun run scripts/fix_inflection_labels.ts [db路径]
 // 推断优先级：同词同面已标 → 全库同面已标 → 后缀规则 → 兜底 null
 import Database from 'bun:sqlite';
 

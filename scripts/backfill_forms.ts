@@ -11,8 +11,8 @@
 //   防御② 推断出的 surface 已是别词条或已有 surface → 跳过该形式
 //
 // 用法：
-//   bun run src/backfill_forms.ts            # dry-run：只看能补多少
-//   bun run src/backfill_forms.ts --apply      # 写入 dict_clean.db（surfaces）
+//   bun run scripts/backfill_forms.ts            # dry-run：只看能补多少
+//   bun run scripts/backfill_forms.ts --apply      # 写入 dict_clean.db（surfaces）
 // ============================================================
 import { join } from "node:path";
 import { Database } from "bun:sqlite";

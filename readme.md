@@ -26,23 +26,26 @@ ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英
 
 目前约：
 
-- 36,326 词条
-- 60,280 义项
-- 267,834 surfaces
+- 44,916 词条
+- 72,289 义项
+- 308,438 surfaces
+
+（线上 D1 同量级；另有 on-demand 生成实时补词）
 
 ## ToDo
 
 - [X] 批量采集：BFS 遍历 + 三层防垃圾（词频门槛 / 词表归原 / AI 批量过滤），62,000 词收尾
 - [X] 数据清洗迁移：分类打标不硬删 → dict_clean.db（surfaces 一表通吃检索）
 - [X] 数据上线：D1 精简 schema 导入（word_id 主键 + 组合主键 surfaces）
-- [X] 词源抽取：other_notes 中模型写的词源/趣闻拆出 etymology（557 词）
+- [X] 词源抽取：other_notes 中模型写的词源/趣闻拆出 etymology（脚本在 `scripts/extract_etymology.ts`，覆盖意义不大，线上未启用）
 - [X] Workers SSR 词条页：URL 即词条 + 静态 assets 分流
 - [X] on-demand 生成：占位页 + 异步回填 + rejects 黑名单 404
 - [X] 客户端渐进增强：fragment 局部替换 + pushState/后退恢复
 - [x] 8243 个小中高大学用词（旧 .dict_json，已退役）
 - [x] alpinejs 练手（旧版页面，已退役）
 - [x] 调通 openrouter/CORS/SSE 流式契约
-- [ ] 部署上线：`wrangler deploy` + LLM_* secrets（未执行）
+- [x] 部署上线：`wrangler deploy` + LLM_* secrets（LLM_TOKEN secret + LLM_API/LLM_MODEL vars）
+- [x] AI 存活探测：`GET /_ai/probe`（Q:PING? → PONG，验证 LLM 通路）
 - [ ] 错误拼写跳转；大小写/缩写/美英差异归一化（跳转表）
 - [ ] 词族归一：postdoc/post-doc/postdoctoral → surfaces(kind=spelling)
 - [ ] 名字/地名/乐队查询：on-demand 名字专属 prompt（谐音坑/词源/性别倾向）
@@ -67,6 +70,9 @@ bun run src/export_d1.ts                       # 导出 D1 SQL（重建线上库
 wrangler dev                                   # 本地开发（连本地 D1 引擎）
 wrangler deploy                                # 部署
 ```
+
+一次性/临时脚本在 `scripts/`（backfill、backfill_forms、extract_etymology、
+fix_inflection_labels、gen_d1_schema），均已移出 src/，用法见各文件头部。
 
 ## Credits
 

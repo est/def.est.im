@@ -1,5 +1,5 @@
 -- def.est.im D1 schema（由 src/export_d1.ts 的 SCHEMA 自动生成，勿手改）
--- 重新生成: bun run src/gen_d1_schema.ts
+-- 重新生成: bun run scripts/gen_d1_schema.ts
 
 -- def.est.im D1 schema（精简版，learner 视角反推）
 PRAGMA foreign_keys = ON;

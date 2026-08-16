@@ -6,8 +6,8 @@
 // 判定：句子同时含【词源信号词】+【语言/古典来源词】。
 //
 // 用法：
-//   bun run src/extract_etymology.ts          # dry-run（统计+样例）
-//   bun run src/extract_etymology.ts --apply  # 写入 dict_clean.db words.etymology
+//   bun run scripts/extract_etymology.ts          # dry-run（统计+样例）
+//   bun run scripts/extract_etymology.ts --apply  # 写入 dict_clean.db words.etymology
 // ============================================================
 import { join } from "node:path";
 import { Database } from "bun:sqlite";

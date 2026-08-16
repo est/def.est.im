@@ -8,12 +8,12 @@
 //       VBN→past_participle、JJR/JJS/RBR/RBS→比较级/最高级）
 //   3. （可选 --prune）清理 terms 里与权威词表无关的冗余？—— 不做，保持简单
 //
-// 用法：bun run src/backfill.ts
+// 用法：bun run scripts/backfill.ts
 // 注意：请在采集器停止时运行（避免并发写 dict.db）
 // ============================================================
 import { join } from "node:path";
 import { Database } from "bun:sqlite";
-import { createDb } from "./schema.ts";
+import { createDb } from "../src/schema.ts";
 
 const DIR = import.meta.dir;
 const DATA_DIR = process.env.COLLECT_DATA_DIR ?? join(DIR, "..", "data");
