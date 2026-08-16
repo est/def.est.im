@@ -1,6 +1,21 @@
 // 查询组装：surface 命中 → 主词判定 → 数据组装（senses/surfaces 分组 + 可点词集合）
 'use strict';
 import { tokensOf } from './render.js';
+import { suggestCandidates } from './suggest.js';
+
+// 拼写归一跳转：未命中时生成候选拼写，命中 surfaces 则 302（错误拼写不再触发 on-demand 烧 LLM）
+async function suggestRedirect(d1, low) {
+  const cands = suggestCandidates(low);
+  if (!cands.length) return null;
+  const marks = cands.map(() => '?').join(',');
+  const hits = await d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...cands).all();
+  const hitSet = new Set((hits.results || []).map((r) => String(r.surface).toLowerCase()));
+  // 按候选优先级（常见表 > 美英规则 > 换位）取第一个命中，不依赖查询返回顺序
+  for (const c of cands) {
+    if (hitSet.has(c)) return { lemma: c, highlight: low };
+  }
+  return null;
+}
 
 async function loadEntry(env, word) {
   const d1 = env.def_dict;
@@ -11,7 +26,10 @@ async function loadEntry(env, word) {
   const rows = hits.results || [];
   if (rows.length === 0) {
     const rej = await d1.prepare('SELECT 1 FROM rejects WHERE surface = ?').bind(low).first();
-    return rej ? { type: 'rejected' } : { type: 'missing' };
+    if (rej) return { type: 'rejected' };
+    const cand = await suggestRedirect(d1, low);
+    if (cand) return { type: 'redirect', lemma: cand.lemma, highlight: cand.highlight };
+    return { type: 'missing' };
   }
   // 主词判定：surface 恰为自己的 lemma 行（正主词）优先；
   // 无 lemma 行时：若该表面是某词条 phrase/idiom 义项的 pattern（run into → run），指向它；
