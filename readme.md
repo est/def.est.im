@@ -46,12 +46,12 @@ ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英
 - [x] 调通 openrouter/CORS/SSE 流式契约
 - [x] 部署上线：`wrangler deploy` + LLM_* secrets（LLM_TOKEN secret + LLM_API/LLM_MODEL vars）
 - [x] AI 存活探测：`GET /_ai/probe`（Q:PING? → PONG，验证 LLM 通路）
-- [ ] 错误拼写跳转；大小写/缩写/美英差异归一化（跳转表）
-- [ ] 词族归一：postdoc/post-doc/postdoctoral → surfaces(kind=spelling)
+- [ ] 错误拼写跳转；大小写/缩写/美英差异归一化（跳转表）（拼写跳转已做 08-16）
+- [ ] 词族归一：postdoc/post-doc/postdoctoral → surfaces(kind=spelling)（连字符变体首批已做）
 - [ ] 名字/地名/乐队查询：on-demand 名字专属 prompt（谐音坑/词源/性别倾向）
-- [ ] register 规范化（受控词表）与覆盖提升
+- [ ] register 规范化（受控词表）与覆盖提升（现 27.4%）
 - [ ] 限流，防止 API 爆掉
-- [ ] **采集 bug：词频门槛误杀整族**。`enqueue()` 用原形自身 freq 判定 `SEED_FREQ_MIN=1e6`，但屈折形式词频可能更高（encapsulated 1.9M / encapsulate 527k → 整族不采）。已确认 919 个 lemma 因此缺失。修复：门槛改用家族 max freq（`formsOf` 全族扫描），或改排序不跳过。补采需评估 API 成本
+- [x] ~~**采集 bug：词频门槛误杀整族**~~（08-16 补采 94 词；根因=rejects 误拒+visited 残留，非门槛）
 - [ ] 词形 label 数据缺口：1542 条 null 已修复 1021，剩 521 为词表噪声（人名/派生词误标 inflection），渲染兜底「词形」；情态动词过去式（would/could/should/might）词表无标注，渲染靠规则推断
 - [ ] OpenSearch / tab-to-search
 - [ ] 义项级 CEFR（词表每词性 level 预计算）
