@@ -79,7 +79,8 @@ const q = (v: unknown): string => {
   if (v === null || v === undefined) return "NULL";
   const s = String(v);
   if (s === "") return "NULL";
-  return "'" + s.replace(/'/g, "''") + "'";
+  // 单引号翻倍 + 换行/回车转 \n 字面量（线上 D1 解析器对跨行字符串严格）
+  return "'" + s.replace(/'/g, "''").replace(/\r\n/g, "\\n").replace(/\n/g, "\\n").replace(/\r/g, "\\n") + "'";
 };
 
 // ---------- 分批写：4 个文件，每文件 ≤ ~95k 行（免费写额度 100k/天） ----------

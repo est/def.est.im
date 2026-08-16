@@ -5,6 +5,7 @@
 import { renderEntry, renderPlaceholder, renderIndex, shell, esc } from './lib/render.js';
 import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
+import { probeAi } from './lib/probe.js';
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -35,6 +36,14 @@ export default {
       const w = (url.searchParams.get('w') || '').trim();
       if (!w) return json({ error: 'no word' }, 400);
       return handlePost(request, env, w);
+    }
+
+    // GET /_ai/probe：AI 存活探测（Q:PING? → A:___）
+    if (request.method === 'GET' && path === '/_ai/probe') {
+      const r = await probeAi(env);
+      const resp = json(r, r.ok ? 200 : 503);
+      resp.headers.set('cache-control', 'no-store');
+      return resp;
     }
 
     // GET /<word>：SSR 词条页
