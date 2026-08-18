@@ -104,6 +104,7 @@ body { background: var(--bg); color: var(--fg); padding: 56px 0 48px; max-width:
 .list li .usage {
   font-size: 12.5px; color: #777; line-height: 1.6; margin-top: 4px;
   border-left: 2px solid #e5e5e5; padding-left: 8px;
+  white-space: pre-wrap; /* 数据中还原的真实换行在此显示 */
 }
 
 /* 短语/习语词头 pattern（与词性徽章同行） */
@@ -150,7 +151,7 @@ body.mod a.term:hover { text-decoration-color: var(--fg); }
 .phr a:hover { color: var(--fg); border-bottom-color: var(--fg); }
 
 /* 核心概念 */
-.concept { font-size: 14px; color: #333; line-height: 1.7; }
+.concept { font-size: 14px; color: #333; line-height: 1.7; white-space: pre-wrap; }
 .concept b { font-weight: 600; }
 
 /* ====== 词形紧凑表格 ====== */
@@ -176,7 +177,7 @@ body.mod a.term:hover { text-decoration-color: var(--fg); }
 .coll .w { color: var(--muted); font-size: 13px; }
 
 /* 词源 */
-.etym { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+.etym { font-size: 13.5px; color: var(--muted); line-height: 1.7; white-space: pre-wrap; }
 
 /* ====== 移动端 ====== */
 @media (max-width: 767px) {

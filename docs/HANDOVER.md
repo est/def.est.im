@@ -151,6 +151,30 @@ npx wrangler d1 execute def-dict --remote --command "SELECT 'words',COUNT(*) FRO
 3. **nohup 引号 bug**：`nohup bash -c "... --seed $SEEDS ..."` 外层展开后内层 bash 把 97 词按空格拆成独立参数，`--seed` 只取到第一个词。必须 `--seed \"$SEEDS\"`（内层引号保整串）。
 4. **autoAudit 关时队列空即退出**：主循环 `if (totalQueued()===0 && inFlight===0) { if (argMaxCefr!==undefined || !autoAudit) break; }`——队列空立即 break，不等挂起词过滤入桶。补采 seed 时若大部分词挂起等 AI 过滤，本轮会提前结束，需再跑一轮处理 unknown 桶。
 
+### 08-16 第二轮：数据质量四项（已上线）
+
+- **词形 label 全修复**：`fix_inflection_labels.ts` 跑通（多数票+后缀规则），538 个 NULL → **0**
+- **重复义项清理**：同词同 pos 同 def_en 的真重复仅 2 对（frost/ring），已删 + sense_no 重排
+- **高频词例句补全**：`scripts/backfill_examples.ts`（新写）为 freq≥1M 缺例句的 1,257 词补 **1,386 个例句**（只补缺的，保留已有；断点 examples.live.json）。剩余高频缺例句仅 2（anorexia/beveridge 超时）
+- **register 规范化**：`scripts/normalize_register.ts`（新写）取值 367 → **130**（收敛到 REGISTER_CN 19 白名单 + US/UK/euphemistic/polite/figurative 保留值；组合值取主标签、程度词前缀剥离、领域词归 technical、噪声置 NULL、罕见值保守保留原文）
+- 例句缺失（全部）2,033 → **642**；register 覆盖 27.4%→27.2%（规范化后 slightly 降，语义更准）
+
+### 08-17/18 第三轮：词源/备注批量补全(已上线)
+
+- **目标**:freq≥1M 的 25,816 词,补 etymology(词源/助记)+ other_notes(词级备注)+ **补漏义项**(常见漏释义/短语/习语/当代流行用法)
+- **脚本** `scripts/backfill_missing.ts`(新写):**YAML 交互**(docs/ai-dictionary-schema.md 约定:block 风格/无围栏/idiom 带 pattern);输入摘取式摘要(不呈完整 YAML,前缀缓存友好);max_tokens 8000 + 5 次重试;断点 `data/missing.live.json`
+- **词源防幻觉**:prompt 硬约束"不确定写 unknown,绝不编造";脚本对 unknown 保持空值不写库
+- **结果**(已上线):词源覆盖 10.2%→**43.8%**(freq≥1M 内 69.4%);备注 41.3%→**61%**(freq≥1M 内 75.7%);**新增义项 23,885 条**(senses 77,692→101,577;in 补 be in for it/have it in for sb 等当代习语)
+- 前置零成本:extract_etymology --apply 抽 790 条
+- 剩余:~520 词失败(多为 YAML 解析失败,重跑 backfill_missing 自动重试);freq<1M 低频词词源未补(占位,可 on-demand 或后续 --min-freq 100000 批次)
+
+### 08-18 第四轮：字面 `\n` 还原(线上/本地)
+
+- **现象**:线上页面显示字面 `\n` 文本——导出 q() 按坑 #3 约定把真实换行转成字面 `\n` 存 D1(防 SQL 跨行),渲染层未还原
+- **处理**:线上 D1 全字段 `\n`(两字符)→ 真实换行 char(10)(words.other_notes 12,858 条/etymology、senses.usage_notes 8,909 等);本地 miniflare D1 同步;dict_clean 真实换行保留(正常),清 1 行字面残留
+- **前端**:`public/style.css` 给 `.usage`/`.concept`/`.etym` 加 `white-space: pre-wrap`,真实换行正确显示;已部署
+- **注意**:未来全量重建导出(export_d1.ts q() 仍转 `\n` 字面)会复发——届时需同步还原或改渲染层
+
 ## 九、历史改动（2026-08 关键 commit）
 
 - `24dfb8b` 脚本归位 + HANDOVER 更新（其后：回填/增量 v3 尚未 commit）
