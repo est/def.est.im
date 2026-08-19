@@ -17,3 +17,18 @@ database_id = "b00dc587-1c70-48ff-9976-3c9895d86830"
 type = "Text"
 globs = ["./src/lib/shell.tpl.html"]
 fallthrough = true
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
