@@ -54,12 +54,18 @@ async function loadEntry(env, word) {
     }
   }
 
-  // 2. 主词排序：entity_type 0 优先 → freq 降序（批量 IN 查询，避免 N+1）
+  // 2. 主词排序：entity_type 0 优先 → freq 降序（批量 IN 查询，避免 N+1；分批 ≤90 避开 D1 绑定变量上限）
   let metas = [];
   if (ids.length) {
-    const marks = ids.map(() => '?').join(',');
-    const allWords = await d1.prepare(`SELECT * FROM words WHERE word_id IN (${marks})`).bind(...ids).all();
-    metas = (allWords.results || []).filter(Boolean);
+    const chunk = 90;
+    const batches = [];
+    for (let i = 0; i < ids.length; i += chunk) {
+      const slice = ids.slice(i, i + chunk);
+      const marks = slice.map(() => '?').join(',');
+      batches.push(d1.prepare(`SELECT * FROM words WHERE word_id IN (${marks})`).bind(...slice).all());
+    }
+    const results = await Promise.all(batches);
+    metas = results.flatMap((r) => r.results || []).filter(Boolean);
   }
   metas.sort((a, b) => (a.entity_type === 0 ? 0 : 1) - (b.entity_type === 0 ? 0 : 1)
     || (b.freq ?? -1) - (a.freq ?? -1));
@@ -88,10 +94,16 @@ async function loadEntry(env, word) {
     if (!reverseMap.has(r.word_id)) reverseMap.set(r.word_id, r);
   }
   if (reverseIds.length) {
-    const wordRows = await d1.prepare(
-      `SELECT word_id, lemma FROM words WHERE word_id IN (${reverseIds.map(() => '?').join(',')})`
-    ).bind(...reverseIds).all();
-    for (const w of wordRows.results || []) {
+    const chunk = 90;
+    const wordBatches = [];
+    for (let i = 0; i < reverseIds.length; i += chunk) {
+      const slice = reverseIds.slice(i, i + chunk);
+      const marks = slice.map(() => '?').join(',');
+      wordBatches.push(d1.prepare(`SELECT word_id, lemma FROM words WHERE word_id IN (${marks})`).bind(...slice).all());
+    }
+    const wordResults = await Promise.all(wordBatches);
+    const wordRowsAll = wordResults.flatMap((r) => r.results || []);
+    for (const w of wordRowsAll) {
       const r = reverseMap.get(w.word_id);
       if (!r) continue;
       const revKind = flipped[r.kind];
@@ -113,8 +125,8 @@ async function loadEntry(env, word) {
   const discoverable = new Set();
   const arr = [...tokens];
   const discBatches = [];
-  for (let i = 0; i < arr.length; i += 100) {
-    const sliceArr = arr.slice(i, i + 100);
+  for (let i = 0; i < arr.length; i += 90) {
+    const sliceArr = arr.slice(i, i + 90);
     const marks = sliceArr.map(() => '?').join(',');
     discBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
   }
@@ -136,8 +148,8 @@ async function loadEntry(env, word) {
     if (p && !phrasePatterns.includes(p)) phrasePatterns.push(p);
   }
   const plBatches = [];
-  for (let i = 0; i < phrasePatterns.length; i += 100) {
-    const sliceArr = phrasePatterns.slice(i, i + 100);
+  for (let i = 0; i < phrasePatterns.length; i += 90) {
+    const sliceArr = phrasePatterns.slice(i, i + 90);
     const marks = sliceArr.map(() => '?').join(',');
     plBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
   }
@@ -157,8 +169,8 @@ async function loadEntry(env, word) {
   const infForms = (groups.inflection || []).map((f) => f.surface);
   const infUnique = [...new Set(infForms.map((s) => s.toLowerCase()))];
   const infBatches = [];
-  for (let i = 0; i < infUnique.length; i += 100) {
-    const sliceArr = infUnique.slice(i, i + 100);
+  for (let i = 0; i < infUnique.length; i += 90) {
+    const sliceArr = infUnique.slice(i, i + 90);
     const marks = sliceArr.map(() => '?').join(',');
     infBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks}) AND kind = 'lemma'`).bind(...sliceArr).all());
   }
