@@ -40,6 +40,13 @@ const esc = (s) =>
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const href = (word) => '/' + encodeURIComponent(word);
+const hrefWords = (phrase) => {
+  const t = String(phrase).trim();
+  if (!t) return '';
+  const parts = t.split(/\s+/);
+  if (parts.length <= 1) return `<a href="${href(t)}">${esc(t)}</a>`;
+  return parts.map((w) => `<a href="${href(w)}">${esc(w)}</a>`).join(' ');
+};
 
 // 文本 token 化（与 collect 同规则：小写、's 剥离、撇号剔除、字母开头）
 const tokenRe = /[a-zA-Z][a-zA-Z'-]*/g;
@@ -131,9 +138,9 @@ function renderEntry(entry, queryWord) {
     const col = (g.collocation || []).filter((r) => r.sense_id === senseId);
     if (!syn.length && !ant.length && !col.length) return '';
     const parts = [];
-    if (syn.length) parts.push(`<span class="sl-sym">≈</span> ` + syn.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
-    if (ant.length) parts.push(`<span class="sl-sym">☍</span> ` + ant.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
-    if (col.length) parts.push(`<span class="sl-sym">⋈</span> ` + col.map((r) => `<a href="${href(r.surface)}">${esc(r.surface)}</a>`).join(', '));
+    if (syn.length) parts.push(`<span class="sl-sym">≈</span> ` + syn.map((r) => hrefWords(r.surface)).join(', '));
+    if (ant.length) parts.push(`<span class="sl-sym">☍</span> ` + ant.map((r) => hrefWords(r.surface)).join(', '));
+    if (col.length) parts.push(`<span class="sl-sym">⋈</span> ` + col.map((r) => hrefWords(r.surface)).join(', '));
     return `<div class="sense-links">${parts.join('　')}</div>`;
   };
   const defList = senses.length
@@ -145,7 +152,7 @@ function renderEntry(entry, queryWord) {
         const posBadge = `<span class="pos-badge">${esc(POS_CN[s.pos] ?? s.pos)}</span>`;
         const head = isPhrNow && s.pattern
           ? (entry.phraseLinked && entry.phraseLinked.has(cleanPattern(s.pattern))
-              ? `<span class="pattern"><a href="${href(s.pattern)}">${esc(s.pattern)}</a></span>`
+              ? `<span class="pattern">${hrefWords(s.pattern)}</span>`
               : `<span class="pattern">${esc(s.pattern)}</span>`)
           : '';
         // 短语项：徽章+pattern 一行，释义换行；普通义徽章与释义同行
