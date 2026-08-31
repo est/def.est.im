@@ -12,21 +12,20 @@ export function isAbnormal(request, word) {
   if (secFetchSite === 'none' && referer.startsWith('https://def.est.im/')) {
     return { abnormal: true, reason: 'sec-fetch-site-none-with-referer' };
   }
-  // 2. 已验证 AI 爬虫（Free 可用）
-  if (verified && verified.includes('AI')) {
-    return { abnormal: true, reason: `verified-ai:${verified}` };
-  }
+  // 2. 已验证 AI 爬虫（Free 可用）—— 暂时注释，按需求保留放行
+  // if (verified && verified.includes('AI')) {
+  //   return { abnormal: true, reason: `verified-ai:${verified}` };
+  // }
   // 3. 非法/超长词（枚举攻击）
   if (word && (word.length > 80 || word.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(word))) {
     return { abnormal: true, reason: 'illegal-word' };
   }
-  // 4. 未验证但 UA 含已知 AI 爬虫（兜底）
-  if (/GPTBot|OAI-SearchBot|ClaudeBot|PerplexityBot|Bytespider|Applebot-Extended|CCBot|cohere-ai|SemrushBot|DotBot/i.test(ua)) {
-    // 已验证的 Search Engine Crawler 放行，其余拦
-    if (!verified || !verified.includes('Search Engine')) {
-      return { abnormal: true, reason: `ua-ai:${ua.slice(0,40)}` };
-    }
-  }
+  // 4. 未验证但 UA 含已知 AI 爬虫（兜底）—— 暂时注释
+  // if (/GPTBot|OAI-SearchBot|ClaudeBot|PerplexityBot|Bytespider|Applebot-Extended|CCBot|cohere-ai|SemrushBot|DotBot/i.test(ua)) {
+  //   if (!verified || !verified.includes('Search Engine')) {
+  //     return { abnormal: true, reason: `ua-ai:${ua.slice(0,40)}` };
+  //   }
+  // }
   return { abnormal: false };
 }
 
