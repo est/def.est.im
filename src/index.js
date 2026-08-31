@@ -6,6 +6,7 @@ import { renderEntry, renderPlaceholder, renderIndex, shell, esc } from './lib/r
 import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
 import { probeAi } from './lib/probe.js';
+import { isAbnormal, tarpit } from './lib/abnormal.js';
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -82,12 +83,14 @@ export default {
       return resp;
     }
 
-    // GET /<word>：SSR 词条页
+    // GET /<word>：SSR 词条页（异常请求统一走中间件 tarpit）
     if (request.method === 'GET' && path !== '/') {
       let word;
       try { word = decodeURIComponent(path.slice(1)); } catch { return new Response('Bad Request', { status: 400 }); }
       word = word.trim();
       if (!word) return new Response('Not Found', { status: 404 });
+      const chk = isAbnormal(request, word);
+      if (chk.abnormal) return tarpit(request, env, chk.reason);
       return renderPage(env, word, url, request);
     }
 

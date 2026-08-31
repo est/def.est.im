@@ -13,6 +13,13 @@ binding = "def_dict"
 database_name = "def-dict"
 database_id = "b00dc587-1c70-48ff-9976-3c9895d86830"
 
+[[ratelimits]]
+name = "ABNORMAL_LIMITER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
 [[rules]]
 type = "Text"
 globs = ["./src/lib/shell.tpl.html"]
