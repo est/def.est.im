@@ -109,8 +109,12 @@ function entryEtag(entry, senses) {
 
 // ---- 词条页渲染（命中 / 占位 / 404） ----
 async function renderPage(env, word, reqUrl, request) {
+  const referer = request.headers.get('referer') || request.headers.get('Referer') || '';
+  const ua = request.headers.get('user-agent') || '';
+  const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || '';
   // 非法/超长词直接 404 短缓存（拦截枚举攻击）
   if (word.length > 80 || word.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(word)) {
+    console.log(JSON.stringify({ tag: 'word', word, type: 'illegal', referer, referer_full: referer, ua: ua.slice(0,120), ip }));
     return new Response(shell(word, renderPlaceholder(word, true), word), {
       status: 404,
       headers: {
@@ -122,6 +126,12 @@ async function renderPage(env, word, reqUrl, request) {
     });
   }
   const r = await loadEntry(env, word);
+  // 统一记录完整 referer（Cloudflare 默认日志不含 referer，这里显式打到 Workers 日志）
+  const refererLog = { tag: 'word', word, type: r.type, referer, referer_full: referer, lemma: r.entry?.lemma || r.lemma || '', ua: ua.slice(0,120), ip };
+  // 偏门词找不到且无明确来源 -> 大概率爬虫（按用户启发式）
+  const isBotLike = (r.type === 'rejected' || r.type === 'missing') && (!referer || /^https?:\/\/def\.est\.im\/?$/.test(referer));
+  if (isBotLike) refererLog.bot_like = 1;
+  console.log(JSON.stringify(refererLog));
   if (r.type === 'entry') {
     if (r.entry.entity_type === -1) {
       return new Response(shell(word, renderPlaceholder(word, false), word, null), {
