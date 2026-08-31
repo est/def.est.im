@@ -1,0 +1,11 @@
+```yaml
+word: talk
+phonetic_uk: /tɔːk/
+phonetic_us: /tɔːk/
+entries:
+  - pos: verb
+    def_en: to say things to someone
+    def_zh: 说话，谈话
+    example_en: We talked about the plan for an hour.
+    example_zh: 我们谈了一个小时的计划。
+```

@@ -1,0 +1,9 @@
+word: guess
+entries:
+  - pos: verb
+    def_en: to give an answer without knowing if it is correct
+    def_zh: 猜，猜测
+inflections:
+  - form: past
+    value: guessed
+    sense: 9

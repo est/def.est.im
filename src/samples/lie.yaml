@@ -1,0 +1,32 @@
+word: lie
+cefr: A1
+phonetic_uk: /laɪ/
+phonetic_us: /laɪ/
+entries:
+  - pos: verb
+    def_en: to be in a horizontal position on a surface
+    def_zh: 躺，平卧
+    example_en: He was lying on the beach.
+    example_zh: 他躺在海滩上。
+  - pos: verb
+    def_en: to say something that is not true
+    def_zh: 说谎
+    example_en: She lied about her age.
+    example_zh: 她谎报了年龄。
+inflections:
+  - form: past
+    value: lay
+    sense: 1
+  - form: past_participle
+    value: lain
+    sense: 1
+  - form: present_participle
+    value: lying
+  - form: third_person_singular
+    value: lies
+  - form: past
+    value: lied
+    sense: 2
+  - form: past_participle
+    value: lied
+    sense: 2

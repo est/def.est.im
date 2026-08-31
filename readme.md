@@ -2,38 +2,83 @@
 
 ## About
 
-一开始觉得搞个 Google Dictionary 离线版；
+一开始想搞 Google Dictionary 离线版；
 
-后来看到 Webster’s 1913 好厉害，做个在线版。
+后来觉得 Webster's 1913 好厉害，做在线版。
 
-其实早有人做了。比如 websters1913.com。GNU Dic 也是基于它的；
+ChatGPT 出来之后，干脆外包给 AI 做——用 LLM 批量生成一本英汉学习者词典
 
-ChatGPT 出来之后，干脆外包给AI做吧。
+[写了个 blog](https://blog.est.im/2025/stdout-12)
 
-[写了个blog](https://blog.est.im/2025/stdout-12) 
+
+
+## 架构
+
+2026-08 基于Cloudflare Workers重写
+
+- **URL 即词条**：`def.est.im/<word>` 直接 SSR 词条页（`/run`、`/went`、`/run%20into`）；`/` 和 `/style.css` 走 assets 静态（`Sec-Fetch-Dest` + 后缀双分流）
+- **数据在 D1**（SQLite）：精简三表 `words / senses / surfaces` + `rejects` 黑名单；surfaces 组合主键一次表读命中（D1 按 rows_read 计费，单次查词 ~30 行）
+- **自洽随点击闭合**：未收录词 → 占位页 → `POST` on-demand 生成 → 入库回填（rejects 命中直接 404，不烧 API）
+- **客户端渐进增强**：词条内可点词 → `POST` 返回服务端 HTML 片段局部替换（无 Shadow DOM，模板只在服务端一份）
+- 命名实体词条（人名/地名/品牌）走 entity 模板，词源/趣闻在 `words.etymology` 展示
+
+## 数据
+
+目前约：
+
+- 44,916 词条
+- 72,289 义项
+- 308,438 surfaces
+
+（线上 D1 同量级；另有 on-demand 生成实时补词）
 
 ## ToDo
 
-- [ ] 错误拼写跳转；大小写如何关联；缩写，符号，美英差异等如何归一化。用个大 json 跳转
-- [ ] 反查哪些属于 Common, General
-- [ ] 把 register 包含 Common, General 的都cache一遍
-- [ ] 把中小学词汇都预热到KV cache里。省钱
-- [ ] 限流，防止API爆掉
-- [ ] [OpenSearch](https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch#OpenSearch_description_file)，[tab-to-search](https://www.chromium.org/tab-to-search/)
-- [ ] jinja2：SSR，适合SEO。有闲心再说
-- [X] 8243个小中高大学用词 https://github.com/est/dict_json
-- [X] alpinejs：拿来练手
-- [X] how to search for new words?
-- 达到MVP：
-   - [X] index.html 改成模板
-   - [X] 调通openrouter。特别是CORS问题
-   - [X] JSON包裹的一坨
+- [X] 批量采集：BFS 遍历 + 三层防垃圾（词频门槛 / 词表归原 / AI 批量过滤），62,000 词收尾
+- [X] 数据清洗迁移：分类打标不硬删 → dict_clean.db（surfaces 一表通吃检索）
+- [X] 数据上线：D1 精简 schema 导入（word_id 主键 + 组合主键 surfaces）
+- [X] 词源抽取：other_notes 中模型写的词源/趣闻拆出 etymology（脚本在 `scripts/extract_etymology.ts`，覆盖意义不大，线上未启用）
+- [X] Workers SSR 词条页：URL 即词条 + 静态 assets 分流
+- [X] on-demand 生成：占位页 + 异步回填 + rejects 黑名单 404
+- [X] 客户端渐进增强：fragment 局部替换 + pushState/后退恢复
+- [x] 8243 个小中高大学用词（旧 .dict_json，已退役）
+- [x] alpinejs 练手（旧版页面，已退役）
+- [x] 调通 openrouter/CORS/SSE 流式契约
+- [x] 部署上线：`wrangler deploy` + LLM_* secrets（LLM_TOKEN secret + LLM_API/LLM_MODEL vars）
+- [x] AI 存活探测：`GET /_ai/probe`（Q:PING? → PONG，验证 LLM 通路）
+- [ ] 错误拼写跳转；大小写/缩写/美英差异归一化（跳转表）（拼写跳转已做 08-16）
+- [ ] 词族归一：postdoc/post-doc/postdoctoral → surfaces(kind=spelling)（连字符变体首批已做）
+- [ ] 名字/地名/乐队查询：on-demand 名字专属 prompt（谐音坑/词源/性别倾向）
+- [ ] register 规范化（受控词表）与覆盖提升（现 27.4%）
+- [ ] 限流，防止 API 爆掉
+- [x] ~~**采集 bug：词频门槛误杀整族**~~（08-16 补采 94 词；根因=rejects 误拒+visited 残留，非门槛）
+- [ ] 词形 label 数据缺口：1542 条 null 已修复 1021，剩 521 为词表噪声（人名/派生词误标 inflection），渲染兜底「词形」；情态动词过去式（would/could/should/might）词表无标注，渲染靠规则推断
+- [ ] OpenSearch / tab-to-search
+- [ ] 义项级 CEFR（词表每词性 level 预计算）
+- [ ] 复数独立义项（data/media 等）人工复核清单
+
+## 开发命令
+
+```bash
+bun run src/collect.ts --max N --limit 15      # 采集（续跑断点）
+bun run src/validate.ts                        # 回归（34 断言）
+bun run src/audit.ts                           # 自洽缺口
+bun run src/clean_classify.ts                  # 清洗 Step1 规则分类
+bun run src/clean_ai.ts                        # 清洗 Step2 AI 多分类
+bun run src/clean_migrate.ts                   # 迁移建库 dict_clean.db
+bun run src/export_d1.ts                       # 导出 D1 SQL（重建线上库）
+wrangler dev                                   # 本地开发（连本地 D1 引擎）
+wrangler deploy                                # 部署
+```
+
+一次性/临时脚本在 `scripts/`（backfill、backfill_forms、extract_etymology、
+fix_inflection_labels、gen_d1_schema），均已移出 src/，用法见各文件头部。
 
 ## Credits
 
-- ❌ Google Dictionary API 
-- DeepSeek R1 (free) by OpenRouter
-- Gemini Flash
+- ❌ Google Dictionary API
+- DeepSeek R1 / DeepSeek V4 Flash (free) via OpenRouter / opencode
+- 权威词表单 `word_cefr_minified.db`
 
 ## License
 

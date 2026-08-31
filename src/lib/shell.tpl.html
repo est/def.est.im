@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${params.title}def.est.im</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body${params.bodyAttr}>
+<div class="topbar">
+  <a class="brand" href="/">def.est.im</a>
+  <div class="search-bar">
+    <input type="text" placeholder="搜索…" id="q">
+    <kbd>⌘K</kbd>
+  </div>
+</div>
+${params.inner}
+<script>
+(function () {
+  var q = document.getElementById('q');
+  if (q && ${params.wordJs}) q.value = ${params.wordJs};
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); q && q.focus(); q && q.select(); }
+  });
+  q && q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && this.value.trim()) location.href = '/' + encodeURIComponent(this.value.trim());
+  });
+
+  // Cmd/Ctrl 按住 → 仅光标下单词变链接+虚线；光标移动切换；松开恢复
+  var mod = false;
+  var activeA = null;
+  function log() { console.log.apply(console, ['[term]'].concat([].slice.call(arguments))); }
+  function clearActive() {
+    if (!activeA) return;
+    log('clearActive:', activeA.getAttribute('data-word'));
+    var s = document.createElement('span');
+    s.className = 'term';
+    s.setAttribute('data-word', activeA.getAttribute('data-word'));
+    s.textContent = activeA.textContent;
+    activeA.replaceWith(s);
+    activeA = null;
+  }
+  function setActive(el) {
+    if (!el || !el.hasAttribute('data-word')) { log('setActive: none (clear)'); clearActive(); return; }
+    log('setActive:', el.tagName, el.getAttribute('data-word'), 'activeA=', activeA && activeA.getAttribute('data-word'));
+    var a = el.tagName === 'A' ? el : null;
+    if (a && a === activeA) return; // 光标还在同一链接上，跳过
+    clearActive();
+    if (a) { activeA = a; return; } // 已是链接
+    a = document.createElement('a');
+    a.className = 'term';
+    a.setAttribute('data-word', el.getAttribute('data-word'));
+    a.href = el.getAttribute('data-word');
+    a.textContent = el.textContent;
+    el.replaceWith(a);
+    activeA = a;
+  }
+  document.addEventListener('keydown', function (e) {
+    log('keydown:', e.key, 'meta=', e.metaKey, 'ctrl=', e.ctrlKey);
+    if (e.metaKey || e.ctrlKey) {
+      if (!mod) { mod = true; document.body.classList.add('mod'); log('MOD ON'); }
+    }
+  });
+  document.addEventListener('keyup', function (e) {
+    log('keyup:', e.key, 'meta=', e.metaKey, 'ctrl=', e.ctrlKey);
+    if (!e.metaKey && !e.ctrlKey && mod) { mod = false; document.body.classList.remove('mod'); clearActive(); log('MOD OFF'); }
+  });
+  window.addEventListener('blur', function () { if (mod) { mod = false; document.body.classList.remove('mod'); clearActive(); log('MOD OFF (blur)'); } });
+
+  // 按住时跟随光标：把鼠标下的 span.term[data-word] 换成链接
+  document.addEventListener('mousemove', function (e) {
+    if (!mod) return;
+    var el = e.target && e.target.closest ? e.target.closest('[data-word]') : null;
+    log('mousemove: target=', e.target && e.target.tagName, 'found=', el && (el.tagName + ':' + el.getAttribute('data-word')));
+    setActive(el);
+  }, { passive: true });
+
+  // Cmd/Ctrl 点击任何 <a> → 正常跳转（不被 SPA 拦截）
+  document.addEventListener('click', function (e) {
+    if (!mod) return;
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a) return;
+    e.stopPropagation();
+  }, true);
+
+  // SPA：普通点击 a.term → fetch fragment 局部替换
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a.term') : null;
+    if (!a) return;
+    e.preventDefault();
+    var w = decodeURIComponent(a.pathname ? a.pathname.replace(/^\\//, '') : a.href.split('/').pop());
+    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return j || r.text().then(function (t) { return { _html: t }; }); }); })
+      .then(function (data) {
+        if (data.redirect) { location.href = data.redirect; return; }
+        var html = data._html || data;
+        var el = document.querySelector('.entry-wrap');
+        if (el && html) { el.outerHTML = html; history.pushState({ w: w }, '', '/' + encodeURIComponent(w)); document.title = w + ' · def.est.im'; }
+      })
+      .catch(function () { location.href = '/' + encodeURIComponent(w); });
+  });
+
+  window.addEventListener('popstate', function (e) {
+    var w = (e.state && e.state.w) || decodeURIComponent(location.pathname.slice(1));
+    if (!w) return;
+    fetch('/?w=' + encodeURIComponent(w) + '&fragment=1', { method: 'POST' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; document.title = w + ' · def.est.im'; } });
+  });
+
+  // 占位页：自动触发生成（generating:true 表示已有任务在跑，提示并稍后自动重试）
+  var gen = document.body.getAttribute('data-gen');
+  if (gen) {
+    fetch('/?w=' + encodeURIComponent(gen) + '&gen=1', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ok) {
+          return fetch('/?w=' + encodeURIComponent(gen) + '&fragment=1', { method: 'POST' }).then(function (r) { return r.text(); });
+        }
+        if (j && j.generating) {
+          var el = document.querySelector('.entry-wrap');
+          if (el) el.insertAdjacentHTML('beforeend', '<div class="section"><h2>生成中…</h2><p class="sub">这个词正在后台生成，页面将自动刷新。</p></div>');
+          setTimeout(function () { location.reload(); }, 8000);
+          return;
+        }
+        throw new Error('gen fail');
+      })
+      .then(function (html) { var el = document.querySelector('.entry-wrap'); if (el && html) { el.outerHTML = html; } })
+      .catch(function () {
+        var el = document.querySelector('.entry-wrap');
+        if (el) el.insertAdjacentHTML('beforeend', '<div class="section"><h2>生成失败</h2><p class="sub">这个词暂时无法生成，请稍后再试。</p></div>');
+      });
+  }
+})();
+</script>
+</body>
+</html>

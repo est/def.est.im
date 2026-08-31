@@ -1,0 +1,14 @@
+word: tear
+phonetic_uk: /teə(r)/
+phonetic_us: /ter/
+inflections:
+  - form: past
+    value: tore
+  - form: past_participle
+    value: torn
+entries:
+  - pos: verb
+    def_en: to pull something apart by force, especially so it is damaged
+    def_zh: 撕，撕裂
+    example_en: He tore the letter into pieces.
+    example_zh: 他把信撕成了碎片。

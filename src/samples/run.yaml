@@ -1,0 +1,48 @@
+word: run
+cefr: A1
+phonetic_uk: /rʌn/
+phonetic_us: /rʌn/
+entries:
+  - pos: verb
+    def_en: to move quickly using your legs
+    def_zh: 跑，奔跑
+    example_en: She runs five miles every morning.
+    example_zh: 她每天早上跑五英里。
+    synonyms:
+      - sprint
+      - dash
+    antonyms:
+      - walk
+    collocations:
+      - run fast
+      - run a marathon
+    register: informal
+  - pos: verb
+    def_en: to move something in a particular direction or position
+    def_zh: 使…移动，推（某物）
+    example_en: He ran his fingers through his hair.
+    example_zh: 他用手指拨了拨头发。
+  - pos: noun
+    def_en: a period of continuous activity or use
+    def_zh: 一段连续时期
+    example_en: The printer had a long run without breaking.
+    example_zh: 这台打印机连续运转了很久都没坏。
+    register: informal
+  - pos: idiom
+    pattern: run into sb.
+    def_en: to meet someone by chance
+    def_zh: 偶然遇到
+    example_en: I ran into an old friend at the mall.
+    example_zh: 我在商场偶然遇到一个老朋友。
+inflections:
+  - form: third_person_singular
+    value: runs
+  - form: present_participle
+    value: running
+  - form: past
+    value: ran
+    sense: 1
+  - form: past_participle
+    value: run
+  - form: plural
+    value: runs
