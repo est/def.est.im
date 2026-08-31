@@ -21,13 +21,49 @@ export default {
       || /\.(css|js|mjs|json|png|svg|ico|jpg|jpeg|gif|webp|woff2?|txt|xml)$/.test(path);
     if (request.method === 'GET' && isAsset) {
       const r = await env.ASSETS.fetch(request);
-      if (r.status !== 404) return r;
+      if (r.status !== 404) {
+        const headers = new Headers(r.headers);
+        if (/\.(css|js|mjs)$/.test(path)) {
+          headers.set('cache-control', 'public, max-age=86400, s-maxage=31536000, immutable');
+          headers.set('cdn-cache-control', 'public, max-age=31536000, immutable');
+        } else if (/\.(png|svg|ico|jpg|jpeg|gif|webp|woff2?)$/.test(path)) {
+          headers.set('cache-control', 'public, max-age=86400, s-maxage=2592000, immutable');
+          headers.set('cdn-cache-control', 'public, max-age=2592000, immutable');
+        } else {
+          headers.set('cache-control', 'public, max-age=3600, s-maxage=86400');
+          headers.set('cdn-cache-control', 'public, max-age=86400');
+        }
+        headers.set('x-content-type-options', 'nosniff');
+        return new Response(r.body, { status: r.status, headers });
+      }
+    }
+
+    // GET /robots.txt：静态（public/）兜底 + 长缓存
+    if (request.method === 'GET' && path === '/robots.txt') {
+      const r = await env.ASSETS.fetch(request);
+      if (r.status !== 404) {
+        const headers = new Headers(r.headers);
+        headers.set('cache-control', 'public, max-age=3600, s-maxage=86400');
+        headers.set('cdn-cache-control', 'public, max-age=86400');
+        headers.set('x-content-type-options', 'nosniff');
+        return new Response(r.body, { status: r.status, headers });
+      }
+    }
+
+    // GET /sitemap.xml：D1 词表动态生成（边缘 1d 缓存，browser 1h）
+    if (request.method === 'GET' && path === '/sitemap.xml') {
+      return handleSitemap(env);
     }
 
     // GET /：首页
     if (request.method === 'GET' && path === '/') {
       return new Response(shell('', renderIndex(), null), {
-        headers: { 'content-type': 'text/html; charset=utf-8' },
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+          'cdn-cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+          'x-content-type-options': 'nosniff',
+        },
       });
     }
 
@@ -73,41 +109,96 @@ function entryEtag(entry, senses) {
 
 // ---- 词条页渲染（命中 / 占位 / 404） ----
 async function renderPage(env, word, reqUrl, request) {
+  // 非法/超长词直接 404 短缓存（拦截枚举攻击）
+  if (word.length > 80 || word.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(word)) {
+    return new Response(shell(word, renderPlaceholder(word, true), word), {
+      status: 404,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
+        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'x-content-type-options': 'nosniff',
+      },
+    });
+  }
   const r = await loadEntry(env, word);
   if (r.type === 'entry') {
-    // entity_type===-1：正在生成中（占位行），渲染「生成中」而非词条
     if (r.entry.entity_type === -1) {
       return new Response(shell(word, renderPlaceholder(word, false), word, null), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
       });
     }
     const html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked, inflectLinked: r.inflectLinked }, word);
-    // P5：ETag 条件请求
     const etag = entryEtag(r.entry, r.senses);
     if (request.headers.get('if-none-match') === etag) {
-      return new Response(null, { status: 304, headers: { etag, 'cache-control': 'public, max-age=3600' } });
+      return new Response(null, {
+        status: 304,
+        headers: {
+          etag,
+          'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+          'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
+        },
+      });
     }
     return new Response(shell(r.entry.lemma, html, word), {
-      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600', etag },
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+        'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
+        etag,
+        'x-content-type-options': 'nosniff',
+        vary: 'Accept-Encoding',
+      },
     });
   }
   if (r.type === 'redirect') {
     const frag = '#:~:text=' + encodeURIComponent(r.highlight);
     const url = new URL('/' + encodeURIComponent(r.lemma), reqUrl);
     url.hash = frag.slice(1);
-    return Response.redirect(url.toString(), 302);
+    const resp = Response.redirect(url.toString(), 302);
+    resp.headers.set('cache-control', 'public, max-age=60, s-maxage=300, must-revalidate');
+    resp.headers.set('cdn-cache-control', 'public, max-age=300, must-revalidate');
+    resp.headers.set('x-content-type-options', 'nosniff');
+    return resp;
   }
   if (r.type === 'rejected') {
     return new Response(shell(word, renderPlaceholder(word, true), word), {
       status: 404,
-      headers: { 'content-type': 'text/html; charset=utf-8' },
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
+        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'x-content-type-options': 'nosniff',
+      },
     });
   }
-  // missing → 占位页，自动触发生成（body data-gen；定界引号保留，值内字符 esc 转义）
-  return new Response(
-    shell(word, renderPlaceholder(word, false), word, ` data-gen="${esc(word)}"`),
-    { headers: { 'content-type': 'text/html; charset=utf-8' } },
-  );
+  return new Response(shell(word, renderPlaceholder(word, false), word, ` data-gen="${esc(word)}"`), {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
+      'cdn-cache-control': 'public, max-age=300, must-revalidate',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
+
+async function handleSitemap(env) {
+  try {
+    const q = await env.def_dict.prepare('SELECT lemma FROM words WHERE entity_type = 0 ORDER BY lemma LIMIT 50000').all();
+    const words = (q.results || []).map((r) => r.lemma);
+    const urls = ['https://def.est.im/', ...words.map((w) => `https://def.est.im/${encodeURIComponent(w)}`)];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${u}</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`).join('')}</urlset>`;
+    return new Response(xml, {
+      headers: {
+        'content-type': 'application/xml; charset=utf-8',
+        'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+        'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
+        'x-content-type-options': 'nosniff',
+      },
+    });
+  } catch (e) {
+    return new Response('Sitemap error', { status: 500, headers: { 'cache-control': 'no-store' } });
+  }
 }
 
 // POST 分发：fragment / gen（w 已由调用方校验非空）
