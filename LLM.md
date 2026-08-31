@@ -17,8 +17,7 @@ A modern dictionary application built with Astro.js, supporting both Server-Side
 - `/[word]` - Dynamic word definition pages (server-rendered for first load, SPA for the rest)
 
 ### API Endpoints (Cloudflare Pages Functions)
-- `GET /.dict_json/out/[word].json` - JSON static data, cheap
-- `POST /.lookup?q=word` - Word lookup API, costy
+- `POST /.lookup?q=word` - Word lookup API（KV 命中长缓存 1d，未命中触发 LLM 并写入 KV）
 
 ### SPA Navigation
 - Client-side navigation between words using `fetch()` and `history.pushState()`

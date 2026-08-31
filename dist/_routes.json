@@ -4,9 +4,8 @@
     "/*"
   ],
   "exclude": [
-    "/.assetsignore",
-    "/.dict_json/*",
     "/_astro/*",
+    "/.assetsignore",
     "/robots.txt",
     "/sitemap-full.xml",
     "/sitemap.xml"

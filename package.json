@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "node ./scripts/copy-dict.mjs && astro build && node ./scripts/patch-routes.mjs",
+    "build": "node ./scripts/generate-sitemap.mjs && astro build",
     "astro": "astro",
     "deploy": "wrangler pages deploy dist"
   },

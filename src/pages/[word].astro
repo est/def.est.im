@@ -16,22 +16,23 @@ if (!word || decodedWord.length > 80 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(decodedW
   Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
 }
 
-// Try to load from cached JSON — 仅对合法词执行，非法词已在上方短缓存 404
+// 查询词库 — 直接读 KV（.dict_json 已清理，不再走静态 JSON 自 fetch）
 let wordData = null;
 let isHit = false;
 const isIllegal = Astro.response.headers.has('Cache-Control');
 if (!isIllegal) {
   try {
-    const response = await fetch(`${Astro.site}/.dict_json/out/${encodeURIComponent(word!)}.json`, {
-      // @ts-ignore Cloudflare Workers fetch 扩展
-      cf: { cacheTtl: 2592000, cacheEverything: true },
-    } as any);
-    if (response.ok) {
-      wordData = await response.json();
-      isHit = !!(wordData as any)?.MEANINGS?.length;
+    // Cloudflare Pages Function 环境：优先 KV，本地开发回退为空
+    const kv = (Astro.locals as any)?.runtime?.env?.kv_def;
+    if (kv) {
+      const kvData = await kv.get(word!, { type: 'json' } as any);
+      if (kvData && (kvData as any).MEANINGS?.length) {
+        wordData = kvData;
+        isHit = true;
+      }
     }
   } catch (error) {
-    console.log('No cached data found for:', word);
+    console.log('KV miss for:', word);
   }
 }
 

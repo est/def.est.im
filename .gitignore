@@ -26,3 +26,10 @@ pnpm-debug.log*
 
 # cloudflare
 .wrangler
+
+# generated sitemaps (built from src/data/words.json)
+public/sitemap.xml
+public/sitemap-full.xml
+
+# dict build artefacts (removed submodule, now src/data/words.json is source)
+public/.dict_json/

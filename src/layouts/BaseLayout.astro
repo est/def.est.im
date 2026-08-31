@@ -207,10 +207,8 @@ const { title = "def.est.im", word, wordData } = Astro.props;
   
   <script>
     async function lookup(word){
-      const r1 = await fetch(`/.dict_json/out/${word}.json`, {method: 'GET'})
-      if (r1.status == 200) return await r1.json()
-      const r2 = await fetch('/.lookup?q=' + encodeURI(word), {method: 'POST'})
-      const {result} = await r2.json()
+      const r = await fetch('/.lookup?q=' + encodeURI(word), {method: 'POST'})
+      const {result} = await r.json()
       return result
     }
     
