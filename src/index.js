@@ -155,11 +155,15 @@ async function renderPage(env, word, reqUrl, request) {
     const frag = '#:~:text=' + encodeURIComponent(r.highlight);
     const url = new URL('/' + encodeURIComponent(r.lemma), reqUrl);
     url.hash = frag.slice(1);
-    const resp = Response.redirect(url.toString(), 302);
-    resp.headers.set('cache-control', 'public, max-age=60, s-maxage=300, must-revalidate');
-    resp.headers.set('cdn-cache-control', 'public, max-age=300, must-revalidate');
-    resp.headers.set('x-content-type-options', 'nosniff');
-    return resp;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: url.toString(),
+        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
+        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'x-content-type-options': 'nosniff',
+      },
+    });
   }
   if (r.type === 'rejected') {
     return new Response(shell(word, renderPlaceholder(word, true), word), {
