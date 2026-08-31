@@ -3,22 +3,39 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import WordCard from '../components/WordCard.astro';
 import MeaningsSection from '../components/MeaningsSection.astro';
 
-export const prerender = false; // This is an SSR page, not prerendered
+export const prerender = false;
 
 const { word } = Astro.params;
 
-// Try to load from cached JSON first
-let wordData = null;
-try {
-  const response = await fetch(`${Astro.site}/.dict_json/out/${word}.json`);
-  if (response.ok) {
-    wordData = await response.json();
-  }
-} catch (error) {
-  console.log('No cached data found for:', word);
+// 非法/超长词直接 404 短缓存，不渲染 — 拦截枚举攻击的主要入口
+const decodedWord = word ? decodeURIComponent(word) : '';
+if (!word || decodedWord.length > 80 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(decodedWord)) {
+  Astro.response.status = 404;
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, must-revalidate');
+  Astro.response.headers.set('CDN-Cache-Control', 'public, max-age=300, must-revalidate');
+  Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
 }
 
-// If no cached data, we'll let the client-side handle the lookup
+// Try to load from cached JSON — 仅对合法词执行，非法词已在上方短缓存 404
+let wordData = null;
+let isHit = false;
+const isIllegal = Astro.response.headers.has('Cache-Control');
+if (!isIllegal) {
+  try {
+    const response = await fetch(`${Astro.site}/.dict_json/out/${encodeURIComponent(word!)}.json`, {
+      // @ts-ignore Cloudflare Workers fetch 扩展
+      cf: { cacheTtl: 2592000, cacheEverything: true },
+    } as any);
+    if (response.ok) {
+      wordData = await response.json();
+      isHit = !!(wordData as any)?.MEANINGS?.length;
+    }
+  } catch (error) {
+    console.log('No cached data found for:', word);
+  }
+}
+
+// 未命中则返回空壳，客户端会走 localStorage → /.dict_json → /.lookup
 if (!wordData) {
   wordData = {
     WORD: word,
@@ -30,6 +47,29 @@ if (!wordData) {
     REGISTER: ''
   };
 }
+
+// 关键：按命中/未命中设置差异化缓存 — 这是降本的核心
+if (!Astro.response.headers.has('Cache-Control')) {
+  if (isHit) {
+    // 真词（8220 词库内）：定义稳定，browser 1h / edge 1d + SWR 1d
+    Astro.response.headers.set(
+      'Cache-Control',
+      'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400'
+    );
+    Astro.response.headers.set(
+      'CDN-Cache-Control',
+      'public, max-age=86400, stale-while-revalidate=86400'
+    );
+  } else {
+    // 未命中词（枚举攻击的随机短语，如 "crazed look"）：短缓存防污染
+    // browser 1m / edge 5m，5 分钟内同一随机词只回源 1 次
+    Astro.response.status = 404;
+    Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, must-revalidate');
+    Astro.response.headers.set('CDN-Cache-Control', 'public, max-age=300, must-revalidate');
+  }
+}
+Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
+Astro.response.headers.set('Vary', 'Accept-Encoding');
 ---
 
 <BaseLayout title={`${word} - def.est.im`} word={word} wordData={wordData}>

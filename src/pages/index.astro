@@ -2,6 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import WordCard from '../components/WordCard.astro';
 import MeaningsSection from '../components/MeaningsSection.astro';
+
+// 首页为静态搜索壳，无动态数据：browser 1h / edge 1h + SWR 1d
+Astro.response.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400');
+Astro.response.headers.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
 ---
 
 <BaseLayout title="def.est.im">

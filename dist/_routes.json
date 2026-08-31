@@ -4,6 +4,11 @@
     "/*"
   ],
   "exclude": [
-    "/_astro/*"
+    "/.assetsignore",
+    "/.dict_json/*",
+    "/_astro/*",
+    "/robots.txt",
+    "/sitemap-full.xml",
+    "/sitemap.xml"
   ]
 }

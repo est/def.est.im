@@ -3,21 +3,24 @@ const CORS = {
 }
 
 
+const CACHE_SUCCESS = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400';
+const CACHE_ERROR = 'no-store, must-revalidate';
+
 export async function onRequest(context) {
   const req = context.request
 
-  // only POST
+  // only POST — 非 POST 直接 405 且不缓存
   if (req.method !== 'POST') {
-    return new Response('', {status: 405 })
+    return new Response('', { status: 405, headers: { 'Cache-Control': CACHE_ERROR, 'X-Content-Type-Options': 'nosniff' } })
   }
   const word = (new URL(req.url).searchParams.get('q') || '').trim()
-  if (!word || word.length > 250){
-    return Response.json({'em': 'terrible request'})
+  if (!word || word.length > 80 || word.split(/\s+/).length > 3){
+    return Response.json({'em': 'terrible request'}, { status: 400, headers: { 'Cache-Control': CACHE_ERROR } })
   }
-  // read from KV cache
+  // read from KV cache — 命中则长缓存：词义稳定，browser 1d / edge 1d
   const e1 = await context.env.kv_def.get(word)
   if(e1){
-    return Response.json({'result': JSON.parse(e1)})
+    return Response.json({'result': JSON.parse(e1)}, { headers: { 'Cache-Control': CACHE_SUCCESS, 'CDN-Cache-Control': CACHE_SUCCESS, 'X-Content-Type-Options': 'nosniff' } })
   }
 
   let {LLM_API, LLM_MODEL, LLM_TOKEN} = context.env
@@ -25,10 +28,10 @@ export async function onRequest(context) {
   try{
     api = new URL(LLM_API)
   } catch (ex) {
-    return Response.json({'em': 'invalid LLM_API'}, {status: 500 })
+    return Response.json({'em': 'invalid LLM_API'}, { status: 500, headers: { 'Cache-Control': CACHE_ERROR } })
   }
   if (!LLM_MODEL){
-    return Response.json({'em': 'invalid LLM_MODEL'})
+    return Response.json({'em': 'invalid LLM_MODEL'}, { headers: { 'Cache-Control': CACHE_ERROR } })
   }
   const sys_prompt=`
 You are a linguistic expert providing dictionary and thesaurus service.
@@ -73,37 +76,34 @@ Do not wrap the JSON. Format is:
 
   let rsp
   try {
-    // Fetch the response from the gateway.
     rsp = await (await fetch(gatewayRequest)).json()
-    // Return the gateway's response to the client.
   } catch (ex) {
-    // If there's an error, return a 500 error to the client.
     console.error(ex, gatewayRequest.url, gatewayRequest.body)
-    return Response.json({'em': 'failed'})
+    return Response.json({'em': 'failed'}, { status: 500, headers: { 'Cache-Control': CACHE_ERROR } })
   }
 
   const em = rsp?.error?.message
   if(em){
     console.error(em)
-    return Response.json({'em': 'gateway error'})
+    return Response.json({'em': 'gateway error'}, { status: 502, headers: { 'Cache-Control': CACHE_ERROR } })
   }
   const ans = (rsp.choices?.[0]?.message?.content || '').replace(
-    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(  // fix openrouter cheap models
-    /^\s*```json/, '').replace(/```\s*$/, '')   // fix needless code block wraps
+    /<｜(?:begin|start|end)[\w\s\-▁_]+｜>$/, '').replace(
+    /^\s*```json/, '').replace(/```\s*$/, '')
   let ans_data
   try{
     ans_data = JSON.parse(ans)
   } catch (ex) {
     console.debug(ans)
-    return Response.json({'em': 'AI error'})
+    return Response.json({'em': 'AI error'}, { status: 502, headers: { 'Cache-Control': CACHE_ERROR } })
   }
   const data = Object.fromEntries(
     // AI will ocasionally return fuckup cases, like MEANINGS -> MEANings
     Object.entries(ans_data).map(([k, v]) => [k.toUpperCase(), v])
   )
   data.MEANINGS.forEach((x)=>{x.PATTERN=x.PATTERN.replaceAll(' | ', '\n')})
-  // @ToDo write to cloudflare KV cache for {data.WORD: data}
   await context.env.kv_def.put(data.WORD, JSON.stringify(data))
+  // 新词生成成功：同样长缓存，1 天内同一词不再触发 LLM
   return Response.json({result: data}, {headers: {
-    'Cache-Control': 'public, max-age=3600'}})
+    'Cache-Control': CACHE_SUCCESS, 'CDN-Cache-Control': CACHE_SUCCESS, 'X-Content-Type-Options': 'nosniff'}})
 }

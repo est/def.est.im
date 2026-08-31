@@ -1,0 +1,26 @@
+User-agent: Applebot
+Crawl-delay: 5
+Allow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: SemrushBot
+Crawl-delay: 10
+Allow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: *
+Disallow: /.lookup
+Disallow: /.dict_json/
+Allow: /
+
+Sitemap: https://def.est.im/sitemap.xml
