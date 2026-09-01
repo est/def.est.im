@@ -8,6 +8,7 @@ ssdb_server_x86/var
 .env.*
 node_modules/
 tmp/
+.tmp
 data/
 .wrangler
 .dev.vars
