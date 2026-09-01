@@ -11,16 +11,31 @@ import { isAbnormal, tarpit } from './lib/abnormal.js';
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
+function cacheKeyForWord(origin, path) {
+  return new Request(origin + path, { method: 'GET' });
+}
+function cacheKeyForSitemap(origin) {
+  return new Request(origin + '/sitemap.xml', { method: 'GET' });
+}
+
+async function cacheMatch(request) {
+  try { return await caches.default.match(request); } catch { return null; }
+}
+async function cachePut(request, response) {
+  try { await caches.default.put(request, response); } catch {}
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
     // 静态资源（CSS/JS/图片）→ assets；首页由 worker 渲染
     const dest = (request.headers.get('Sec-Fetch-Dest') || '').toLowerCase();
     const isAsset = /^(style|script|image|font|audio|video|xslt|track|manifest)$/.test(dest)
-      || /\.(css|js|mjs|json|png|svg|ico|jpg|jpeg|gif|webp|woff2?|txt|xml)$/.test(path);
-    if (request.method === 'GET' && isAsset) {
+       || /\.(css|js|mjs|json|png|svg|ico|jpg|jpeg|gif|webp|woff2?|txt|xml)$/.test(path);
+    // sitemap 走专用处理，不走这里的静态直通（避免 path.endsWith xml 误判）
+    if (request.method === 'GET' && isAsset && path !== '/sitemap.xml' && !path.startsWith('/sitemaps/')) {
       const r = await env.ASSETS.fetch(request);
       if (r.status !== 404) {
         const headers = new Headers(r.headers);
@@ -51,14 +66,17 @@ export default {
       }
     }
 
-    // GET /sitemap.xml：D1 词表动态生成（边缘 1d 缓存，browser 1h）
-    if (request.method === 'GET' && path === '/sitemap.xml') {
-      return handleSitemap(env);
+    // GET /sitemap.xml / /sitemaps/*.xml：词典 sitemap（Cache API + 静态兜底）
+    if (request.method === 'GET' && (path === '/sitemap.xml' || path.startsWith('/sitemaps/'))) {
+      return handleSitemap(request, env, ctx);
     }
 
-    // GET /：首页
+    // GET /：首页（短缓存，可被 Cache API 加速）
     if (request.method === 'GET' && path === '/') {
-      return new Response(shell('', renderIndex(), null), {
+      const ck = cacheKeyForWord(url.origin, '/');
+      const hit = await cacheMatch(ck);
+      if (hit) return hit;
+      const resp = new Response(shell('', renderIndex(), null), {
         headers: {
           'content-type': 'text/html; charset=utf-8',
           'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
@@ -66,13 +84,21 @@ export default {
           'x-content-type-options': 'nosniff',
         },
       });
+      if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp.clone()));
+      else await cachePut(ck, resp.clone());
+      return resp;
     }
 
-    // POST / ：fragment / gen
+    // POST / ：fragment / gen（先过异常/非法校验，不进 D1）
     if (request.method === 'POST' && path === '/') {
       const w = (url.searchParams.get('w') || '').trim();
       if (!w) return json({ error: 'no word' }, 400);
-      return handlePost(request, env, w);
+      const chk = isAbnormal(request, w);
+      if (chk.abnormal) return tarpit(request, env, chk.reason);
+      if (w.length > 80 || w.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(w)) {
+        return tarpit(request, env, 'illegal-word');
+      }
+      return handlePost(request, env, w, ctx);
     }
 
     // GET /_ai/probe：AI 存活探测（Q:PING? → A:___）
@@ -83,7 +109,7 @@ export default {
       return resp;
     }
 
-    // GET /<word>：SSR 词条页（异常请求统一走中间件 tarpit）
+    // GET /<word>：SSR 词条页（Cache API 前置，未命中再 D1）
     if (request.method === 'GET' && path !== '/') {
       let word;
       try { word = decodeURIComponent(path.slice(1)); } catch { return new Response('Bad Request', { status: 400 }); }
@@ -91,7 +117,34 @@ export default {
       if (!word) return new Response('Not Found', { status: 404 });
       const chk = isAbnormal(request, word);
       if (chk.abnormal) return tarpit(request, env, chk.reason);
-      return renderPage(env, word, url, request);
+
+      // Cache API 前置（归一化 key：剥离 query，防 ?v=1 绕过）
+      const ck = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word));
+      const hit = await cacheMatch(ck);
+      if (hit) {
+        const etag = hit.headers.get('etag');
+        if (etag && request.headers.get('if-none-match') === etag) {
+          return new Response(null, {
+            status: 304,
+            headers: {
+              etag,
+              'cache-control': hit.headers.get('cache-control') || 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+              'cdn-cache-control': hit.headers.get('cdn-cache-control') || 'public, max-age=86400, stale-while-revalidate=86400',
+            },
+          });
+        }
+        return hit;
+      }
+
+      const resp = await renderPage(env, word, url, request);
+      // 占位页（generating 且 no-store）不缓存，其余均缓存以阻断重复 D1
+      const cc = resp.headers.get('cache-control') || '';
+      if (!cc.includes('no-store')) {
+        const toCache = resp.clone();
+        if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, toCache));
+        else await cachePut(ck, toCache);
+      }
+      return resp;
     }
 
     return new Response('Not Found', { status: 404 });
@@ -120,21 +173,21 @@ async function renderPage(env, word, reqUrl, request) {
       status: 404,
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
-        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
+        'cdn-cache-control': 'public, max-age=86400, must-revalidate',
         'x-bot-reason': 'sec-fetch-site-none-with-referer',
         'x-content-type-options': 'nosniff',
       },
     });
   }
-  // 非法/超长词直接 404 短缓存（拦截枚举攻击）
+  // 非法/超长词直接 404 长缓存（拦截枚举攻击，命中 Cache API 不再进 D1）
   if (word.length > 80 || word.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(word)) {
     return new Response(shell(word, renderPlaceholder(word, true), word), {
       status: 404,
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
-        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
+        'cdn-cache-control': 'public, max-age=86400, must-revalidate',
         'x-content-type-options': 'nosniff',
       },
     });
@@ -177,8 +230,8 @@ async function renderPage(env, word, reqUrl, request) {
       status: 302,
       headers: {
         location: url.toString(),
-        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
-        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
+        'cdn-cache-control': 'public, max-age=86400, must-revalidate',
         'x-content-type-options': 'nosniff',
       },
     });
@@ -188,8 +241,8 @@ async function renderPage(env, word, reqUrl, request) {
       status: 404,
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
-        'cdn-cache-control': 'public, max-age=300, must-revalidate',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
+        'cdn-cache-control': 'public, max-age=86400, must-revalidate',
         'x-content-type-options': 'nosniff',
       },
     });
@@ -204,13 +257,60 @@ async function renderPage(env, word, reqUrl, request) {
   });
 }
 
-async function handleSitemap(env) {
+async function handleSitemap(request, env, ctx) {
+  const url = new URL(request.url);
+  const origin = url.origin;
+  const ck = cacheKeyForSitemap(origin);
+  const hit = await cacheMatch(ck);
+  if (hit) return hit;
+
+  // 词典型 sitemap：优先静态资产（public/sitemap*.xml），零 D1
+  // 静态文件由 export_d1.ts 生成并随 wrangler deploy 发布；Worker 仅作回退
   try {
-    const q = await env.def_dict.prepare('SELECT lemma FROM words WHERE entity_type = 0 ORDER BY lemma LIMIT 50000').all();
-    const words = (q.results || []).map((r) => r.lemma);
-    const urls = ['https://def.est.im/', ...words.map((w) => `https://def.est.im/${encodeURIComponent(w)}`)];
-    const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${u}</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`).join('')}</urlset>`;
-    return new Response(xml, {
+    const assetReq = new Request(origin + '/sitemap.xml', request);
+    const asset = await env.ASSETS.fetch(assetReq);
+    if (asset.status === 200) {
+      const headers = new Headers(asset.headers);
+      headers.set('content-type', 'application/xml; charset=utf-8');
+      headers.set('cache-control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
+      headers.set('cdn-cache-control', 'public, max-age=86400, stale-while-revalidate=86400');
+      headers.set('x-content-type-options', 'nosniff');
+      const resp = new Response(asset.body, { status: 200, headers });
+      if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp.clone()));
+      else await cachePut(ck, resp.clone());
+      return resp;
+    }
+  } catch {}
+
+  // 回退：D1 动态生成（仅首 miss 触发，配合索引与限流）
+  // 简单限流防刷：sitemap 被高频刷时 429
+  try {
+    if (env.ABNORMAL_LIMITER?.limit) {
+      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+      const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
+      if (!success) {
+        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60' } });
+      }
+    }
+  } catch {}
+
+  try {
+    // 分层优先级：CEFR 越基础、freq 越高越靠前；高频词优先被爬虫发现
+    const q = await env.def_dict.prepare(
+      `SELECT lemma, cefr, freq FROM words WHERE entity_type = 0 ORDER BY
+        CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
+        freq DESC, lemma ASC LIMIT 50000`
+    ).all();
+    const rows = q.results || [];
+    const urls = ['https://def.est.im/'];
+    let xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+    xml += `<url><loc>https://def.est.im/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`;
+    for (const r of rows) {
+      const pri = r.cefr === 'A1' || r.cefr === 'A2' ? '0.9' : r.cefr === 'B1' || r.cefr === 'B2' ? '0.7' : '0.5';
+      xml += `<url><loc>https://def.est.im/${encodeURIComponent(r.lemma)}</loc><changefreq>monthly</changefreq><priority>${pri}</priority></url>`;
+    }
+    xml += `</urlset>`;
+    const resp = new Response(xml, {
       headers: {
         'content-type': 'application/xml; charset=utf-8',
         'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
@@ -218,13 +318,16 @@ async function handleSitemap(env) {
         'x-content-type-options': 'nosniff',
       },
     });
+    if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp.clone()));
+    else await cachePut(ck, resp.clone());
+    return resp;
   } catch (e) {
     return new Response('Sitemap error', { status: 500, headers: { 'cache-control': 'no-store' } });
   }
 }
 
-// POST 分发：fragment / gen（w 已由调用方校验非空）
-async function handlePost(request, env, w) {
+// POST 分发：fragment / gen（w 已由调用方校验非空 + 异常校验）
+async function handlePost(request, env, w, ctx) {
   const url = new URL(request.url);
   const isFragment = url.searchParams.get('fragment') === '1';
   const isGen = url.searchParams.get('gen') === '1';
@@ -232,18 +335,15 @@ async function handlePost(request, env, w) {
   if (isGen) {
     const low = w.toLowerCase();
     const now = Date.now();
-    // P2 锁：words 表占位行 entity_type=-1 + other_notes=开始时间戳
     const row = await env.def_dict.prepare(
       'SELECT word_id, entity_type, other_notes FROM words WHERE lemma = ? LIMIT 1'
     ).bind(low).first();
-    if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low }); // 已有正式词条
+    if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low });
     if (row && row.entity_type === -1) {
       const start = parseInt(row.other_notes || '', 10) || 0;
-      if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low }); // 生成中
-      // 锁过期（上次失败残留）：重置时间戳继续
+      if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low });
       await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(String(now), row.word_id).run();
     } else {
-      // 无行：插入占位行（锁）
       await env.def_dict.prepare(
         'INSERT INTO words (lemma, entity_type, other_notes) VALUES (?, -1, ?)'
       ).bind(low, String(now)).run();
@@ -252,10 +352,16 @@ async function handlePost(request, env, w) {
       const data = await generateEntry(env, w);
       validate(data, w);
       await ingest(env, data);
+      // 成功后清对应词条与 sitemap 的 Cache API（下次 GET 走新数据）
+      try {
+        const origin = new URL(request.url).origin;
+        await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(low)));
+        await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(w)));
+        await caches.default.delete(cacheKeyForSitemap(origin));
+      } catch {}
       return json({ ok: true, word: low });
     } catch (e) {
       console.error('[gen]', w, String(e));
-      // 失败：占位行保留（-1），5 分钟后锁过期可重试
       return json({ ok: false, error: String(e).slice(0, 200) });
     }
   }

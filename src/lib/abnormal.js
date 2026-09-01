@@ -1,36 +1,50 @@
 'use strict';
 // 统一异常请求判定 + 429 tarpit 中间件
-// 免费可用：verifiedBotCategory / Sec-Fetch-* / UA / 词形校验 / Rate Limiting binding
+// 免费可用：verifiedBotCategory / botManagement / Sec-Fetch-* / UA / 词形校验 / Rate Limiting binding
+
+const AI_UA_RE = /GPTBot|OAI-SearchBot|ClaudeBot|PerplexityBot|Bytespider|Applebot-Extended|CCBot|cohere-ai|SemrushBot|DotBot|Amazonbot|Applebot/i;
 
 export function isAbnormal(request, word) {
   const secFetchSite = (request.headers.get('sec-fetch-site') || '').toLowerCase();
   const referer = request.headers.get('referer') || request.headers.get('Referer') || '';
   const ua = request.headers.get('user-agent') || '';
   const verified = request.cf?.verifiedBotCategory || '';
+  const bm = request.cf?.botManagement;
 
   // 1. Sec-Fetch 伪造：none 却带同站 referer（真实同站应为 same-origin）
   if (secFetchSite === 'none' && referer.startsWith('https://def.est.im/')) {
     return { abnormal: true, reason: 'sec-fetch-site-none-with-referer' };
   }
-  // 2. 已验证 AI 爬虫（Free 可用）—— 暂时注释，按需求保留放行
-  // if (verified && verified.includes('AI')) {
-  //   return { abnormal: true, reason: `verified-ai:${verified}` };
-  // }
-  // 3. 非法/超长词（枚举攻击）
+  // 2. Cloudflare 托管验证机器人（verifiedBot）—— AI/未分类爬虫直接拦截
+  if (bm?.verifiedBot) {
+    // 放行可信搜索引擎，其余验证机器人视为异常
+    if (!verified.includes('Search Engine')) {
+      return { abnormal: true, reason: `verified-bot:${verified || 'unknown'}` };
+    }
+  }
+  if (verified && verified.includes('AI Crawler')) {
+    return { abnormal: true, reason: `verified-ai:${verified}` };
+  }
+  // 3. botManagement 分数低（0-99，<30 高确信为 bot）
+  if (bm && typeof bm.score === 'number' && bm.score < 30) {
+    return { abnormal: true, reason: `bot-score:${bm.score}` };
+  }
+  // 4. 非法/超长词（枚举攻击）
   if (word && (word.length > 80 || word.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(word))) {
     return { abnormal: true, reason: 'illegal-word' };
   }
-  // 4. 未验证但 UA 含已知 AI 爬虫（兜底）—— 暂时注释
-  // if (/GPTBot|OAI-SearchBot|ClaudeBot|PerplexityBot|Bytespider|Applebot-Extended|CCBot|cohere-ai|SemrushBot|DotBot/i.test(ua)) {
-  //   if (!verified || !verified.includes('Search Engine')) {
-  //     return { abnormal: true, reason: `ua-ai:${ua.slice(0,40)}` };
-  //   }
-  // }
+  // 5. 未验证但 UA 含已知 AI 爬虫（兜底）
+  if (AI_UA_RE.test(ua)) {
+    if (!verified || !verified.includes('Search Engine')) {
+      return { abnormal: true, reason: `ua-ai:${ua.slice(0,40)}` };
+    }
+  }
   return { abnormal: false };
 }
 
 // 429 tarpit：限流 + 延迟后返回 429
 // 注意：Workers 墙钟上限 30s，60s 延迟会超时，这里用 5s 延迟 + Retry-After:60 卡死客户端
+// 429 响应改为可缓存 60s（防重试风暴反复烧 D1）
 export async function tarpit(request, env, reason) {
   const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'unknown';
   // 优先用 Rate Limiting 绑定（需 wrangler.toml 配置），降级到无状态
@@ -43,7 +57,8 @@ export async function tarpit(request, env, reason) {
           status: 429,
           headers: {
             'retry-after': '60',
-            'cache-control': 'no-store',
+            'cache-control': 'public, max-age=60, s-maxage=60',
+            'cdn-cache-control': 'public, max-age=60',
             'x-bot-reason': reason,
           },
         });
@@ -56,7 +71,8 @@ export async function tarpit(request, env, reason) {
     status: 429,
     headers: {
       'retry-after': '60',
-      'cache-control': 'no-store',
+      'cache-control': 'public, max-age=60, s-maxage=60',
+      'cdn-cache-control': 'public, max-age=60',
       'x-bot-reason': reason,
     },
   });

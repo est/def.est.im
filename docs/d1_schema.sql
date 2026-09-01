@@ -15,6 +15,7 @@ CREATE TABLE words (
   etymology TEXT
 );
 CREATE INDEX idx_words_lemma ON words (lemma COLLATE NOCASE);
+CREATE INDEX idx_words_entity_lemma ON words (entity_type, lemma COLLATE NOCASE);
 
 CREATE TABLE senses (
   word_id INTEGER NOT NULL REFERENCES words(word_id),

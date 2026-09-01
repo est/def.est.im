@@ -44,6 +44,7 @@ CREATE TABLE words (
   etymology TEXT
 );
 CREATE INDEX idx_words_lemma ON words (lemma COLLATE NOCASE);
+CREATE INDEX idx_words_entity_lemma ON words (entity_type, lemma COLLATE NOCASE);
 
 CREATE TABLE senses (
   word_id INTEGER NOT NULL REFERENCES words(word_id),
@@ -144,8 +145,39 @@ console.log(`rejects: ${n}`);
 // ---------- 5. schema 文件 ----------
 writeFileSync(join(OUT_DIR, "d1_schema.sql"), SCHEMA);
 
-// ---------- 5. schema 文件 ----------
-writeFileSync(join(OUT_DIR, "d1_schema.sql"), SCHEMA);
+// ---------- 5b. 静态 sitemap（词典友好：零 D1 查询，优先级分层） ----------
+// 词典 sitemap 策略：A1/A2 基础词优先（priority 0.9/0.7/0.5），50000 上限内当前 44k 全量
+// 产出：public/sitemap.xml（随 wrangler deploy 发布，Worker 优先走 ASSETS，D1 仅回退）
+try {
+  const PUBLIC_DIR = join(DATA_DIR, "..", "public");
+  mkdirSync(PUBLIC_DIR, { recursive: true });
+  const wordsForSitemap = src.query(
+    `SELECT lemma, cefr, freq FROM words WHERE kind IN ('common','abbr') OR kind IS NULL
+     ORDER BY
+       CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
+       freq DESC, lemma ASC LIMIT 50000`
+  ).all() as any[];
+  // 若本地库 kind 列已映射为 entity_type 语义，回退查询 words 全部并按 entity_type 过滤
+  const rows = wordsForSitemap.length ? wordsForSitemap : (src.query(
+    `SELECT lemma, cefr, freq FROM words ORDER BY
+       CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
+       freq DESC, lemma ASC LIMIT 50000`
+  ).all() as any[]);
+  const today = new Date().toISOString().slice(0, 10);
+  let xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+  xml += `<url><loc>https://def.est.im/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`;
+  for (const r of rows) {
+    // 兼容行：若 cefr 为 NULL 则取中等优先级
+    const pri = r.cefr === 'A1' || r.cefr === 'A2' ? '0.9' : r.cefr === 'B1' || r.cefr === 'B2' ? '0.7' : '0.5';
+    const freqHint = (r.freq ?? 0) > 1e7 ? 'daily' : (r.freq ?? 0) > 1e6 ? 'weekly' : 'monthly';
+    xml += `<url><loc>https://def.est.im/${encodeURIComponent(r.lemma)}</loc><lastmod>${today}</lastmod><changefreq>${freqHint}</changefreq><priority>${pri}</priority></url>`;
+  }
+  xml += `</urlset>`;
+  writeFileSync(join(PUBLIC_DIR, "sitemap.xml"), xml);
+  console.log(`sitemap: ${rows.length + 1} urls → public/sitemap.xml`);
+} catch (e) {
+  console.warn(`sitemap 生成跳过: ${String(e).slice(0,200)}`);
+}
 
 src.close();
 console.log(`\n导出完成 → ${OUT_DIR}/（d1_schema.sql + d1_data_00..03.sql）`);

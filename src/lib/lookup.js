@@ -114,7 +114,16 @@ async function loadEntry(env, word) {
     }
   }
 
-  // 4. 可点词集合：def_en/example_en/pattern token + 关联表面自身（小批量 IN 查询）
+  // 4. 可点词集合：def_en/example_en/pattern token + 关联表面自身
+  // 停用词与长度过滤 + 截断至 40，避免长词条 80 token 全量扫 D1
+  const STOPWORDS = new Set([
+    'the','and','for','with','that','this','from','have','has','had','are','was','were','been','being',
+    'will','would','could','should','might','must','shall','may','can','also','such','than','then','when',
+    'where','which','while','about','into','through','after','before','under','over','again','further',
+    'once','here','there','their','they','them','you','your','what','how','why','who','whom','a','an',
+    'of','to','in','on','at','by','is','it','as','be','or','if','so','but','not','no','its','our','out','up',
+    'we','he','she','my','me','his','her','our','are','was',
+  ]);
   const tokens = new Set();
   for (const s of senses) {
     for (const t of tokensOf(s.def_en)) tokens.add(t);
@@ -122,24 +131,10 @@ async function loadEntry(env, word) {
     for (const t of tokensOf(s.pattern)) tokens.add(t);
   }
   for (const s of allSurfaces) for (const t of tokensOf(s)) tokens.add(t);
-  const discoverable = new Set();
-  const arr = [...tokens];
-  const discBatches = [];
-  for (let i = 0; i < arr.length; i += 90) {
-    const sliceArr = arr.slice(i, i + 90);
-    const marks = sliceArr.map(() => '?').join(',');
-    discBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
-  }
-  const discResults = await Promise.all(discBatches);
-  for (const res of discResults) {
-    for (const r of res.results || []) discoverable.add(String(r.surface).toLowerCase());
-  }
-  // 多词 surface 也加入 discoverable（供短语链接判断）
-  for (const s of allSurfaces) discoverable.add(s.toLowerCase());
+  let arr = [...tokens].filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  if (arr.length > 40) arr = arr.slice(0, 40);
 
-  // 短语收录检查：phrase/idiom 的 pattern 是否在 surfaces 表中（批量 IN 查询，分批 ≤100）
   const phraseSenses = senses.filter((s) => s.pos === 'phrase' || s.pos === 'idiom');
-  const phraseLinked = new Set();
   const phrasePatterns = [];
   for (const s of phraseSenses) {
     const p = (s.pattern || '').toLowerCase()
@@ -147,42 +142,41 @@ async function loadEntry(env, word) {
       .replace(/\s+/g, ' ').trim();
     if (p && !phrasePatterns.includes(p)) phrasePatterns.push(p);
   }
-  const plBatches = [];
-  for (let i = 0; i < phrasePatterns.length; i += 90) {
-    const sliceArr = phrasePatterns.slice(i, i + 90);
-    const marks = sliceArr.map(() => '?').join(',');
-    plBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
-  }
-  if (plBatches.length) {
-    const plResults = await Promise.all(plBatches);
-    const plSet = new Set();
-    for (const res of plResults) {
-      for (const r of res.results || []) plSet.add(String(r.surface).toLowerCase());
-    }
-    for (const p of phrasePatterns) {
-      if (plSet.has(p)) phraseLinked.add(p);
-    }
-  }
-
-  // 词形收录检查：inflection surface 是否为某词的 lemma（有独立词条才做链接）
-  const inflectLinked = new Set();
   const infForms = (groups.inflection || []).map((f) => f.surface);
   const infUnique = [...new Set(infForms.map((s) => s.toLowerCase()))];
-  const infBatches = [];
-  for (let i = 0; i < infUnique.length; i += 90) {
-    const sliceArr = infUnique.slice(i, i + 90);
-    const marks = sliceArr.map(() => '?').join(',');
-    infBatches.push(d1.prepare(`SELECT DISTINCT surface FROM surfaces WHERE surface IN (${marks}) AND kind = 'lemma'`).bind(...sliceArr).all());
+
+  // 合并三类存在性检查为单次批量查询（省 2 次 RTT）
+  const allNeededSet = new Set([...arr, ...phrasePatterns, ...infUnique]);
+  const allNeeded = [...allNeededSet];
+  const foundMap = new Map(); // surface -> Set(kind)
+  if (allNeeded.length) {
+    const batches = [];
+    for (let i = 0; i < allNeeded.length; i += 90) {
+      const sliceArr = allNeeded.slice(i, i + 90);
+      const marks = sliceArr.map(() => '?').join(',');
+      batches.push(d1.prepare(`SELECT surface, kind FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
+    }
+    const results = await Promise.all(batches);
+    for (const res of results) {
+      for (const r of res.results || []) {
+        const k = String(r.surface).toLowerCase();
+        const kind = String(r.kind);
+        if (!foundMap.has(k)) foundMap.set(k, new Set());
+        foundMap.get(k).add(kind);
+      }
+    }
   }
-  if (infBatches.length) {
-    const infResults = await Promise.all(infBatches);
-    const infSet = new Set();
-    for (const res of infResults) {
-      for (const r of res.results || []) infSet.add(String(r.surface).toLowerCase());
-    }
-    for (const s of infUnique) {
-      if (infSet.has(s)) inflectLinked.add(s);
-    }
+  const discoverable = new Set();
+  for (const w of arr) if (foundMap.has(w)) discoverable.add(w);
+  for (const s of allSurfaces) discoverable.add(s.toLowerCase());
+
+  const phraseLinked = new Set();
+  for (const p of phrasePatterns) if (foundMap.has(p)) phraseLinked.add(p);
+
+  const inflectLinked = new Set();
+  for (const s of infUnique) {
+    const kinds = foundMap.get(s);
+    if (kinds && kinds.has('lemma')) inflectLinked.add(s);
   }
 
   return {
