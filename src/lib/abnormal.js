@@ -39,6 +39,14 @@ export function isAbnormal(request, word) {
       return { abnormal: true, reason: `ua-ai:${ua.slice(0,40)}` };
     }
   }
+  // 6. UA 矛盾：声称 Macintosh 但 Client Hints 平台不是 macOS（伪造 UA）
+  if (ua.includes('Macintosh')) {
+    const raw = request.headers.get('sec-ch-ua-platform');
+    const platform = (raw || '').replace(/"/g, '').trim().toLowerCase();
+    if (platform !== 'macos') {
+      return { abnormal: true, reason: `ua-platform-mismatch:${platform || 'empty'}` };
+    }
+  }
   return { abnormal: false };
 }
 
@@ -56,9 +64,9 @@ export async function tarpit(request, env, reason) {
         return new Response('Too Many Requests - rate limited', {
           status: 429,
           headers: {
-            'retry-after': '60',
-            'cache-control': 'public, max-age=60, s-maxage=60',
-            'cdn-cache-control': 'public, max-age=60',
+            'retry-after': '86400',
+            'cache-control': 'public, max-age=86400, s-maxage=86400',
+            'cdn-cache-control': 'public, max-age=86400',
             'x-bot-reason': reason,
           },
         });
@@ -70,9 +78,9 @@ export async function tarpit(request, env, reason) {
   return new Response('Blocked abnormal request', {
     status: 429,
     headers: {
-      'retry-after': '60',
-      'cache-control': 'public, max-age=60, s-maxage=60',
-      'cdn-cache-control': 'public, max-age=60',
+      'retry-after': '86400',
+      'cache-control': 'public, max-age=86400, s-maxage=86400',
+      'cdn-cache-control': 'public, max-age=86400',
       'x-bot-reason': reason,
     },
   });

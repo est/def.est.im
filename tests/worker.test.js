@@ -57,13 +57,13 @@ describe("需求2: DB错误捕获后 sleep 4s 返回 429 空白", () => {
     const res = await worker.fetch(req, baseEnv(mockD1Fail()), ctx);
     const dt = Date.now() - t0;
     expect(res.status).toBe(429);
-    expect(res.headers.get('retry-after')).toBe('60');
+    expect(res.headers.get('retry-after')).toBe('86400');
     expect(res.headers.get('x-d1-error')).toBe('1');
     expect(await res.text()).toBe('');
     expect(dt).toBeGreaterThanOrEqual(3900);
     expect(dt).toBeLessThan(6000);
     // 统一 429 逻辑：可缓存 60s
-    expect(res.headers.get('cache-control')).toContain('max-age=60');
+    expect(res.headers.get('cache-control')).toContain('max-age=86400');
   }, 10000);
 
   test("sitemap D1 异常同样转 429", async () => {
@@ -178,4 +178,42 @@ describe("需求5: 省日志", () => {
     expect(logsSection).toContain("persist = false");
     expect(logsSection).not.toContain("persist = true");
   });
+});
+
+describe("拦截中间件: Macintosh UA 与 sec-ch-ua-platform 矛盾", () => {
+  const macUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
+  const winUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+  test("Macintosh + 无平台头 => 429", async () => {
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': macUA, 'cf-connecting-ip': '9.9.9.1' } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('x-bot-reason')).toContain('ua-platform-mismatch');
+  }, 10000);
+  test("Macintosh + platform Windows => 429", async () => {
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': macUA, 'sec-ch-ua-platform': '"Windows"', 'cf-connecting-ip': '9.9.9.2' } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('x-bot-reason')).toContain('ua-platform-mismatch');
+  }, 10000);
+  test("Macintosh + platform macOS => 放行", async () => {
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': macUA, 'sec-ch-ua-platform': '"macOS"', 'cf-connecting-ip': '9.9.9.3' } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    // missing 单词应 200 占位，不应被拦截
+    expect(res.status).toBe(200);
+  }, 10000);
+  test("非 Macintosh + Windows 平台 => 放行", async () => {
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': winUA, 'sec-ch-ua-platform': '"Windows"', 'cf-connecting-ip': '9.9.9.4' } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(200);
+  }, 10000);
+  test("Macintosh + platform 大小写容错 => 放行", async () => {
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': macUA, 'sec-ch-ua-platform': 'macOS', 'cf-connecting-ip': '9.9.9.5' } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(200);
+  }, 10000);
 });

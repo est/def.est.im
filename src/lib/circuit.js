@@ -44,9 +44,9 @@ export function circuit429(word, reason) {
   return new Response('', {
     status: 429,
     headers: {
-      'retry-after': '60',
-      'cache-control': 'public, max-age=60, s-maxage=60',
-      'cdn-cache-control': 'public, max-age=60',
+      'retry-after': '86400',
+      'cache-control': 'public, max-age=86400, s-maxage=86400',
+      'cdn-cache-control': 'public, max-age=86400',
       'x-circuit-reason': reason,
       'x-word': word.slice(0, 30),
     },

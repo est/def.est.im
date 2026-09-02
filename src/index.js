@@ -47,7 +47,7 @@ export default {
           headers.set('cache-control', 'public, max-age=86400, s-maxage=2592000, immutable');
           headers.set('cdn-cache-control', 'public, max-age=2592000, immutable');
         } else {
-          headers.set('cache-control', 'public, max-age=3600, s-maxage=86400');
+          headers.set('cache-control', 'public, max-age=86400, s-maxage=86400');
           headers.set('cdn-cache-control', 'public, max-age=86400');
         }
         headers.set('x-content-type-options', 'nosniff');
@@ -60,7 +60,7 @@ export default {
       const r = await env.ASSETS.fetch(request);
       if (r.status !== 404) {
         const headers = new Headers(r.headers);
-        headers.set('cache-control', 'public, max-age=3600, s-maxage=86400');
+        headers.set('cache-control', 'public, max-age=86400, s-maxage=86400');
         headers.set('cdn-cache-control', 'public, max-age=86400');
         headers.set('x-content-type-options', 'nosniff');
         return new Response(r.body, { status: r.status, headers });
@@ -80,8 +80,8 @@ export default {
       const resp = new Response(shell('', renderIndex(), null), {
         headers: {
           'content-type': 'text/html; charset=utf-8',
-          'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-          'cdn-cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+          'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
+          'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
           'x-content-type-options': 'nosniff',
         },
       });
@@ -103,14 +103,14 @@ export default {
         await new Promise((r) => setTimeout(r, 4000));
         return new Response('', {
           status: 429,
-          headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-circuit-reason': 'spaced-query-circuit-open' },
+          headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-circuit-reason': 'spaced-query-circuit-open' },
         });
       }
       if (isCircuitOpen()) {
         await new Promise((r) => setTimeout(r, 4000));
         return new Response('', {
           status: 429,
-          headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-circuit-reason': 'circuit-open-post' },
+          headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-circuit-reason': 'circuit-open-post' },
         });
       }
       try {
@@ -121,7 +121,7 @@ export default {
           await new Promise((r) => setTimeout(r, 4000));
           return new Response('', {
             status: 429,
-            headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' },
+            headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' },
           });
         }
         throw e;
@@ -151,9 +151,9 @@ export default {
         return new Response('', {
           status: 429,
           headers: {
-            'retry-after': '60',
-            'cache-control': 'public, max-age=60, s-maxage=60',
-            'cdn-cache-control': 'public, max-age=60',
+            'retry-after': '86400',
+            'cache-control': 'public, max-age=86400, s-maxage=86400',
+            'cdn-cache-control': 'public, max-age=86400',
             'x-circuit-reason': 'spaced-query-circuit-open',
           },
         });
@@ -169,7 +169,7 @@ export default {
             status: 304,
             headers: {
               etag,
-              'cache-control': hit.headers.get('cache-control') || 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+              'cache-control': hit.headers.get('cache-control') || 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
               'cdn-cache-control': hit.headers.get('cdn-cache-control') || 'public, max-age=86400, stale-while-revalidate=86400',
             },
           });
@@ -183,9 +183,9 @@ export default {
         return new Response('', {
           status: 429,
           headers: {
-            'retry-after': '60',
-            'cache-control': 'public, max-age=60, s-maxage=60',
-            'cdn-cache-control': 'public, max-age=60',
+            'retry-after': '86400',
+            'cache-control': 'public, max-age=86400, s-maxage=86400',
+            'cdn-cache-control': 'public, max-age=86400',
             'x-circuit-reason': 'circuit-open-cache-miss',
           },
         });
@@ -202,9 +202,9 @@ export default {
           return new Response('', {
             status: 429,
             headers: {
-              'retry-after': '60',
-              'cache-control': 'public, max-age=60, s-maxage=60',
-              'cdn-cache-control': 'public, max-age=60',
+              'retry-after': '86400',
+              'cache-control': 'public, max-age=86400, s-maxage=86400',
+              'cdn-cache-control': 'public, max-age=86400',
               'x-d1-error': '1',
             },
           });
@@ -280,7 +280,7 @@ async function renderPage(env, word, reqUrl, request) {
         status: 304,
         headers: {
           etag,
-          'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+          'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
           'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
         },
       });
@@ -288,7 +288,7 @@ async function renderPage(env, word, reqUrl, request) {
     return new Response(shell(r.entry.lemma, html, word), {
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
         'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
         etag,
         'x-content-type-options': 'nosniff',
@@ -338,7 +338,7 @@ async function renderPage(env, word, reqUrl, request) {
   return new Response(shell(word, renderPlaceholder(word, false), word, ` data-gen="${esc(word)}"`), {
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'public, max-age=3600, s-maxage=86400, must-revalidate',
+      'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
       'cdn-cache-control': 'public, max-age=86400, must-revalidate',
       'x-negative-cache': '1',
       'x-content-type-options': 'nosniff',
@@ -361,7 +361,7 @@ async function handleSitemap(request, env, ctx) {
     if (asset.status === 200) {
       const headers = new Headers(asset.headers);
       headers.set('content-type', 'application/xml; charset=utf-8');
-      headers.set('cache-control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
+      headers.set('cache-control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400');
       headers.set('cdn-cache-control', 'public, max-age=86400, stale-while-revalidate=86400');
       headers.set('x-content-type-options', 'nosniff');
       const resp = new Response(asset.body, { status: 200, headers });
@@ -378,7 +378,7 @@ async function handleSitemap(request, env, ctx) {
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
       if (!success) {
-        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60' } });
+        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400' } });
       }
     }
   } catch {}
@@ -402,7 +402,7 @@ async function handleSitemap(request, env, ctx) {
     const resp = new Response(xml, {
       headers: {
         'content-type': 'application/xml; charset=utf-8',
-        'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
         'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
         'x-content-type-options': 'nosniff',
       },
@@ -416,7 +416,7 @@ async function handleSitemap(request, env, ctx) {
       await new Promise((r) => setTimeout(r, 4000));
       return new Response('', {
         status: 429,
-        headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' },
+        headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' },
       });
     }
     return new Response('Sitemap error', { status: 500, headers: { 'cache-control': 'no-store' } });
@@ -461,7 +461,7 @@ async function handlePost(request, env, w, ctx) {
         if (isD1Error(e)) {
           recordD1Failure();
           await new Promise((r) => setTimeout(r, 4000));
-          return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+          return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
         }
         return json({ ok: false, error: String(e).slice(0, 200) });
       }
@@ -469,7 +469,7 @@ async function handlePost(request, env, w, ctx) {
       if (isD1Error(e)) {
         recordD1Failure();
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+        return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
       }
       throw e;
     }
@@ -496,7 +496,7 @@ async function handlePost(request, env, w, ctx) {
       if (isD1Error(e)) {
         recordD1Failure();
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+        return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
       }
       throw e;
     }
