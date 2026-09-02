@@ -143,24 +143,19 @@ export default {
       word = word.trim();
       if (!word) return new Response('Not Found', { status: 404 });
       const chk = isAbnormal(request, word);
-      if (chk.abnormal) return tarpit(request, env, chk.reason);
-
-      // 熔断：反复 D1 出错后，带空格的查询一律 429（枚举短语攻击）
-      if (shouldBlockSpaced(word)) {
-        await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', {
-          status: 429,
-          headers: {
-            'retry-after': '86400',
-            'cache-control': 'public, max-age=86400, s-maxage=86400',
-            'cdn-cache-control': 'public, max-age=86400',
-            'x-circuit-reason': 'spaced-query-circuit-open',
-          },
-        });
+      if (chk.abnormal) {
+        const r = await tarpit(request, env, chk.reason);
+        // 429 入 Cache API，避免重复 tarpit 5s 墙钟开销
+        try {
+          const ckAb = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word.toLowerCase()));
+          if (ctx?.waitUntil) ctx.waitUntil(cachePut(ckAb, r.clone()));
+          else await cachePut(ckAb, r.clone());
+        } catch {}
+        return r;
       }
 
-      // Cache API 前置（归一化 key：剥离 query，防 ?v=1 绕过）
-      const ck = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word));
+      // Cache API 前置（归一化 key：小写 + 剥离 query，防 ?v=1 / 大小写绕过）
+      const ck = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word.toLowerCase()));
       const hit = await cacheMatch(ck);
       if (hit) {
         const etag = hit.headers.get('etag');
@@ -177,10 +172,27 @@ export default {
         return hit;
       }
 
+      // 熔断：反复 D1 出错后，带空格的查询一律 429（枚举短语攻击）— 置于 cache 之后，命中缓存直接返回
+      if (shouldBlockSpaced(word)) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const resp429 = new Response('', {
+          status: 429,
+          headers: {
+            'retry-after': '86400',
+            'cache-control': 'public, max-age=86400, s-maxage=86400',
+            'cdn-cache-control': 'public, max-age=86400',
+            'x-circuit-reason': 'spaced-query-circuit-open',
+          },
+        });
+        if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
+        else await cachePut(ck, resp429.clone());
+        return resp429;
+      }
+
       // 重复查询击穿缓存后，熔断期内一律 429（阻断 D1 穿透）
       if (isCircuitOpen()) {
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', {
+        const resp429 = new Response('', {
           status: 429,
           headers: {
             'retry-after': '86400',
@@ -189,6 +201,9 @@ export default {
             'x-circuit-reason': 'circuit-open-cache-miss',
           },
         });
+        if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
+        else await cachePut(ck, resp429.clone());
+        return resp429;
       }
 
       let resp;
@@ -199,7 +214,7 @@ export default {
         if (isD1Error(e)) {
           recordD1Failure();
           await new Promise((r) => setTimeout(r, 4000));
-          return new Response('', {
+          const resp429 = new Response('', {
             status: 429,
             headers: {
               'retry-after': '86400',
@@ -208,6 +223,9 @@ export default {
               'x-d1-error': '1',
             },
           });
+          if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
+          else await cachePut(ck, resp429.clone());
+          return resp429;
         }
         throw e;
       }
