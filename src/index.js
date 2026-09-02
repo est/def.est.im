@@ -7,6 +7,7 @@ import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
 import { probeAi } from './lib/probe.js';
 import { isAbnormal, tarpit } from './lib/abnormal.js';
+import { recordD1Failure, recordD1Success, shouldBlockSpaced, isCircuitOpen, isD1Error } from './lib/circuit.js';
 
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -98,7 +99,33 @@ export default {
       if (w.length > 80 || w.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(w)) {
         return tarpit(request, env, 'illegal-word');
       }
-      return handlePost(request, env, w, ctx);
+      if (shouldBlockSpaced(w)) {
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', {
+          status: 429,
+          headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-circuit-reason': 'spaced-query-circuit-open' },
+        });
+      }
+      if (isCircuitOpen()) {
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', {
+          status: 429,
+          headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-circuit-reason': 'circuit-open-post' },
+        });
+      }
+      try {
+        return await handlePost(request, env, w, ctx);
+      } catch (e) {
+        if (isD1Error(e)) {
+          recordD1Failure();
+          await new Promise((r) => setTimeout(r, 4000));
+          return new Response('', {
+            status: 429,
+            headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' },
+          });
+        }
+        throw e;
+      }
     }
 
     // GET /_ai/probe：AI 存活探测（Q:PING? → A:___）
@@ -118,6 +145,20 @@ export default {
       const chk = isAbnormal(request, word);
       if (chk.abnormal) return tarpit(request, env, chk.reason);
 
+      // 熔断：反复 D1 出错后，带空格的查询一律 429（枚举短语攻击）
+      if (shouldBlockSpaced(word)) {
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', {
+          status: 429,
+          headers: {
+            'retry-after': '60',
+            'cache-control': 'public, max-age=60, s-maxage=60',
+            'cdn-cache-control': 'public, max-age=60',
+            'x-circuit-reason': 'spaced-query-circuit-open',
+          },
+        });
+      }
+
       // Cache API 前置（归一化 key：剥离 query，防 ?v=1 绕过）
       const ck = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word));
       const hit = await cacheMatch(ck);
@@ -136,8 +177,41 @@ export default {
         return hit;
       }
 
-      const resp = await renderPage(env, word, url, request);
-      // 占位页（generating 且 no-store）不缓存，其余均缓存以阻断重复 D1
+      // 重复查询击穿缓存后，熔断期内一律 429（阻断 D1 穿透）
+      if (isCircuitOpen()) {
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', {
+          status: 429,
+          headers: {
+            'retry-after': '60',
+            'cache-control': 'public, max-age=60, s-maxage=60',
+            'cdn-cache-control': 'public, max-age=60',
+            'x-circuit-reason': 'circuit-open-cache-miss',
+          },
+        });
+      }
+
+      let resp;
+      try {
+        resp = await renderPage(env, word, url, request);
+        recordD1Success();
+      } catch (e) {
+        if (isD1Error(e)) {
+          recordD1Failure();
+          await new Promise((r) => setTimeout(r, 4000));
+          return new Response('', {
+            status: 429,
+            headers: {
+              'retry-after': '60',
+              'cache-control': 'public, max-age=60, s-maxage=60',
+              'cdn-cache-control': 'public, max-age=60',
+              'x-d1-error': '1',
+            },
+          });
+        }
+        throw e;
+      }
+      // 占位页（generating 且 no-store）不缓存，其余均缓存以阻断重复 D1（negative cache）
       const cc = resp.headers.get('cache-control') || '';
       if (!cc.includes('no-store')) {
         const toCache = resp.clone();
@@ -247,11 +321,26 @@ async function renderPage(env, word, reqUrl, request) {
       },
     });
   }
+  // negative cache：missing 词不再短 TTL 重复烧 D1
+  // 带空格的短语枚举直接 404 长缓存，不触发生成；单词仍可生成但缓存 1h
+  if (word.includes(' ')) {
+    return new Response(shell(word, renderPlaceholder(word, true), word), {
+      status: 404,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=86400, s-maxage=86400, must-revalidate',
+        'cdn-cache-control': 'public, max-age=86400, must-revalidate',
+        'x-negative-cache': '1',
+        'x-content-type-options': 'nosniff',
+      },
+    });
+  }
   return new Response(shell(word, renderPlaceholder(word, false), word, ` data-gen="${esc(word)}"`), {
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'public, max-age=60, s-maxage=300, must-revalidate',
-      'cdn-cache-control': 'public, max-age=300, must-revalidate',
+      'cache-control': 'public, max-age=3600, s-maxage=86400, must-revalidate',
+      'cdn-cache-control': 'public, max-age=86400, must-revalidate',
+      'x-negative-cache': '1',
       'x-content-type-options': 'nosniff',
     },
   });
@@ -322,6 +411,14 @@ async function handleSitemap(request, env, ctx) {
     else await cachePut(ck, resp.clone());
     return resp;
   } catch (e) {
+    if (isD1Error(e)) {
+      recordD1Failure();
+      await new Promise((r) => setTimeout(r, 4000));
+      return new Response('', {
+        status: 429,
+        headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' },
+      });
+    }
     return new Response('Sitemap error', { status: 500, headers: { 'cache-control': 'no-store' } });
   }
 }
@@ -333,55 +430,76 @@ async function handlePost(request, env, w, ctx) {
   const isGen = url.searchParams.get('gen') === '1';
 
   if (isGen) {
-    const low = w.toLowerCase();
-    const now = Date.now();
-    const row = await env.def_dict.prepare(
-      'SELECT word_id, entity_type, other_notes FROM words WHERE lemma = ? LIMIT 1'
-    ).bind(low).first();
-    if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low });
-    if (row && row.entity_type === -1) {
-      const start = parseInt(row.other_notes || '', 10) || 0;
-      if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low });
-      await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(String(now), row.word_id).run();
-    } else {
-      await env.def_dict.prepare(
-        'INSERT INTO words (lemma, entity_type, other_notes) VALUES (?, -1, ?)'
-      ).bind(low, String(now)).run();
-    }
     try {
-      const data = await generateEntry(env, w);
-      validate(data, w);
-      await ingest(env, data);
-      // 成功后清对应词条与 sitemap 的 Cache API（下次 GET 走新数据）
+      const low = w.toLowerCase();
+      const now = Date.now();
+      const row = await env.def_dict.prepare(
+        'SELECT word_id, entity_type, other_notes FROM words WHERE lemma = ? LIMIT 1'
+      ).bind(low).first();
+      if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low });
+      if (row && row.entity_type === -1) {
+        const start = parseInt(row.other_notes || '', 10) || 0;
+        if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low });
+        await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(String(now), row.word_id).run();
+      } else {
+        await env.def_dict.prepare(
+          'INSERT INTO words (lemma, entity_type, other_notes) VALUES (?, -1, ?)'
+        ).bind(low, String(now)).run();
+      }
       try {
-        const origin = new URL(request.url).origin;
-        await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(low)));
-        await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(w)));
-        await caches.default.delete(cacheKeyForSitemap(origin));
-      } catch {}
-      return json({ ok: true, word: low });
+        const data = await generateEntry(env, w);
+        validate(data, w);
+        await ingest(env, data);
+        try {
+          const origin = new URL(request.url).origin;
+          await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(low)));
+          await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(w)));
+          await caches.default.delete(cacheKeyForSitemap(origin));
+        } catch {}
+        return json({ ok: true, word: low });
+      } catch (e) {
+        if (isD1Error(e)) {
+          recordD1Failure();
+          await new Promise((r) => setTimeout(r, 4000));
+          return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+        }
+        return json({ ok: false, error: String(e).slice(0, 200) });
+      }
     } catch (e) {
-      console.error('[gen]', w, String(e));
-      return json({ ok: false, error: String(e).slice(0, 200) });
+      if (isD1Error(e)) {
+        recordD1Failure();
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+      }
+      throw e;
     }
   }
 
   if (isFragment) {
-    const r = await loadEntry(env, w);
-    if (r.type === 'redirect') {
-      const frag = '#:~:text=' + encodeURIComponent(r.highlight);
-      return json({ redirect: '/' + encodeURIComponent(r.lemma) + frag });
+    try {
+      const r = await loadEntry(env, w);
+      if (r.type === 'redirect') {
+        const frag = '#:~:text=' + encodeURIComponent(r.highlight);
+        return json({ redirect: '/' + encodeURIComponent(r.lemma) + frag });
+      }
+      let html, status = 200;
+      if (r.type === 'entry') {
+        html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked, inflectLinked: r.inflectLinked }, w);
+      } else if (r.type === 'rejected') {
+        html = renderPlaceholder(w, true);
+        status = 404;
+      } else {
+        html = renderPlaceholder(w, false);
+      }
+      return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+    } catch (e) {
+      if (isD1Error(e)) {
+        recordD1Failure();
+        await new Promise((r) => setTimeout(r, 4000));
+        return new Response('', { status: 429, headers: { 'retry-after': '60', 'cache-control': 'public, max-age=60, s-maxage=60', 'cdn-cache-control': 'public, max-age=60', 'x-d1-error': '1' } });
+      }
+      throw e;
     }
-    let html, status = 200;
-    if (r.type === 'entry') {
-      html = renderEntry({ ...r.entry, senses: r.senses, groups: r.groups, discoverable: r.discoverable, phraseLinked: r.phraseLinked, inflectLinked: r.inflectLinked }, w);
-    } else if (r.type === 'rejected') {
-      html = renderPlaceholder(w, true);
-      status = 404;
-    } else {
-      html = renderPlaceholder(w, false);
-    }
-    return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
   }
   return json({ error: 'unknown action' }, 400);
 }
