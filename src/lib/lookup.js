@@ -145,18 +145,25 @@ async function loadEntry(env, word) {
   const infForms = (groups.inflection || []).map((f) => f.surface);
   const infUnique = [...new Set(infForms.map((s) => s.toLowerCase()))];
 
-  // 合并三类存在性检查为单次批量查询（省 2 次 RTT）
+  // 存在性检查：逐词 LIMIT 5 探测（kind 域恰好 5 种，LIMIT 5 即完备）
+  // 不用单条大 IN：高频词（如 time/make）在 surfaces 中命中成百上千行，
+  // 单条 IN 会全量扫描，D1 rows_read 爆表；逐词 LIMIT 5 每词最多读 5 行
   const allNeededSet = new Set([...arr, ...phrasePatterns, ...infUnique]);
   const allNeeded = [...allNeededSet];
   const foundMap = new Map(); // surface -> Set(kind)
   if (allNeeded.length) {
-    const batches = [];
-    for (let i = 0; i < allNeeded.length; i += 90) {
-      const sliceArr = allNeeded.slice(i, i + 90);
-      const marks = sliceArr.map(() => '?').join(',');
-      batches.push(d1.prepare(`SELECT surface, kind FROM surfaces WHERE surface IN (${marks})`).bind(...sliceArr).all());
+    const stmts = allNeeded.map((w) =>
+      d1.prepare('SELECT surface, kind FROM surfaces WHERE surface = ? LIMIT 5').bind(w),
+    );
+    const results = [];
+    for (let i = 0; i < stmts.length; i += 50) {
+      const chunk = stmts.slice(i, i + 50);
+      if (typeof d1.batch === 'function') {
+        results.push(...(await d1.batch(chunk)));
+      } else {
+        results.push(...(await Promise.all(chunk.map((s) => s.all()))));
+      }
     }
-    const results = await Promise.all(batches);
     for (const res of results) {
       for (const r of res.results || []) {
         const k = String(r.surface).toLowerCase();

@@ -384,19 +384,17 @@ async function handleSitemap(request, env, ctx) {
   } catch {}
 
   try {
-    // 分层优先级：CEFR 越基础、freq 越高越靠前；高频词优先被爬虫发现
+    // 回退路径：去掉 ORDER BY CASE（全表扫描 + TEMP B-TREE 排序，一次读 5 万行）。
+    // 主路径是静态 public/sitemap.xml（零 D1），这里只求便宜不断流
     const q = await env.def_dict.prepare(
-      `SELECT lemma, cefr, freq FROM words WHERE entity_type = 0 ORDER BY
-        CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
-        freq DESC, lemma ASC LIMIT 50000`
+      'SELECT lemma FROM words WHERE entity_type = 0 LIMIT 50000'
     ).all();
     const rows = q.results || [];
     const urls = ['https://def.est.im/'];
     let xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
     xml += `<url><loc>https://def.est.im/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`;
     for (const r of rows) {
-      const pri = r.cefr === 'A1' || r.cefr === 'A2' ? '0.9' : r.cefr === 'B1' || r.cefr === 'B2' ? '0.7' : '0.5';
-      xml += `<url><loc>https://def.est.im/${encodeURIComponent(r.lemma)}</loc><changefreq>monthly</changefreq><priority>${pri}</priority></url>`;
+      xml += `<url><loc>https://def.est.im/${encodeURIComponent(r.lemma)}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`;
     }
     xml += `</urlset>`;
     const resp = new Response(xml, {
