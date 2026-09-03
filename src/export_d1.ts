@@ -145,24 +145,26 @@ console.log(`rejects: ${n}`);
 // ---------- 5. schema 文件 ----------
 writeFileSync(join(OUT_DIR, "d1_schema.sql"), SCHEMA);
 
-// ---------- 5b. 静态 sitemap（词典友好：零 D1 查询，优先级分层） ----------
-// 词典 sitemap 策略：A1/A2 基础词优先（priority 0.9/0.7/0.5），50000 上限内当前 44k 全量
-// 产出：public/sitemap.xml（随 wrangler deploy 发布，Worker 优先走 ASSETS，D1 仅回退）
+// ---------- 5b. 静态 sitemap（纯静态：高频 + 最新，Worker 零 D1） ----------
+// 策略：高频 TOP 15000（freq DESC）+ 最新 2000（id DESC，新收录），去重后上限约 1.7 万
+// 全量 44k 不再进 sitemap：长尾词靠内链 discoverable 被爬虫发现即可
+// 产出：public/sitemap.xml（随 wrangler deploy 发布，Worker 只走 ASSETS，无 D1 回退）
 try {
   const PUBLIC_DIR = join(DATA_DIR, "..", "public");
   mkdirSync(PUBLIC_DIR, { recursive: true });
-  const wordsForSitemap = src.query(
-    `SELECT lemma, cefr, freq FROM words WHERE kind IN ('common','abbr') OR kind IS NULL
-     ORDER BY
-       CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
-       freq DESC, lemma ASC LIMIT 50000`
+  const hot = src.query(
+    `SELECT lemma, cefr, freq FROM words ORDER BY freq DESC, lemma ASC LIMIT 15000`
   ).all() as any[];
-  // 若本地库 kind 列已映射为 entity_type 语义，回退查询 words 全部并按 entity_type 过滤
-  const rows = wordsForSitemap.length ? wordsForSitemap : (src.query(
-    `SELECT lemma, cefr, freq FROM words ORDER BY
-       CASE cefr WHEN 'A1' THEN 0 WHEN 'A2' THEN 1 WHEN 'B1' THEN 2 WHEN 'B2' THEN 3 WHEN 'C1' THEN 4 WHEN 'C2' THEN 5 ELSE 6 END,
-       freq DESC, lemma ASC LIMIT 50000`
-  ).all() as any[]);
+  const fresh = src.query(
+    `SELECT lemma, cefr, freq FROM words ORDER BY id DESC LIMIT 2000`
+  ).all() as any[];
+  const seen = new Set<string>();
+  const rows = [...hot, ...fresh].filter((r) => {
+    const k = String(r.lemma).toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   const today = new Date().toISOString().slice(0, 10);
   let xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
   xml += `<url><loc>https://def.est.im/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`;

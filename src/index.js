@@ -353,8 +353,19 @@ async function handleSitemap(request, env, ctx) {
   const hit = await cacheMatch(ck);
   if (hit) return hit;
 
-  // 词典型 sitemap：优先静态资产（public/sitemap*.xml），零 D1
-  // 静态文件由 export_d1.ts 生成并随 wrangler deploy 发布；Worker 仅作回退
+  // 纯静态 sitemap（public/sitemap.xml，高频 TOP + 最新，export_d1.ts 生成）
+  // 无 D1 回退：静态缺失直接 404，绝不读库（D1 rows_read 曾被 sitemap 回退打爆）
+  // 简单限流防刷：sitemap 被高频刷时 429
+  try {
+    if (env.ABNORMAL_LIMITER?.limit) {
+      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+      const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
+      if (!success) {
+        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400' } });
+      }
+    }
+  } catch {}
+
   try {
     const assetReq = new Request(origin + '/sitemap.xml', request);
     const asset = await env.ASSETS.fetch(assetReq);
@@ -370,55 +381,7 @@ async function handleSitemap(request, env, ctx) {
       return resp;
     }
   } catch {}
-
-  // 回退：D1 动态生成（仅首 miss 触发，配合索引与限流）
-  // 简单限流防刷：sitemap 被高频刷时 429
-  try {
-    if (env.ABNORMAL_LIMITER?.limit) {
-      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-      const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
-      if (!success) {
-        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400' } });
-      }
-    }
-  } catch {}
-
-  try {
-    // 回退路径：去掉 ORDER BY CASE（全表扫描 + TEMP B-TREE 排序，一次读 5 万行）。
-    // 主路径是静态 public/sitemap.xml（零 D1），这里只求便宜不断流
-    const q = await env.def_dict.prepare(
-      'SELECT lemma FROM words WHERE entity_type = 0 LIMIT 50000'
-    ).all();
-    const rows = q.results || [];
-    const urls = ['https://def.est.im/'];
-    let xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-    xml += `<url><loc>https://def.est.im/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`;
-    for (const r of rows) {
-      xml += `<url><loc>https://def.est.im/${encodeURIComponent(r.lemma)}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`;
-    }
-    xml += `</urlset>`;
-    const resp = new Response(xml, {
-      headers: {
-        'content-type': 'application/xml; charset=utf-8',
-        'cache-control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400',
-        'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
-        'x-content-type-options': 'nosniff',
-      },
-    });
-    if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp.clone()));
-    else await cachePut(ck, resp.clone());
-    return resp;
-  } catch (e) {
-    if (isD1Error(e)) {
-      recordD1Failure();
-      await new Promise((r) => setTimeout(r, 4000));
-      return new Response('', {
-        status: 429,
-        headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' },
-      });
-    }
-    return new Response('Sitemap error', { status: 500, headers: { 'cache-control': 'no-store' } });
-  }
+  return new Response('Not Found', { status: 404, headers: { 'cache-control': 'public, max-age=86400, s-maxage=86400' } });
 }
 
 // POST 分发：fragment / gen（w 已由调用方校验非空 + 异常校验）
