@@ -47,6 +47,14 @@ export function isAbnormal(request, word) {
       return { abnormal: true, reason: `ua-platform-mismatch:${platform || 'empty'}` };
     }
   }
+  // 7. 无 referer 却只有 cache-control: no-cache：真实浏览器刷新必然同时带 pragma: no-cache，缺 pragma 为伪造
+  if (!referer) {
+    const cc = (request.headers.get('cache-control') || '').toLowerCase();
+    const pragma = (request.headers.get('pragma') || '').toLowerCase();
+    if (cc.includes('no-cache') && !pragma.includes('no-cache')) {
+      return { abnormal: true, reason: 'cc-without-pragma' };
+    }
+  }
   return { abnormal: false };
 }
 
