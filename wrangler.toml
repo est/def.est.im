@@ -20,6 +20,10 @@ namespace_id = "1001"
   limit = 20
   period = 60
 
+[[services]]
+binding = "GUARD"
+service = "crest"
+
 [[rules]]
 type = "Text"
 globs = ["./src/lib/shell.tpl.html"]

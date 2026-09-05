@@ -6,7 +6,8 @@ import { renderEntry, renderPlaceholder, renderIndex, shell, esc } from './lib/r
 import { loadEntry } from './lib/lookup.js';
 import { generateEntry, validate, ingest } from './lib/gen.js';
 import { probeAi } from './lib/probe.js';
-import { isAbnormal, tarpit } from './lib/abnormal.js';
+import { tarpit } from './lib/abnormal.js';
+import { checkAbnormal } from './lib/guard.js';
 import { recordD1Failure, recordD1Success, shouldBlockSpaced, isCircuitOpen, isD1Error } from './lib/circuit.js';
 
 const json = (o, status = 200) =>
@@ -94,7 +95,7 @@ export default {
     if (request.method === 'POST' && path === '/') {
       const w = (url.searchParams.get('w') || '').trim();
       if (!w) return json({ error: 'no word' }, 400);
-      const chk = isAbnormal(request, w);
+      const chk = await checkAbnormal(request, env, w);
       if (chk.abnormal) return tarpit(request, env, chk.reason);
       if (w.length > 80 || w.split(/\s+/).length > 3 || /[^\w\s'\-.\u4e00-\u9fa5]/.test(w)) {
         return tarpit(request, env, 'illegal-word');
@@ -142,7 +143,7 @@ export default {
       try { word = decodeURIComponent(path.slice(1)); } catch { return new Response('Bad Request', { status: 400 }); }
       word = word.trim();
       if (!word) return new Response('Not Found', { status: 404 });
-      const chk = isAbnormal(request, word);
+      const chk = await checkAbnormal(request, env, word);
       if (chk.abnormal) {
         const r = await tarpit(request, env, chk.reason);
         // 429 入 Cache API，避免重复 tarpit 5s 墙钟开销

@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, mock } from "bun:test";
 import worker from "../src/index.js";
+import { checkVerdict } from "../crest/src/guard.ts";
 import { resetCircuitForTest, getCircuitState, recordD1Failure } from "../src/lib/circuit.js";
 
 function mockD1Fail() {
@@ -33,7 +34,9 @@ function mockD1Missing() {
 const baseEnv = (d1) => ({
   def_dict: d1,
   ASSETS: { fetch: async () => new Response('not found', {status:404}) },
-  ABNORMAL_LIMITER: { limit: async () => ({ success: true }) }
+  ABNORMAL_LIMITER: { limit: async () => ({ success: true }) },
+  // 默认走真实 guard 规则（经纯数据 signal），与生产 RPC 行為一致
+  GUARD: { check: async (s) => checkVerdict(s) }
 });
 
 const ctx = { waitUntil: (p) => p };
@@ -216,4 +219,45 @@ describe("拦截中间件: Macintosh UA 与 sec-ch-ua-platform 矛盾", () => {
     const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
     expect(res.status).toBe(200);
   }, 10000);
+});
+
+describe("guard RPC 接入: verdict 拦截 + fail-open", () => {
+  test("guard 判 abnormal => 429 + x-bot-reason", async () => {
+    const env = baseEnv(mockD1Missing());
+    env.GUARD = { check: async () => ({ abnormal: true, reason: 'ua-ai:GPTBot' }) };
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': 'GPTBot/1.0', 'cf-connecting-ip': '9.9.9.9' } });
+    req.cf = {};
+    const res = await worker.fetch(req, env, ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('x-bot-reason')).toContain('ua-ai');
+  }, 10000);
+  test("guard 收到的 signal 是纯数据（无函数、无 Request）", async () => {
+    let got = null;
+    const env = baseEnv(mockD1Missing());
+    env.GUARD = { check: async (s) => { got = s; return { abnormal: false }; } };
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': 'x', 'cache-control': 'no-cache', 'cf-connecting-ip': '1.2.3.4' } });
+    req.cf = { verifiedBotCategory: 'Search Engine', botManagement: { verifiedBot: true, score: 99 } };
+    await worker.fetch(req, env, ctx);
+    expect(got.cacheControl).toBe('no-cache');
+    expect(got.verifiedBotCategory).toBe('Search Engine');
+    expect(got.botManagement).toEqual({ verifiedBot: true, score: 99 });
+    expect(got.sameSiteOrigin).toBe('https://def.est.im/');
+    expect(JSON.parse(JSON.stringify(got))).toEqual(got);
+  });
+  test("guard 抛错 => fail-open 放行", async () => {
+    const env = baseEnv(mockD1Missing());
+    env.GUARD = { check: async () => { throw new Error('boom'); } };
+    const req = new Request('https://def.est.im/hello', { headers: { 'cf-connecting-ip': '9.9.9.10' } });
+    req.cf = {};
+    const res = await worker.fetch(req, env, ctx);
+    expect(res.status).toBe(200);
+  });
+  test("无 GUARD binding => fail-open 放行", async () => {
+    const env = baseEnv(mockD1Missing());
+    delete env.GUARD;
+    const req = new Request('https://def.est.im/hello', { headers: { 'cf-connecting-ip': '9.9.9.11' } });
+    req.cf = {};
+    const res = await worker.fetch(req, env, ctx);
+    expect(res.status).toBe(200);
+  });
 });

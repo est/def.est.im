@@ -14,3 +14,5 @@ data/
 .dev.vars
 .mimocode
 .dict_json/
+# crest 为独立仓库（symlink），其改动在各自仓库提交
+/crest
