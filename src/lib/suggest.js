@@ -33,7 +33,7 @@ const SPELL_FIX = {
   expierence: ['experience'], familar: ['familiar'], foriegn: ['foreign'], gaurd: ['guard'],
   happend: ['happened'], heared: ['heard'], imediate: ['immediate'], invincible: ['invincible'],
   jealosy: ['jealousy'], knifes: ['knives'], lenght: ['length'], mentall: ['mental'],
-  ocasion: ['occasion'], pasttime: ['pastime'], peice: ['piece'], personel: ['personnel'],
+  ocasion: ['occasion'], pasttime: ['pastime'], personel: ['personnel'],
   presistent: ['persistent'], pretier: ['prettier'], realse: ['release'],
   religous: ['religious'], responsability: ['responsibility'], seige: ['siege'],
   similiar: ['similar'], sincerly: ['sincerely'], somtimes: ['sometimes'],

@@ -18,8 +18,9 @@ export async function tarpit(request, env, reason) {
           status: 429,
           headers: {
             'retry-after': '86400',
-            'cache-control': 'public, max-age=86400, s-maxage=86400',
-            'cdn-cache-control': 'public, max-age=86400',
+            'cache-control': 'public, max-age=60, s-maxage=60',
+            'cdn-cache-control': 'public, max-age=60',
+            'cloudflare-cdn-cache-control': 'no-store',
             'x-bot-reason': reason,
           },
         });
@@ -27,13 +28,15 @@ export async function tarpit(request, env, reason) {
     }
   } catch (_) {}
   // 异常请求统一延迟 5s 后 429（卡死爬虫，浏览器用户几乎不触发）
+  // 缓存 TTL 压到 60s：block 缓存独立于词条页，短周期自愈，避免 24h 毒化
   await new Promise((r) => setTimeout(r, 5000));
   return new Response('Blocked abnormal request', {
     status: 429,
     headers: {
       'retry-after': '86400',
-      'cache-control': 'public, max-age=86400, s-maxage=86400',
-      'cdn-cache-control': 'public, max-age=86400',
+      'cache-control': 'public, max-age=60, s-maxage=60',
+      'cdn-cache-control': 'public, max-age=60',
+      'cloudflare-cdn-cache-control': 'no-store',
       'x-bot-reason': reason,
     },
   });

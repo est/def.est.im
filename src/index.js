@@ -11,13 +11,58 @@ import { checkAbnormal } from './lib/guard.js';
 import { recordD1Failure, recordD1Success, shouldBlockSpaced, isCircuitOpen, isD1Error } from './lib/circuit.js';
 
 const json = (o, status = 200) =>
-  new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
+  new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 
 function cacheKeyForWord(origin, path) {
   return new Request(origin + path, { method: 'GET' });
 }
-function cacheKeyForSitemap(origin) {
-  return new Request(origin + '/sitemap.xml', { method: 'GET' });
+// path 缺省为根 sitemap（保持 gen 后失效调用不变）；显式传入时按实际路径缓存，避免 /sitemaps/* 串内容
+function cacheKeyForSitemap(origin, path) {
+  return new Request(origin + (path || '/sitemap.xml'), { method: 'GET' });
+}
+// 拦截/熔断 429 专用缓存键：与词条页 key 隔离，短 TTL，绝不污染真实词条页缓存
+// 路径含 `/`，天然不可能与合法词条（正则禁 `/`）撞 key
+function cacheKeyForBlock(origin, word) {
+  return new Request(origin + '/__block/' + encodeURIComponent(String(word).toLowerCase()), { method: 'GET' });
+}
+// 仅这些状态可写入词条页缓存；429/5xx 一律不写（防 negative cache 毒化正常流量）
+const CACHEABLE_PAGE_STATUS = new Set([200, 302, 404]);
+// Workers Cache 精确失效标签（必须 printable ASCII）
+const wordTag = (word) => 'word:' + encodeURIComponent(String(word).toLowerCase());
+// 给响应补 Cache-Tag（Workers Cache 消费该头做批量 purge）
+function withCacheTag(resp, tag) {
+  if (!tag || resp.headers.has('cache-tag')) return resp;
+  const headers = new Headers(resp.headers);
+  headers.set('cache-tag', tag);
+  return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers });
+}
+// 失效某个词的缓存：优先 Workers Cache（全局），再兜底 Cache API（本 POP）
+async function purgeWord(ctx, reqUrl, words) {
+  const list = [...new Set((words || []).filter(Boolean))];
+  const tags = [...new Set(list.map((w) => wordTag(w)).concat(['sitemap']))];
+  try { if (ctx?.cache?.purge) await ctx.cache.purge({ tags }); } catch {}
+  try {
+    const origin = new URL(reqUrl).origin;
+    for (const w of list) {
+      await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(String(w).toLowerCase())));
+      await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(w)));
+    }
+    await caches.default.delete(cacheKeyForSitemap(origin));
+  } catch {}
+}
+// 瞬时 429（熔断 / D1 错误）：不落词条缓存，最多让浏览器/边缘缓存 60s 即重试
+// cloudflare-cdn-cache-control:no-store 让 Workers Cache 永不缓存 429（避免全局毒化）
+function transient429(extra) {
+  return new Response('', {
+    status: 429,
+    headers: {
+      'retry-after': '86400',
+      'cache-control': 'public, max-age=60, s-maxage=60',
+      'cdn-cache-control': 'public, max-age=60',
+      'cloudflare-cdn-cache-control': 'no-store',
+      ...extra,
+    },
+  });
 }
 
 async function cacheMatch(request) {
@@ -102,17 +147,11 @@ export default {
       }
       if (shouldBlockSpaced(w)) {
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', {
-          status: 429,
-          headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-circuit-reason': 'spaced-query-circuit-open' },
-        });
+        return transient429({ 'x-circuit-reason': 'spaced-query-circuit-open' });
       }
       if (isCircuitOpen()) {
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', {
-          status: 429,
-          headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-circuit-reason': 'circuit-open-post' },
-        });
+        return transient429({ 'x-circuit-reason': 'circuit-open-post' });
       }
       try {
         return await handlePost(request, env, w, ctx);
@@ -120,10 +159,7 @@ export default {
         if (isD1Error(e)) {
           recordD1Failure();
           await new Promise((r) => setTimeout(r, 4000));
-          return new Response('', {
-            status: 429,
-            headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' },
-          });
+          return transient429({ 'x-d1-error': '1' });
         }
         throw e;
       }
@@ -145,13 +181,14 @@ export default {
       if (!word) return new Response('Not Found', { status: 404 });
       const chk = await checkAbnormal(request, env, word);
       if (chk.abnormal) {
+        // 仅当本请求自身被判 abnormal 时才查 block 缓存，正常用户不会读到 429
+        const bk = cacheKeyForBlock(url.origin, word);
+        const bhit = await cacheMatch(bk);
+        if (bhit) return bhit;
         const r = await tarpit(request, env, chk.reason);
-        // 429 入 Cache API，避免重复 tarpit 5s 墙钟开销
-        try {
-          const ckAb = cacheKeyForWord(url.origin, '/' + encodeURIComponent(word.toLowerCase()));
-          if (ctx?.waitUntil) ctx.waitUntil(cachePut(ckAb, r.clone()));
-          else await cachePut(ckAb, r.clone());
-        } catch {}
+        // 429 只进独立 block 键（短 TTL），避免重复 tarpit 5s，且不污染词条页缓存
+        if (ctx?.waitUntil) ctx.waitUntil(cachePut(bk, r.clone()));
+        else await cachePut(bk, r.clone());
         return r;
       }
 
@@ -174,37 +211,16 @@ export default {
       }
 
       // 熔断：反复 D1 出错后，带空格的查询一律 429（枚举短语攻击）— 置于 cache 之后，命中缓存直接返回
+      // 瞬时 429 不落词条页缓存，仅浏览器/边缘短缓存 60s
       if (shouldBlockSpaced(word)) {
         await new Promise((r) => setTimeout(r, 4000));
-        const resp429 = new Response('', {
-          status: 429,
-          headers: {
-            'retry-after': '86400',
-            'cache-control': 'public, max-age=86400, s-maxage=86400',
-            'cdn-cache-control': 'public, max-age=86400',
-            'x-circuit-reason': 'spaced-query-circuit-open',
-          },
-        });
-        if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
-        else await cachePut(ck, resp429.clone());
-        return resp429;
+        return transient429({ 'x-circuit-reason': 'spaced-query-circuit-open' });
       }
 
       // 重复查询击穿缓存后，熔断期内一律 429（阻断 D1 穿透）
       if (isCircuitOpen()) {
         await new Promise((r) => setTimeout(r, 4000));
-        const resp429 = new Response('', {
-          status: 429,
-          headers: {
-            'retry-after': '86400',
-            'cache-control': 'public, max-age=86400, s-maxage=86400',
-            'cdn-cache-control': 'public, max-age=86400',
-            'x-circuit-reason': 'circuit-open-cache-miss',
-          },
-        });
-        if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
-        else await cachePut(ck, resp429.clone());
-        return resp429;
+        return transient429({ 'x-circuit-reason': 'circuit-open-cache-miss' });
       }
 
       let resp;
@@ -215,24 +231,15 @@ export default {
         if (isD1Error(e)) {
           recordD1Failure();
           await new Promise((r) => setTimeout(r, 4000));
-          const resp429 = new Response('', {
-            status: 429,
-            headers: {
-              'retry-after': '86400',
-              'cache-control': 'public, max-age=86400, s-maxage=86400',
-              'cdn-cache-control': 'public, max-age=86400',
-              'x-d1-error': '1',
-            },
-          });
-          if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp429.clone()));
-          else await cachePut(ck, resp429.clone());
-          return resp429;
+          return transient429({ 'x-d1-error': '1' });
         }
         throw e;
       }
-      // 占位页（generating 且 no-store）不缓存，其余均缓存以阻断重复 D1（negative cache）
+      // Workers Cache 精确失效标签（hit/miss 都带上，供 purge by tag）
+      resp = withCacheTag(resp, wordTag(word));
+      // 占位页（generating 且 no-store）不缓存；且仅 200/302/404 入缓存，429/5xx 一律不写（防毒化）
       const cc = resp.headers.get('cache-control') || '';
-      if (!cc.includes('no-store')) {
+      if (!cc.includes('no-store') && CACHEABLE_PAGE_STATUS.has(resp.status)) {
         const toCache = resp.clone();
         if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, toCache));
         else await cachePut(ck, toCache);
@@ -311,7 +318,6 @@ async function renderPage(env, word, reqUrl, request) {
         'cdn-cache-control': 'public, max-age=86400, stale-while-revalidate=86400',
         etag,
         'x-content-type-options': 'nosniff',
-        vary: 'Accept-Encoding',
       },
     });
   }
@@ -368,7 +374,8 @@ async function renderPage(env, word, reqUrl, request) {
 async function handleSitemap(request, env, ctx) {
   const url = new URL(request.url);
   const origin = url.origin;
-  const ck = cacheKeyForSitemap(origin);
+  // 按实际请求路径缓存，避免所有 /sitemaps/* 共用 /sitemap.xml 键而串内容
+  const ck = cacheKeyForSitemap(origin, url.pathname);
   const hit = await cacheMatch(ck);
   if (hit) return hit;
 
@@ -380,19 +387,20 @@ async function handleSitemap(request, env, ctx) {
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
       if (!success) {
-        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400' } });
+        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=60, s-maxage=60', 'cloudflare-cdn-cache-control': 'no-store' } });
       }
     }
   } catch {}
 
   try {
-    const assetReq = new Request(origin + '/sitemap.xml', request);
+    const assetReq = new Request(origin + url.pathname, request);
     const asset = await env.ASSETS.fetch(assetReq);
     if (asset.status === 200) {
       const headers = new Headers(asset.headers);
       headers.set('content-type', 'application/xml; charset=utf-8');
       headers.set('cache-control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400');
       headers.set('cdn-cache-control', 'public, max-age=86400, stale-while-revalidate=86400');
+      headers.set('cache-tag', 'sitemap');
       headers.set('x-content-type-options', 'nosniff');
       const resp = new Response(asset.body, { status: 200, headers });
       if (ctx?.waitUntil) ctx.waitUntil(cachePut(ck, resp.clone()));
@@ -410,6 +418,14 @@ async function handlePost(request, env, w, ctx) {
   const isGen = url.searchParams.get('gen') === '1';
 
   if (isGen) {
+    // E：连续 MAX_GEN_FAILS 次「内容性」失败后写入 rejects，停止反复烧 LLM（HTTP/超时/缺 env 等基础设施错误不计入，避免误封好词）
+    const MAX_GEN_FAILS = 3;
+    const parseMarker = (s) => {
+      const [startS, failS] = String(s || '').split('|');
+      return { start: parseInt(startS, 10) || 0, fails: parseInt(failS, 10) || 0 };
+    };
+    const marker = (start, fails) => `${start}|${fails}`;
+    const isContentFail = (msg) => /JSON parse fail|word missing|entries empty|entries\[|def_en missing|def_zh missing|example pair mismatch|needs pattern|inflection/i.test(msg);
     try {
       const low = w.toLowerCase();
       const now = Date.now();
@@ -417,39 +433,56 @@ async function handlePost(request, env, w, ctx) {
         'SELECT word_id, entity_type, other_notes FROM words WHERE lemma = ? LIMIT 1'
       ).bind(low).first();
       if (row && (row.entity_type ?? 0) >= 0) return json({ ok: true, word: low });
+      // 已判不可收录：直接回绝，避免其它 POP 的陈旧占位页再次触发生成
+      const rej = await env.def_dict.prepare('SELECT 1 FROM rejects WHERE surface = ?').bind(low).first();
+      if (rej) return json({ ok: false, rejected: true, word: low });
+
+      let wordId;
+      let prevFails = 0;
       if (row && row.entity_type === -1) {
-        const start = parseInt(row.other_notes || '', 10) || 0;
-        if (now - start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low });
-        await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(String(now), row.word_id).run();
+        const m = parseMarker(row.other_notes);
+        prevFails = m.fails;
+        if (now - m.start < 5 * 60 * 1000) return json({ ok: false, generating: true, word: low });
+        wordId = row.word_id;
+        await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(marker(now, prevFails), wordId).run();
       } else {
-        await env.def_dict.prepare(
+        const wres = await env.def_dict.prepare(
           'INSERT INTO words (lemma, entity_type, other_notes) VALUES (?, -1, ?)'
-        ).bind(low, String(now)).run();
+        ).bind(low, marker(now, 0)).run();
+        wordId = wres.meta.last_row_id;
       }
       try {
         const data = await generateEntry(env, w);
         validate(data, w);
         await ingest(env, data);
-        try {
-          const origin = new URL(request.url).origin;
-          await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(low)));
-          await caches.default.delete(cacheKeyForWord(origin, '/' + encodeURIComponent(w)));
-          await caches.default.delete(cacheKeyForSitemap(origin));
-        } catch {}
+        await purgeWord(ctx, request.url, [low, w]);
         return json({ ok: true, word: low });
       } catch (e) {
         if (isD1Error(e)) {
           recordD1Failure();
           await new Promise((r) => setTimeout(r, 4000));
-          return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
+          return transient429({ 'x-d1-error': '1' });
         }
-        return json({ ok: false, error: String(e).slice(0, 200) });
+        const msg = String(e);
+        const contentFail = isContentFail(msg);
+        const fails = contentFail ? prevFails + 1 : prevFails;
+        if (contentFail && fails >= MAX_GEN_FAILS && wordId != null) {
+          // 达到上限：判为不可收录，写 rejects + 清占位行 + 清本地页面缓存，后续 GET 直接 404
+          await env.def_dict.prepare('INSERT OR IGNORE INTO rejects (surface, reason) VALUES (?, ?)').bind(low, 'gen-fail').run();
+          await env.def_dict.prepare('DELETE FROM words WHERE word_id = ? AND entity_type = -1').bind(wordId).run();
+          await purgeWord(ctx, request.url, [low, w]);
+          return json({ ok: false, rejected: true, error: msg.slice(0, 200) });
+        }
+        if (wordId != null && fails !== prevFails) {
+          await env.def_dict.prepare('UPDATE words SET other_notes = ? WHERE word_id = ?').bind(marker(now, fails), wordId).run();
+        }
+        return json({ ok: false, error: msg.slice(0, 200) });
       }
     } catch (e) {
       if (isD1Error(e)) {
         recordD1Failure();
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
+        return transient429({ 'x-d1-error': '1' });
       }
       throw e;
     }
@@ -476,7 +509,7 @@ async function handlePost(request, env, w, ctx) {
       if (isD1Error(e)) {
         recordD1Failure();
         await new Promise((r) => setTimeout(r, 4000));
-        return new Response('', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=86400, s-maxage=86400', 'cdn-cache-control': 'public, max-age=86400', 'x-d1-error': '1' } });
+        return transient429({ 'x-d1-error': '1' });
       }
       throw e;
     }

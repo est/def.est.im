@@ -24,6 +24,12 @@ namespace_id = "1001"
 binding = "GUARD"
 service = "crest"
 
+# Workers Cache：命中时 Worker 不执行（省 D1/CPU），跨版本共享（避免每次部署冷启动）
+# 429 一律 no-store / cloudflare-cdn-cache-control:no-store，绝不被全局缓存
+[cache]
+enabled = true
+cross_version_cache = true
+
 [[rules]]
 type = "Text"
 globs = ["./src/lib/shell.tpl.html"]

@@ -65,21 +65,18 @@ describe("需求2: DB错误捕获后 sleep 4s 返回 429 空白", () => {
     expect(await res.text()).toBe('');
     expect(dt).toBeGreaterThanOrEqual(3900);
     expect(dt).toBeLessThan(6000);
-    // 统一 429 逻辑：可缓存 60s
-    expect(res.headers.get('cache-control')).toContain('max-age=86400');
+    // P0-1：瞬时 429 不再落 24h 缓存，只允许浏览器/边缘短缓存 60s
+    expect(res.headers.get('cache-control')).toContain('public, max-age=60, s-maxage=60');
   }, 10000);
 
-  test("sitemap D1 异常同样转 429", async () => {
+  test("sitemap 静态缺失直接 404，无 D1 回退", async () => {
     const req = new Request('https://def.est.im/sitemap.xml', { headers: { 'cf-connecting-ip': '1.1.1.2' } });
     req.cf = {};
-    // mock ASSETS 返回 404 让其走 D1 回退
+    // mock ASSETS 返回 404：纯静态 sitemap 设计下应直接 404，绝不读库
     const env = baseEnv(mockD1Fail());
     env.ASSETS.fetch = async () => new Response('not found', {status:404});
-    const t0 = Date.now();
     const res = await worker.fetch(req, env, ctx);
-    const dt = Date.now() - t0;
-    expect(res.status).toBe(429);
-    expect(dt).toBeGreaterThanOrEqual(3900);
+    expect(res.status).toBe(404);
   }, 10000);
 });
 
@@ -172,14 +169,81 @@ describe("需求1: negative cache", () => {
   });
 });
 
-describe("需求5: 省日志", () => {
-  test("wrangler.toml 关闭 invocation_logs", async () => {
+describe("P0-1: 429 不污染词条页缓存", () => {
+  const cacheStub = () => {
+    const store = new Map();
+    return {
+      store,
+      api: {
+        match: async (req) => { const r = store.get(req.url); return r ? r.clone() : null; },
+        put: async (req, res) => { store.set(req.url, res); },
+        delete: async (req) => { store.delete(req.url); },
+      },
+    };
+  };
+
+  test("abnormal 429 只写独立 /__block/ 键，绝不写词条页键", async () => {
+    const putPaths = [];
+    globalThis.caches.default = {
+      match: async () => null,
+      put: async (req) => { putPaths.push(new URL(req.url).pathname); },
+      delete: async () => {},
+    };
+    const env = baseEnv(mockD1Missing());
+    const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': 'GPTBot/1.0', 'cf-connecting-ip': '7.7.7.7' } });
+    req.cf = {};
+    const res = await worker.fetch(req, env, ctx);
+    expect(res.status).toBe(429);
+    expect(putPaths.some((p) => p.startsWith('/__block/'))).toBe(true);
+    expect(putPaths).not.toContain('/hello');
+  }, 15000);
+
+  test("bot 被判 abnormal 后，正常请求同一词仍返回 200（不中毒）", async () => {
+    const stub = cacheStub();
+    globalThis.caches.default = stub.api;
+    const env = baseEnv(mockD1Missing());
+    const bot = new Request('https://def.est.im/hello', { headers: { 'user-agent': 'GPTBot/1.0', 'cf-connecting-ip': '7.7.7.8' } });
+    bot.cf = {};
+    const r1 = await worker.fetch(bot, env, ctx);
+    expect(r1.status).toBe(429);
+    const human = new Request('https://def.est.im/hello', { headers: { 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36', 'cf-connecting-ip': '7.7.7.9' } });
+    human.cf = {};
+    const r2 = await worker.fetch(human, env, ctx);
+    expect(r2.status).toBe(200);
+    expect(r2.headers.get('x-negative-cache')).toBe('1');
+  }, 20000);
+
+  test("熔断 429 不写任何缓存键（含 block 键）", async () => {
+    const putPaths = [];
+    globalThis.caches.default = {
+      match: async () => null,
+      put: async (req) => { putPaths.push(new URL(req.url).pathname); },
+      delete: async () => {},
+    };
+    const envFail = baseEnv(mockD1Fail());
+    for (let i = 0; i < 3; i++) {
+      const r = new Request(`https://def.est.im/fail${i}`, { headers: { 'cf-connecting-ip': `8.8.8.${i}` } });
+      r.cf = {};
+      await worker.fetch(r, envFail, ctx);
+    }
+    putPaths.length = 0;
+    const req = new Request('https://def.est.im/singleword', { headers: { 'cf-connecting-ip': '8.8.8.9' } });
+    req.cf = {};
+    const res = await worker.fetch(req, envFail, ctx);
+    expect(res.status).toBe(429);
+    expect(putPaths).toEqual([]);
+  }, 20000);
+});
+
+describe("需求5: observability 配置", () => {
+  // 注意：日志已在 d4c6042 重新开启（排障需要），此测试改为锁定当前线上配置
+  test("wrangler.toml observability.logs 配置与线上一致", async () => {
     const toml = await Bun.file("wrangler.toml").text();
-    expect(toml).toContain("invocation_logs = false");
     expect(toml).toContain("[observability.logs]");
     const logsSection = toml.split("[observability.logs]")[1].split("[")[0];
-    expect(logsSection).toContain("persist = false");
-    expect(logsSection).not.toContain("persist = true");
+    expect(logsSection).toContain("enabled = true");
+    expect(logsSection).toContain("invocation_logs = true");
+    expect(logsSection).toContain("persist = true");
   });
 });
 
@@ -260,4 +324,179 @@ describe("guard RPC 接入: verdict 拦截 + fail-open", () => {
     const res = await worker.fetch(req, env, ctx);
     expect(res.status).toBe(200);
   });
+});
+
+describe("E: 生成失败达上限写入 rejects，停止反复烧 LLM", () => {
+  // 状态化 D1 桩：覆盖 handlePost(gen) 用到的全部语句
+  function genEnv() {
+    const state = { words: new Map(), rejects: new Set(), lastId: 0 };
+    const d1 = {
+      state,
+      prepare(sql) {
+        const norm = sql.replace(/\s+/g, " ").trim();
+        return {
+          _a: [],
+          bind(...a) { this._a = a; return this; },
+          async first() {
+            if (norm.startsWith("SELECT word_id, entity_type, other_notes FROM words")) {
+              const w = state.words.get(String(this._a[0]).toLowerCase());
+              return w ? { ...w } : null;
+            }
+            if (norm.startsWith("SELECT 1 FROM rejects")) {
+              return state.rejects.has(String(this._a[0]).toLowerCase()) ? { 1: 1 } : null;
+            }
+            return null;
+          },
+          async run() {
+            if (norm.startsWith("INSERT INTO words (lemma, entity_type, other_notes)")) {
+              const [lemma, notes] = this._a;
+              const id = ++state.lastId;
+              state.words.set(lemma, { word_id: id, entity_type: -1, other_notes: notes });
+              return { meta: { last_row_id: id } };
+            }
+            if (norm.startsWith("UPDATE words SET other_notes")) {
+              const [notes, id] = this._a;
+              for (const w of state.words.values()) if (w.word_id === id) w.other_notes = notes;
+              return {};
+            }
+            if (norm.startsWith("INSERT OR IGNORE INTO rejects")) { state.rejects.add(String(this._a[0]).toLowerCase()); return {}; }
+            if (norm.startsWith("DELETE FROM words WHERE word_id")) {
+              const [id] = this._a;
+              for (const [k, w] of state.words) if (w.word_id === id) state.words.delete(k);
+              return {};
+            }
+            return {};
+          },
+          async all() { return { results: [] }; },
+        };
+      },
+      async batch(stmts) { return Promise.all(stmts.map((s) => s.all())); },
+    };
+    // 正常请求：guard 放行，回到真正的业务逻辑
+    return { env: { def_dict: d1, LLM_API: "https://llm.test/v1", LLM_MODEL: "x", LLM_TOKEN: "t", GUARD: { check: async () => ({ abnormal: false }) } }, state };
+  }
+
+  const genReq = () => {
+    const r = new Request("https://def.est.im/?w=zzztest&gen=1", { method: "POST", headers: { "cf-connecting-ip": "5.5.5.5" } });
+    r.cf = {};
+    return r;
+  };
+  // 把 throttle 窗口拨到过期，保留失败计数（模拟 5 分钟后重试）
+  const expireWindow = (state) => { for (const w of state.words.values()) w.other_notes = "0|" + String(w.other_notes).split("|")[1]; };
+
+  test("连续 3 次内容性失败 → 写 rejects + 删占位行", async () => {
+    const orig = globalThis.fetch;
+    // 合法 JSON 但缺 entries → validate 抛 'entries empty'（内容性失败）
+    globalThis.fetch = async () => new Response('data: {"choices":[{"delta":{"content":"{\\"word\\":\\"zzz\\"}"}}]}\n\ndata: [DONE]\n\n', { status: 200 });
+    try {
+      const { env, state } = genEnv();
+      for (let i = 0; i < 3; i++) {
+        const res = await worker.fetch(genReq(), env, ctx);
+        const body = await res.json();
+        expect(body.ok).toBe(false);
+        expect(state.rejects.has("zzztest")).toBe(i === 2);
+        expireWindow(state);
+      }
+      expect(state.rejects.has("zzztest")).toBe(true);
+      expect(state.words.size).toBe(0);
+    } finally { globalThis.fetch = orig; }
+  }, 20000);
+
+  test("HTTP 5xx 等基础设施错误不计入失败数，不误封", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = async () => new Response("boom", { status: 500 });
+    try {
+      const { env, state } = genEnv();
+      for (let i = 0; i < 5; i++) {
+        const res = await worker.fetch(genReq(), env, ctx);
+        const body = await res.json();
+        expect(body.ok).toBe(false);
+        expireWindow(state);
+      }
+      expect(state.rejects.size).toBe(0);
+      const w = [...state.words.values()][0];
+      expect(String(w.other_notes).split("|")[1]).toBe("0");
+    } finally { globalThis.fetch = orig; }
+  }, 20000);
+
+  test("已在 rejects 的词：gen 直接回绝，不调用 LLM", async () => {
+    const orig = globalThis.fetch;
+    let called = 0;
+    globalThis.fetch = async () => { called++; return new Response("", { status: 200 }); };
+    try {
+      const { env, state } = genEnv();
+      state.rejects.add("zzztest");
+      const res = await worker.fetch(genReq(), env, ctx);
+      const body = await res.json();
+      expect(body.ok).toBe(false);
+      expect(body.rejected).toBe(true);
+      expect(called).toBe(0);
+    } finally { globalThis.fetch = orig; }
+  }, 10000);
+});
+
+describe("C/D: Workers Cache 接入", () => {
+  test("页面响应带 Cache-Tag（供全局 purge）", async () => {
+    const req = new Request("https://def.est.im/Hello", { headers: { "cf-connecting-ip": "6.6.6.9" } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.headers.get("cache-tag")).toBe("word:hello");
+  }, 10000);
+
+  test("429 带 cloudflare-cdn-cache-control:no-store，绝不被 Workers Cache 缓存", async () => {
+    const env = baseEnv(mockD1Missing());
+    const req = new Request("https://def.est.im/hello", { headers: { "user-agent": "GPTBot/1.0", "cf-connecting-ip": "6.6.6.10" } });
+    req.cf = {};
+    const res = await worker.fetch(req, env, ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("cloudflare-cdn-cache-control")).toBe("no-store");
+  }, 15000);
+
+  test("生成成功后调用 ctx.cache.purge 失效该词与 sitemap", async () => {
+    const orig = globalThis.fetch;
+    const okJson = JSON.stringify({ word: "zzztest", entries: [{ pos: "noun", def_en: "nonsense", def_zh: "胡说" }] });
+    globalThis.fetch = async () => new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: okJson } }] }) + '\n\ndata: [DONE]\n\n', { status: 200 });
+    try {
+      const state = { words: new Map(), rejects: new Set(), lastId: 0 };
+      const d1 = {
+        prepare(sql) {
+          const norm = sql.replace(/\s+/g, " ").trim();
+          return {
+            _a: [],
+            bind(...a) { this._a = a; return this; },
+            async first() {
+              if (norm.startsWith("SELECT word_id, entity_type, other_notes FROM words")) {
+                const w = state.words.get(String(this._a[0]).toLowerCase());
+                return w ? { ...w } : null;
+              }
+              if (norm.startsWith("SELECT 1 FROM rejects")) return null;
+              return null;
+            },
+            async run() {
+              const a = this._a;
+              if (norm.startsWith("INSERT OR IGNORE INTO rejects")) { state.rejects.add(String(a[0]).toLowerCase()); return {}; }
+              if (norm.startsWith("INSERT INTO words")) { const id = ++state.lastId; state.words.set(a[0], { word_id: id, entity_type: -1, other_notes: a[1] }); return { meta: { last_row_id: id } }; }
+              if (norm.startsWith("INSERT")) return { meta: { last_row_id: ++state.lastId } };
+              if (norm.startsWith("UPDATE words SET other_notes")) { const [notes, id] = a; for (const w of state.words.values()) if (w.word_id === id) w.other_notes = notes; return {}; }
+              if (norm.startsWith("DELETE")) return {};
+              return {};
+            },
+            async all() { return { results: [] }; },
+          };
+        },
+        async batch(s) { return Promise.all(s.map((x) => x.all())); },
+      };
+      const purges = [];
+      const c = { waitUntil: (p) => p, cache: { purge: async (arg) => { purges.push(arg); return { success: true }; } } };
+      const env = { def_dict: d1, LLM_API: "https://llm.test/v1", LLM_MODEL: "x", LLM_TOKEN: "t", GUARD: { check: async () => ({ abnormal: false }) } };
+      const req = new Request("https://def.est.im/?w=zzztest&gen=1", { method: "POST", headers: { "cf-connecting-ip": "6.6.6.11" } });
+      req.cf = {};
+      const res = await worker.fetch(req, env, c);
+      const body = await res.json();
+      expect(body.ok).toBe(true);
+      expect(purges.length).toBeGreaterThan(0);
+      expect(purges[0].tags).toContain("word:zzztest");
+      expect(purges[0].tags).toContain("sitemap");
+    } finally { globalThis.fetch = orig; }
+  }, 20000);
 });

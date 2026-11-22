@@ -17,6 +17,28 @@ async function suggestRedirect(d1, low) {
   return null;
 }
 
+// 批量存在性探测：每词一条 `LIMIT 1`，返回命中的 surface 集合。
+// onlyLemma=true 时只查 kind='lemma'（词形跳转判定）。
+// rows_read 与命中数成正比：每词开销从「≤5 行」降到「0/1 行」。
+async function probeSurfaces(d1, surfaces, onlyLemma) {
+  const found = new Set();
+  if (!surfaces || !surfaces.length) return found;
+  const sql = onlyLemma
+    ? "SELECT 1 AS hit FROM surfaces WHERE surface = ? AND kind = 'lemma' LIMIT 1"
+    : 'SELECT 1 AS hit FROM surfaces WHERE surface = ? LIMIT 1';
+  const stmts = surfaces.map((w) => d1.prepare(sql).bind(w));
+  for (let i = 0; i < stmts.length; i += 50) {
+    const chunk = stmts.slice(i, i + 50);
+    const results = typeof d1.batch === 'function'
+      ? await d1.batch(chunk)
+      : await Promise.all(chunk.map((s) => s.all()));
+    for (let j = 0; j < chunk.length; j++) {
+      if ((results[j]?.results || []).length) found.add(surfaces[i + j]);
+    }
+  }
+  return found;
+}
+
 async function loadEntry(env, word) {
   const d1 = env.def_dict;
   const low = word.toLowerCase();
@@ -145,46 +167,22 @@ async function loadEntry(env, word) {
   const infForms = (groups.inflection || []).map((f) => f.surface);
   const infUnique = [...new Set(infForms.map((s) => s.toLowerCase()))];
 
-  // 存在性检查：逐词 LIMIT 5 探测（kind 域恰好 5 种，LIMIT 5 即完备）
-  // 不用单条大 IN：高频词（如 time/make）在 surfaces 中命中成百上千行，
-  // 单条 IN 会全量扫描，D1 rows_read 爆表；逐词 LIMIT 5 每词最多读 5 行
-  const allNeededSet = new Set([...arr, ...phrasePatterns, ...infUnique]);
-  const allNeeded = [...allNeededSet];
-  const foundMap = new Map(); // surface -> Set(kind)
-  if (allNeeded.length) {
-    const stmts = allNeeded.map((w) =>
-      d1.prepare('SELECT surface, kind FROM surfaces WHERE surface = ? LIMIT 5').bind(w),
-    );
-    const results = [];
-    for (let i = 0; i < stmts.length; i += 50) {
-      const chunk = stmts.slice(i, i + 50);
-      if (typeof d1.batch === 'function') {
-        results.push(...(await d1.batch(chunk)));
-      } else {
-        results.push(...(await Promise.all(chunk.map((s) => s.all()))));
-      }
-    }
-    for (const res of results) {
-      for (const r of res.results || []) {
-        const k = String(r.surface).toLowerCase();
-        const kind = String(r.kind);
-        if (!foundMap.has(k)) foundMap.set(k, new Set());
-        foundMap.get(k).add(kind);
-      }
-    }
-  }
+  // 存在性检查：每条 `SELECT 1 ... LIMIT 1` 最多读 1 行
+  // （原 `SELECT surface,kind ... LIMIT 5` 每个命中词最多读 5 行 → rows_read 直接降到 1/5）
+  // 不用单条大 IN：高频词（如 time/make）在 surfaces 中命中成百上千行，单条 IN 会全量扫描，rows_read 爆表
+  // discoverable/phraseLinked 只需「是否存在」；inflectLinked 只需「是否存在 kind=lemma」
+  const found = await probeSurfaces(d1, [...new Set([...arr, ...phrasePatterns])], false);
+  const foundLemma = await probeSurfaces(d1, infUnique, true);
+
   const discoverable = new Set();
-  for (const w of arr) if (foundMap.has(w)) discoverable.add(w);
+  for (const w of arr) if (found.has(w)) discoverable.add(w);
   for (const s of allSurfaces) discoverable.add(s.toLowerCase());
 
   const phraseLinked = new Set();
-  for (const p of phrasePatterns) if (foundMap.has(p)) phraseLinked.add(p);
+  for (const p of phrasePatterns) if (found.has(p)) phraseLinked.add(p);
 
   const inflectLinked = new Set();
-  for (const s of infUnique) {
-    const kinds = foundMap.get(s);
-    if (kinds && kinds.has('lemma')) inflectLinked.add(s);
-  }
+  for (const s of infUnique) if (foundLemma.has(s)) inflectLinked.add(s);
 
   return {
     type: 'entry',
