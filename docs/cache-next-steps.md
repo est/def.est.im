@@ -21,9 +21,9 @@
 ## 1. 已完成
 
 ### P0-1:429 不再污染词条页缓存 ✅
-- 429 走独立 key `/__block/<word>`;词条页写缓存前只放行 `200/302/404`;熔断/D1 错误 429 不落任何缓存。
-- `abnormal.js` 429 缓存 TTL 86400 → 60s。
+- 词条页写缓存前只放行 `200/302/404`;所有 429 **一律 `cache-control: no-store`**(浏览器 / 边缘 / Cache API 都不缓存)。
 - 根因链:bot/被误判请求把某词写成 24h 429 → 正常用户集体吃 429。已复现、已修。
+- 迭代记录:最初用 `/__block/<word>` 短 TTL 块缓存,后发现 `Cache-Control: max-age=60` 仍会被浏览器/Cache API 缓存 429,遂**改为全 no-store 并移除块缓存**(被拦路径本就在 D1 之前返回,不缓存也不会多读一行)。
 
 ### B:存在性探测瘦身(D1 rows_read 直接降)✅
 - `src/lib/lookup.js`:探测由 `SELECT surface,kind ... LIMIT 5`(每命中词最多 **5 行**)改为
@@ -42,7 +42,7 @@
 
 ### C:词条页接入 Workers Cache ✅
 - `wrangler.toml` 新增 `[cache] enabled = true` + `cross_version_cache = true`。
-- 429 全部加 `cloudflare-cdn-cache-control: no-store`,**绝不被全局缓存**(避免 429 毒化)。
+- 429 全部 `cache-control: no-store`,**任何一层都不缓存**(避免 429 毒化/被缓存)。
 - 移除词条页的 `Vary: Accept-Encoding`:Workers Cache 对 `Vary` 是**逐字面值**建变体,`gzip,br` 与 `br,gzip` 会分裂成两条 → 命中率暴跌。
 - POST 的 JSON 响应加 `no-store`,防被启发式缓存。
 - 效果:命中时 **Worker 不执行 → 零 D1、零 CPU、零 guard RPC**(但请求数照记)。
@@ -101,4 +101,4 @@ guard 在 Worker 内,爬虫请求照样计入配额。把「AI 爬虫 / 已知�
 
 ## 5. 测试
 
-`bun test` → 全绿。覆盖:P0-1(block 键隔离/中毒回归)、B(探测 LIMIT 1/语义)、E(失败上限/reject/基础设施不计入)、C/D(Cache-Tag/429 no-store/purge 调用)。
+`bun test` → 全绿。覆盖:P0-1(429 不写任意缓存/中毒回归)、B(探测 LIMIT 1/语义)、E(失败上限/reject/基础设施不计入)、C/D(Cache-Tag/429 no-store/purge 调用)。

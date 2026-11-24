@@ -4,8 +4,8 @@
 // 免费可用：Rate Limiting binding
 
 // 429 tarpit：限流 + 延迟后返回 429
-// 注意：Workers 墙钟上限 30s，60s 延迟会超时，这里用 5s 延迟 + Retry-After:60 卡死客户端
-// 429 响应改为可缓存 60s（防重试风暴反复烧 D1）
+// 注意：Workers 墙钟上限 30s，60s 延迟会超时，这里用 5s 延迟 + Retry-After 卡死客户端
+// 429 一律 no-store：浏览器 / 边缘 / Cache API 都不缓存（不被拦住反而更费流量）
 export async function tarpit(request, env, reason) {
   const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'unknown';
   // 优先用 Rate Limiting 绑定（需 wrangler.toml 配置），降级到无状态
@@ -18,9 +18,7 @@ export async function tarpit(request, env, reason) {
           status: 429,
           headers: {
             'retry-after': '86400',
-            'cache-control': 'public, max-age=60, s-maxage=60',
-            'cdn-cache-control': 'public, max-age=60',
-            'cloudflare-cdn-cache-control': 'no-store',
+            'cache-control': 'no-store',
             'x-bot-reason': reason,
           },
         });
@@ -28,15 +26,12 @@ export async function tarpit(request, env, reason) {
     }
   } catch (_) {}
   // 异常请求统一延迟 5s 后 429（卡死爬虫，浏览器用户几乎不触发）
-  // 缓存 TTL 压到 60s：block 缓存独立于词条页，短周期自愈，避免 24h 毒化
   await new Promise((r) => setTimeout(r, 5000));
   return new Response('Blocked abnormal request', {
     status: 429,
     headers: {
       'retry-after': '86400',
-      'cache-control': 'public, max-age=60, s-maxage=60',
-      'cdn-cache-control': 'public, max-age=60',
-      'cloudflare-cdn-cache-control': 'no-store',
+      'cache-control': 'no-store',
       'x-bot-reason': reason,
     },
   });

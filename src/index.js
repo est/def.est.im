@@ -20,11 +20,6 @@ function cacheKeyForWord(origin, path) {
 function cacheKeyForSitemap(origin, path) {
   return new Request(origin + (path || '/sitemap.xml'), { method: 'GET' });
 }
-// 拦截/熔断 429 专用缓存键：与词条页 key 隔离，短 TTL，绝不污染真实词条页缓存
-// 路径含 `/`，天然不可能与合法词条（正则禁 `/`）撞 key
-function cacheKeyForBlock(origin, word) {
-  return new Request(origin + '/__block/' + encodeURIComponent(String(word).toLowerCase()), { method: 'GET' });
-}
 // 仅这些状态可写入词条页缓存；429/5xx 一律不写（防 negative cache 毒化正常流量）
 const CACHEABLE_PAGE_STATUS = new Set([200, 302, 404]);
 // Workers Cache 精确失效标签（必须 printable ASCII）
@@ -50,16 +45,14 @@ async function purgeWord(ctx, reqUrl, words) {
     await caches.default.delete(cacheKeyForSitemap(origin));
   } catch {}
 }
-// 瞬时 429（熔断 / D1 错误）：不落词条缓存，最多让浏览器/边缘缓存 60s 即重试
-// cloudflare-cdn-cache-control:no-store 让 Workers Cache 永不缓存 429（避免全局毒化）
+// 瞬时 429（拦截 / 熔断 / D1 错误）：任何一层都不缓存（浏览器 / 边缘 / Cache API 全 no-store）
+// 被拦路径都在 D1 之前返回，不缓存不会多读一行；retry-after 仍劝退守规矩的爬虫
 function transient429(extra) {
   return new Response('', {
     status: 429,
     headers: {
       'retry-after': '86400',
-      'cache-control': 'public, max-age=60, s-maxage=60',
-      'cdn-cache-control': 'public, max-age=60',
-      'cloudflare-cdn-cache-control': 'no-store',
+      'cache-control': 'no-store',
       ...extra,
     },
   });
@@ -181,15 +174,8 @@ export default {
       if (!word) return new Response('Not Found', { status: 404 });
       const chk = await checkAbnormal(request, env, word);
       if (chk.abnormal) {
-        // 仅当本请求自身被判 abnormal 时才查 block 缓存，正常用户不会读到 429
-        const bk = cacheKeyForBlock(url.origin, word);
-        const bhit = await cacheMatch(bk);
-        if (bhit) return bhit;
-        const r = await tarpit(request, env, chk.reason);
-        // 429 只进独立 block 键（短 TTL），避免重复 tarpit 5s，且不污染词条页缓存
-        if (ctx?.waitUntil) ctx.waitUntil(cachePut(bk, r.clone()));
-        else await cachePut(bk, r.clone());
-        return r;
+        // 429 不写任何缓存（浏览器/边缘/Cache API 全 no-store）；避免 429 被任何一层缓存后毒化
+        return tarpit(request, env, chk.reason);
       }
 
       // Cache API 前置（归一化 key：小写 + 剥离 query，防 ?v=1 / 大小写绕过）
@@ -387,7 +373,7 @@ async function handleSitemap(request, env, ctx) {
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const { success } = await env.ABNORMAL_LIMITER.limit({ key: 'sitemap:' + ip });
       if (!success) {
-        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'public, max-age=60, s-maxage=60', 'cloudflare-cdn-cache-control': 'no-store' } });
+        return new Response('Too Many Requests', { status: 429, headers: { 'retry-after': '86400', 'cache-control': 'no-store' } });
       }
     }
   } catch {}

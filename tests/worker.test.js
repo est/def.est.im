@@ -65,8 +65,8 @@ describe("需求2: DB错误捕获后 sleep 4s 返回 429 空白", () => {
     expect(await res.text()).toBe('');
     expect(dt).toBeGreaterThanOrEqual(3900);
     expect(dt).toBeLessThan(6000);
-    // P0-1：瞬时 429 不再落 24h 缓存，只允许浏览器/边缘短缓存 60s
-    expect(res.headers.get('cache-control')).toContain('public, max-age=60, s-maxage=60');
+    // 429 任何一层都不缓存（浏览器/边缘/Cache API 全 no-store）
+    expect(res.headers.get('cache-control')).toBe('no-store');
   }, 10000);
 
   test("sitemap 静态缺失直接 404，无 D1 回退", async () => {
@@ -182,7 +182,7 @@ describe("P0-1: 429 不污染词条页缓存", () => {
     };
   };
 
-  test("abnormal 429 只写独立 /__block/ 键，绝不写词条页键", async () => {
+  test("abnormal 429 不写任何缓存键，且响应 no-store", async () => {
     const putPaths = [];
     globalThis.caches.default = {
       match: async () => null,
@@ -194,8 +194,8 @@ describe("P0-1: 429 不污染词条页缓存", () => {
     req.cf = {};
     const res = await worker.fetch(req, env, ctx);
     expect(res.status).toBe(429);
-    expect(putPaths.some((p) => p.startsWith('/__block/'))).toBe(true);
-    expect(putPaths).not.toContain('/hello');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(putPaths).toEqual([]);
   }, 15000);
 
   test("bot 被判 abnormal 后，正常请求同一词仍返回 200（不中毒）", async () => {
@@ -455,13 +455,13 @@ describe("C/D: Workers Cache 接入", () => {
     expect(res.headers.get("cache-tag")).toBe("word:hello");
   }, 10000);
 
-  test("429 带 cloudflare-cdn-cache-control:no-store，绝不被 Workers Cache 缓存", async () => {
+  test("429 一律 no-store，浏览器/边缘/Cache API 都不缓存", async () => {
     const env = baseEnv(mockD1Missing());
     const req = new Request("https://def.est.im/hello", { headers: { "user-agent": "GPTBot/1.0", "cf-connecting-ip": "6.6.6.10" } });
     req.cf = {};
     const res = await worker.fetch(req, env, ctx);
     expect(res.status).toBe(429);
-    expect(res.headers.get("cloudflare-cdn-cache-control")).toBe("no-store");
+    expect(res.headers.get("cache-control")).toBe("no-store");
   }, 15000);
 
   test("生成成功后调用 ctx.cache.purge 失效该词与 sitemap", async () => {
