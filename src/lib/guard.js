@@ -7,6 +7,9 @@ export function extractSignal(request, word) {
   const bm = cf.botManagement || null;
   return {
     secFetchSite: request.headers.get('sec-fetch-site') || '',
+    secFetchMode: request.headers.get('sec-fetch-mode') || '',
+    secFetchDest: request.headers.get('sec-fetch-dest') || '',
+    secFetchUser: request.headers.get('sec-fetch-user') || '',
     referer: request.headers.get('referer') || '',
     ua: request.headers.get('user-agent') || '',
     secChUaPlatform: request.headers.get('sec-ch-ua-platform') || '',

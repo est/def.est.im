@@ -251,10 +251,15 @@ function entryEtag(entry, senses) {
 
 // ---- 词条页渲染（命中 / 占位 / 404） ----
 async function renderPage(env, word, reqUrl, request) {
-  // Sec-Fetch-Site 校验：真实同站点击应为 same-origin/same-site，none 却带 referer 为伪造
+  // Sec-Fetch-Site 校验：真实同站点击应为 same-origin/same-site，none 却带 referer 为伪造。
+  // 与 crest 规则1 保持一致：用户主动打开的页面导航（部分 WebView 会错报 none）放行
   const secFetchSite = request.headers.get('sec-fetch-site') || '';
   const referer = request.headers.get('referer') || request.headers.get('Referer') || '';
-  if (secFetchSite.toLowerCase() === 'none' && referer && referer.startsWith('https://def.est.im/')) {
+  const secFetchMode = request.headers.get('sec-fetch-mode') || '';
+  const secFetchDest = request.headers.get('sec-fetch-dest') || '';
+  const secFetchUser = request.headers.get('sec-fetch-user') || '';
+  const isUserNavigation = (secFetchMode === 'navigate' && secFetchDest === 'document') || secFetchUser === '?1';
+  if (secFetchSite.toLowerCase() === 'none' && referer && referer.startsWith('https://def.est.im/') && !isUserNavigation) {
     return new Response(shell(word, renderPlaceholder(word, true), word), {
       status: 404,
       headers: {

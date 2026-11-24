@@ -70,6 +70,11 @@
 - 改法:`crest/src/guard.ts` 认可 `verifiedBotCategory`(免费套餐可用,由 Cloudflare 打标不可伪造);`Search Engine`/`Page Preview` 视为可信,规则2 与规则6(UA 伪造)都放行。AI Crawler 仍然拦。
 - 说明:免费套餐下 `request.cf.botManagement` 常缺失,规则2/3 本就基本不触发;真正误伤 Page Preview 的是规则6,故规则6 也必须豁免可信类别。
 
+### S:规则1 豁免「用户导航」(日志分析所得)✅
+- 现象:Via 等 WebView 套壳浏览器把同站导航错报成 `sec-fetch-site: none`,配合同站 referer 命中规则1 `sec-fetch-site-none-with-referer` → 5s tarpit 429,真用户被拦。
+- 改法:对「用户主动打开的页面导航」放行——`sec-fetch-mode: navigate` 且 `sec-fetch-dest: document`,或 `sec-fetch-user: ?1`。信号新增这三个头(`guard.js` → `crest` 的 GuardSignal)。
+- **注意**:`def` 的 `renderPage` 里还有一份规则1 的重复实现(返回 404),已同步豁免;两处逻辑需保持一致。
+
 ---
 
 ## 2. 必须知道的取舍 / 风险(部署前读)

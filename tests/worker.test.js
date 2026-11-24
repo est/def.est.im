@@ -512,3 +512,28 @@ describe("C/D: Workers Cache 接入", () => {
     } finally { globalThis.fetch = orig; }
   }, 20000);
 });
+
+describe("规则1: 用户导航豁免（WebView 错报 sec-fetch-site:none）", () => {
+  const mkVia = (ip) => {
+    const req = new Request('https://def.est.im/rich', { headers: {
+      'user-agent': 'Mozilla/5.0 (Linux; Android 13; 22041216C; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/104.0.5112.97 Mobile Safari/537.36',
+      'sec-fetch-site': 'none', 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document', 'sec-fetch-user': '?1',
+      'referer': 'https://def.est.im/heavy', 'cf-connecting-ip': ip,
+    } });
+    req.cf = {};
+    return req;
+  };
+  test("同站导航(mode=navigate & dest=document) => 放行", async () => {
+    const res = await worker.fetch(mkVia('9.9.9.21'), baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(200);
+  }, 10000);
+  test("无导航特征的 none + 同站 referer => 仍 429", async () => {
+    const req = new Request('https://def.est.im/rich', { headers: {
+      'user-agent': 'curl/8', 'sec-fetch-site': 'none', 'referer': 'https://def.est.im/heavy', 'cf-connecting-ip': '9.9.9.22',
+    } });
+    req.cf = {};
+    const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('x-bot-reason')).toContain('sec-fetch-site-none-with-referer');
+  }, 15000);
+});
