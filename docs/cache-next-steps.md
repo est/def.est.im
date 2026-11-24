@@ -60,6 +60,16 @@
 - ❌ 未采用「放行所有 Safari/Firefox」:那样伪装 Safari 的爬虫会落到 D1,反而费流量。
 - 测试:crest 9 项 + 本仓 worker 用例(新增 Safari/Firefox/iPadOS Safari 放行)全绿。
 
+### L:抑制自伤坏链接(日志分析所得)✅
+- 现象:`/draw attention to sb./sth.`、`/approve of sb./sth.`、`/sb./sth.` 被爬虫反复请求并触发规则4 非法词 → 429(5s tarpit)。
+- 根因:`render.js` 的 `hrefWords()` 把短语 pattern 按空格拆成逐词链接,`sb./sth.` 被当成 token 渲染成 `href="/sb.%2Fsth."`。**站点自己造的爬虫陷阱**。
+- 改法:新增 `isLinkableWord()`,含 `/` 等非法字符、或形如 `sb`/`sth`/`sb.`/`sth.`/`sb's` 的占位符**只渲染纯文本不链接**;`renderForms` 同样过滤词形 surface。
+
+### PA:放行 Cloudflare 已验证的 Page Preview ✅
+- 现象:链接预览机器人(Page Preview)被判 abnormal → 分享到聊天软件的链接预览失败。
+- 改法:`crest/src/guard.ts` 认可 `verifiedBotCategory`(免费套餐可用,由 Cloudflare 打标不可伪造);`Search Engine`/`Page Preview` 视为可信,规则2 与规则6(UA 伪造)都放行。AI Crawler 仍然拦。
+- 说明:免费套餐下 `request.cf.botManagement` 常缺失,规则2/3 本就基本不触发;真正误伤 Page Preview 的是规则6,故规则6 也必须豁免可信类别。
+
 ---
 
 ## 2. 必须知道的取舍 / 风险(部署前读)

@@ -40,12 +40,20 @@ const esc = (s) =>
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const href = (word) => '/' + encodeURIComponent(word);
+// 只有「像词」的 token 才渲染成链接：与 guard/lookup 同规则（禁 `/`、`(`、`[` 等非法字符），
+// 且跳过 sb/sth 占位符——否则会生成 /sb./sth. 这类坏链接，爬虫跟上去被 guard 判非法词 → 429
+const isLinkableWord = (w) => {
+  if (!w) return false;
+  if (/[^\w'\-.\u4e00-\u9fa5]/.test(w)) return false;
+  const core = w.toLowerCase().replace(/'s$/, '').replace(/[^a-z]/g, '');
+  return core !== 'sb' && core !== 'sth';
+};
 const hrefWords = (phrase) => {
   const t = String(phrase).trim();
   if (!t) return '';
+  const render = (w) => (isLinkableWord(w) ? `<a href="${href(w)}">${esc(w)}</a>` : esc(w));
   const parts = t.split(/\s+/);
-  if (parts.length <= 1) return `<a href="${href(t)}">${esc(t)}</a>`;
-  return parts.map((w) => `<a href="${href(w)}">${esc(w)}</a>`).join(' ');
+  return parts.length <= 1 ? render(t) : parts.map(render).join(' ');
 };
 
 // 文本 token 化（与 collect 同规则：小写、's 剥离、撇号剔除、字母开头）
@@ -96,7 +104,7 @@ function renderForms(forms, inflectLinked) {
   const LABEL_CN = { plural: '复数', past: '过去式', past_participle: '过去分词', present_participle: '现在分词', third_person_singular: '第三人称单数', comparative: '比较级', superlative: '最高级' };
   const rows = forms.map((f) => {
     const linked = inflectLinked && inflectLinked.has(String(f.surface).toLowerCase());
-    const v = linked ? `<a href="${href(f.surface)}">${esc(f.surface)}</a>` : esc(f.surface);
+    const v = linked && isLinkableWord(String(f.surface)) ? `<a href="${href(f.surface)}">${esc(f.surface)}</a>` : esc(f.surface);
     const label = LABEL_CN[f.label] ?? formLabel(f);
     return `<tr><td>${esc(label)}</td><td>${v}</td></tr>`;
   }).join('');
