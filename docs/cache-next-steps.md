@@ -52,6 +52,14 @@
 - 页面/词条响应加 `Cache-Tag: word:<urlencoded>`;sitemap 加 `Cache-Tag: sitemap`。
 - 生成成功 / 判 reject 时调用 `purgeWord`,失效该词与 sitemap。
 
+### A:crest 修 Safari/Firefox 误伤(近中性)✅
+- 根因:`crest/src/guard.ts` 规则 6「UA 含 `Macintosh` 但没发 `sec-ch-ua-platform` → abnormal」。
+  **`sec-ch-ua-platform` 是 Chromium 专有 Client Hint,Safari/Firefox/iPadOS Safari 都不发** → 全被误判成 bot。
+- 改法(窄化,不放开):仅当「UA 明确是 Chromium」(`/(Chrome|Chromium|Edg|OPR)\//`)时才判 platform 矛盾。
+  伪装成 Chrome 的爬虫仍被拦,真 Safari/Firefox 放行。
+- ❌ 未采用「放行所有 Safari/Firefox」:那样伪装 Safari 的爬虫会落到 D1,反而费流量。
+- 测试:crest 9 项 + 本仓 worker 用例(新增 Safari/Firefox/iPadOS Safari 放行)全绿。
+
 ---
 
 ## 2. 必须知道的取舍 / 风险(部署前读)
@@ -69,12 +77,6 @@
 ---
 
 ## 3. 剩余下一步
-
-### A. crest 放宽 Safari/Firefox 误判 —— 建议优先(近中性)⭐
-`crest/src/guard.ts:70` 现为「UA 含 `Macintosh` 但没发 `sec-ch-ua-platform` → abnormal」;**Safari/Firefox 本就不发该头**,等于误伤所有 macOS Safari/Firefox。
-- 只能做**窄化版**:仅当 UA 含 Chromium 特征(`Chrome/` 或带 `Sec-CH-UA`)时才判 platform 矛盾。
-- ❌ 不要做「放行所有 Safari/Firefox」:伪装 Safari 的爬虫会落到 D1,那才真费流量。
-- 💸 近中性;🔧 小。
 
 ### F. HEAD 复用 GET(顺手)
 `curl -I /run` 现返回 `404 text/plain` 且绕过全部缓存。爬虫用 HEAD 探测会误判站点坏掉。

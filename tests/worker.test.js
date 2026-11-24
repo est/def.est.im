@@ -283,6 +283,18 @@ describe("拦截中间件: Macintosh UA 与 sec-ch-ua-platform 矛盾", () => {
     const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
     expect(res.status).toBe(200);
   }, 10000);
+  // Safari/Firefox/iPadOS Safari 不发 sec-ch-ua-platform，不能误伤
+  const safariMacUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+  const firefoxMacUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0";
+  const iPadSafariUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+  for (const [name, ua] of [["Safari", safariMacUA], ["Firefox", firefoxMacUA], ["iPadOS Safari", iPadSafariUA]]) {
+    test(`macOS ${name}（不发 platform 头）=> 放行`, async () => {
+      const req = new Request('https://def.est.im/hello', { headers: { 'user-agent': ua, 'cf-connecting-ip': '9.9.9.6' } });
+      req.cf = {};
+      const res = await worker.fetch(req, baseEnv(mockD1Missing()), ctx);
+      expect(res.status).toBe(200);
+    }, 10000);
+  }
 });
 
 describe("guard RPC 接入: verdict 拦截 + fail-open", () => {
